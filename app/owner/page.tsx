@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CounterQR from "@/components/CounterQR";
 import ConfettiEffect from "@/components/ConfettiEffect";
 import { useStore } from "@/context/StoreContext";
+import { createClient } from "@/lib/supabase/client";
+import { approveVisit, rejectVisit } from "@/app/actions/scan";
+import { playApprovalBell } from "@/lib/audio";
 import {
   Store,
   Users,
@@ -23,6 +26,14 @@ import {
   BellRing,
 } from "lucide-react";
 
+interface QueueItem {
+  id: string;
+  customerMasked: string;
+  amount: number;
+  formattedTime: string;
+  isDb?: boolean;
+}
+
 export default function OwnerPage() {
   const {
     rule,
@@ -35,6 +46,124 @@ export default function OwnerPage() {
     reviews,
     markRewardGiven,
   } = useStore();
+
+  const [dbVisits, setDbVisits] = useState<QueueItem[]>([]);
+
+  // Supabase Real-Time WebSocket Listener for pending scans
+  useEffect(() => {
+    const supabase = createClient();
+
+    // 1. Initial fetch of active pending visits from PostgreSQL
+    const fetchPendingVisits = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("visits")
+          .select("id, created_at, status, customers(phone)")
+          .eq("status", "PENDING")
+          .order("created_at", { ascending: false });
+
+        if (data && !error) {
+          const items: QueueItem[] = data.map((v: any) => {
+            const rawPhone = v.customers?.phone || "";
+            const masked =
+              rawPhone.length >= 10
+                ? `${rawPhone.slice(0, 2)}••••••${rawPhone.slice(-2)}`
+                : "Customer Check-in";
+            return {
+              id: v.id,
+              customerMasked: masked,
+              amount: rule.minSpend,
+              formattedTime: "Just now",
+              isDb: true,
+            };
+          });
+          setDbVisits(items);
+        }
+      } catch (err) {
+        console.warn("Could not fetch DB visits:", err);
+      }
+    };
+
+    fetchPendingVisits();
+
+    // 2. Real-time WebSocket channel for incoming customer scans
+    const channel = supabase
+      .channel("scans")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "visits",
+          filter: "status=eq.PENDING",
+        },
+        async (payload) => {
+          // Play the native Web Audio approval chime
+          playApprovalBell();
+          const v = payload.new;
+
+          let masked = "Customer Check-in";
+          if (v.customer_id) {
+            const { data: cust } = await supabase
+              .from("customers")
+              .select("phone")
+              .eq("id", v.customer_id)
+              .maybeSingle();
+
+            if (cust?.phone && cust.phone.length >= 10) {
+              masked = `${cust.phone.slice(0, 2)}••••••${cust.phone.slice(-2)}`;
+            }
+          }
+
+          const newItem: QueueItem = {
+            id: v.id,
+            customerMasked: masked,
+            amount: rule.minSpend,
+            formattedTime: "Just now",
+            isDb: true,
+          };
+
+          setDbVisits((prev) => [newItem, ...prev.filter((item) => item.id !== newItem.id)]);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "visits",
+        },
+        (payload) => {
+          const v = payload.new;
+          if (v.status !== "PENDING") {
+            setDbVisits((prev) => prev.filter((item) => item.id !== v.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [rule.minSpend]);
+
+  const handleApproveScan = async (item: QueueItem) => {
+    if (item.isDb) {
+      setDbVisits((prev) => prev.filter((q) => q.id !== item.id));
+      await approveVisit(item.id);
+    } else {
+      approveScan(item.id);
+    }
+  };
+
+  const handleRejectScan = async (item: QueueItem) => {
+    if (item.isDb) {
+      setDbVisits((prev) => prev.filter((q) => q.id !== item.id));
+      await rejectVisit(item.id);
+    } else {
+      rejectScan(item.id);
+    }
+  };
 
   const [shopNameInput, setShopNameInput] = useState(rule.name);
   const [minSpendInput, setMinSpendInput] = useState(rule.minSpend);
@@ -96,6 +225,21 @@ export default function OwnerPage() {
       setPinInput("");
     }
   };
+
+  const localPending: QueueItem[] = pendingQueue
+    .filter((q) => q.status === "pending")
+    .map((q) => ({
+      id: q.id,
+      customerMasked: q.customerMasked,
+      amount: q.amount,
+      formattedTime: q.formattedTime,
+      isDb: false,
+    }));
+
+  const allPending = [
+    ...dbVisits,
+    ...localPending.filter((lp) => !dbVisits.some((dv) => dv.id === lp.id)),
+  ];
 
   const filteredCustomers = customers.filter((c) =>
     c.masked.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -220,12 +364,12 @@ export default function OwnerPage() {
                   </div>
                 </div>
                 <span className="font-mono text-xs font-bold rounded-full bg-primary px-3 py-1 text-white">
-                  {pendingQueue.filter((q) => q.status === "pending").length} Pending
+                  {allPending.length} Pending
                 </span>
               </div>
 
               <div className="mt-6 space-y-3">
-                {pendingQueue.filter((q) => q.status === "pending").length === 0 ? (
+                {allPending.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-white/20 p-8 text-center text-white/75">
                     <p className="font-semibold text-sm">No pending scans right now. Waiting for customers...</p>
                     <p className="mt-1 text-xs text-white/55">
@@ -233,48 +377,51 @@ export default function OwnerPage() {
                     </p>
                   </div>
                 ) : (
-                  pendingQueue
-                    .filter((q) => q.status === "pending")
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-4 text-ink shadow-sm animate-stamp-pop"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-base font-extrabold text-secondary">
-                              {item.customerMasked}
-                            </span>
-                            <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/75">
-                              Bill ₹{item.amount}
-                            </span>
-                          </div>
-                          <p className="mt-1 text-xs text-ink/50">
-                            {item.formattedTime} • Counter Scan
-                          </p>
-                        </div>
-
+                  allPending.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-4 text-ink shadow-sm animate-stamp-pop"
+                    >
+                      <div>
                         <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => approveScan(item.id)}
-                            className="flex min-h-[48px] items-center gap-1.5 rounded-xl bg-success px-5 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            1-Tap Approve
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => rejectScan(item.id)}
-                            className="flex min-h-[48px] items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-4 text-xs font-bold text-primary transition hover:bg-primary hover:text-white"
-                          >
-                            <XCircle className="h-4 w-4" />
-                            Reject
-                          </button>
+                          <span className="font-mono text-base font-extrabold text-secondary">
+                            {item.customerMasked}
+                          </span>
+                          <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/75">
+                            Bill ₹{item.amount}
+                          </span>
+                          {item.isDb && (
+                            <span className="rounded bg-emerald-100 text-emerald-800 px-2 py-0.5 font-mono text-[10px] font-bold">
+                              Live Scan
+                            </span>
+                          )}
                         </div>
+                        <p className="mt-1 text-xs text-ink/50">
+                          {item.formattedTime} • Counter Scan
+                        </p>
                       </div>
-                    ))
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleApproveScan(item)}
+                          className="flex min-h-[48px] items-center gap-1.5 rounded-xl bg-success px-5 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          1-Tap Approve
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRejectScan(item)}
+                          className="flex min-h-[48px] items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-4 text-xs font-bold text-primary transition hover:bg-primary hover:text-white"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))
                 )}
               </div>
             </div>
