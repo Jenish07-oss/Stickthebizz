@@ -93,3 +93,4 @@ SET name = EXCLUDED.name,
     min_spend = EXCLUDED.min_spend,
     visits_required = EXCLUDED.visits_required,
     reward_name = EXCLUDED.reward_name;
+

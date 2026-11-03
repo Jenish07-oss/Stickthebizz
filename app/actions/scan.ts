@@ -209,3 +209,4 @@ export async function getPendingVisits(merchantId: string) {
     return { visits: [], error: err.message || String(err) };
   }
 }
+

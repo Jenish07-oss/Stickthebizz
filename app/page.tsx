@@ -8,6 +8,7 @@ import StampGrid from "@/components/StampGrid";
 import ConfettiEffect from "@/components/ConfettiEffect";
 import PhoneFrame from "@/components/PhoneFrame";
 import LiveActivityToast from "@/components/LiveActivityToast";
+import AnimatedHero from "@/components/AnimatedHero";
 import { CategoryPreset } from "@/context/StoreContext";
 import {
   ChaiCupIcon,
@@ -189,16 +190,13 @@ export default function HomePage() {
       <Navbar />
 
       <main className="flex-1">
-        {/* HERO SECTION - SPLIT PANE REMOVED, ULTRA-POLISHED CENTRIC HERO */}
-        <section className="grain relative overflow-hidden px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:px-8 lg:pb-24">
-          <div className="pointer-events-none absolute -right-36 top-10 h-96 w-96 rounded-full border-[40px] border-primary/10" />
-          <div className="pointer-events-none absolute -left-24 bottom-10 h-64 w-64 rounded-full bg-secondary/5" />
-
+        {/* HERO SECTION - INTERACTIVE ANIMATED MESH GRADIENT & SPOTLIGHT */}
+        <AnimatedHero className="px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:px-8 lg:pb-24">
           <div className="mx-auto max-w-7xl">
             <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
               {/* Left Column: Value Proposition & Category Selector */}
               <div className="lg:col-span-7 flex flex-col items-start text-left">
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-white/80 px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
+                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   Made for Bharat&apos;s Retail Counters
                 </div>
@@ -225,8 +223,8 @@ export default function HomePage() {
                       onClick={() => handleCategoryChange("chai")}
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "chai"
-                          ? "bg-secondary text-white"
-                          : "bg-white text-ink/75 hover:bg-sand border border-[#E5D9C8]"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <ChaiCupIcon size={20} />
@@ -238,8 +236,8 @@ export default function HomePage() {
                       onClick={() => handleCategoryChange("kirana")}
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "kirana"
-                          ? "bg-secondary text-white"
-                          : "bg-white text-ink/75 hover:bg-sand border border-[#E5D9C8]"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <BasketIcon size={20} />
@@ -251,8 +249,8 @@ export default function HomePage() {
                       onClick={() => handleCategoryChange("burger")}
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "burger"
-                          ? "bg-secondary text-white"
-                          : "bg-white text-ink/75 hover:bg-sand border border-[#E5D9C8]"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <StreakIcon size={20} />
@@ -261,13 +259,13 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Key Bullet Highlights */}
+                {/* Key Bullet Highlights with Glassmorphism */}
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
-                  <div className="flex items-center gap-2 rounded-xl bg-white/70 p-3 border border-[#E5D9C8]/60 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
                     <AntiFraudIcon size={20} />
                     <span>12-Hour Midnight Anti-Fraud Guard</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-white/70 p-3 border border-[#E5D9C8]/60 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
                     <CustomersIcon size={20} />
                     <span>DPDP Safe Customer Privacy</span>
                   </div>
@@ -287,17 +285,37 @@ export default function HomePage() {
                   <Link
                     href="/owner"
                     target="_self"
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-secondary/30 bg-white px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-sand"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-white/70"
                   >
                     <Store className="h-4 w-4 text-primary" />
                     <span>Open Merchant Desk</span>
                   </Link>
                 </div>
+
+                {/* Glassmorphic ROI Lift Card inside Hero */}
+                <div className="mt-8 flex items-center justify-between gap-4 rounded-2xl bg-white/40 backdrop-blur-md border border-white/30 p-3.5 shadow-sm max-w-md w-full">
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
+                      <AnalyticsIcon size={18} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/60">
+                        Live ROI Calculator Lift
+                      </p>
+                      <p className="font-display text-base font-extrabold text-secondary">
+                        +₹{monthlyExtraRevenue.toLocaleString("en-IN")} / mo
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/20 px-2.5 py-1 font-mono text-xs font-bold">
+                    +{monthlyExtraVisits} visits
+                  </span>
+                </div>
               </div>
 
-              {/* Right Column: Ultra-Realistic Apple Wallet Style Smartphone Pass (Centered, No Split Pane!) */}
+              {/* Right Column: Ultra-Realistic Apple Wallet Style Smartphone Pass with Glassmorphic Pedestal */}
               <div className="lg:col-span-5 flex flex-col items-center justify-center">
-                <div className="relative w-full flex flex-col items-center">
+                <div className="relative w-full flex flex-col items-center rounded-[3.2rem] p-4 backdrop-blur-md bg-white/40 border border-white/20 shadow-xl">
                   <p className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                     <Smartphone className="h-4 w-4 text-primary" />
                     Interactive Customer Pass (Tap Below To Test)
@@ -341,8 +359,8 @@ export default function HomePage() {
                         </p>
                       </div>
 
-                      {/* Notched White Ticket Body */}
-                      <div className="relative rounded-b-3xl bg-white p-4 shadow-card border border-t-0 border-[#E5D9C8]">
+                      {/* Notched White Ticket Body with Glassmorphism */}
+                      <div className="relative rounded-b-3xl bg-white/85 backdrop-blur-md p-4 shadow-card border border-t-0 border-white/40">
                         {/* Perforated ticket circles */}
                         <div className="absolute -left-2 -top-2 h-4 w-4 rounded-full bg-sand" />
                         <div className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-sand" />
@@ -441,7 +459,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-        </section>
+        </AnimatedHero>
 
         {/* TRUSTED BY BANNER (TICKER BELOW HERO WITH LOCATION ICON) */}
         <section aria-label="Trusted Stores Across Bharat" className="border-y border-border bg-white py-6">
@@ -706,8 +724,8 @@ export default function HomePage() {
 
         {/* INTERACTIVE ROI CALCULATOR WITH ANALYTICS ICON */}
         <section className="px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl rounded-[2.5rem] border border-border bg-white p-8 shadow-card sm:p-12">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border pb-8">
+          <div className="mx-auto max-w-5xl rounded-[2.5rem] border border-white/40 bg-white/60 backdrop-blur-md p-8 shadow-card sm:p-12">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/60 pb-8">
               <div>
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-xs font-bold text-primary">
                   <AnalyticsIcon size={18} />
@@ -721,7 +739,7 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-sand/50 p-4 border border-[#E5D9C8] text-right">
+              <div className="rounded-2xl bg-white/40 backdrop-blur-md p-4 border border-white/30 text-right">
                 <span className="text-xs font-bold text-ink/60 uppercase">Estimated Monthly Lift</span>
                 <p className="font-display text-3xl font-extrabold text-success">
                   +₹{monthlyExtraRevenue.toLocaleString("en-IN")}

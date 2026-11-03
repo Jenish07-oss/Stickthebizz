@@ -34,6 +34,20 @@ const config: Config = {
         flame: "0 0 20px rgba(242, 118, 94, 0.55)",
       },
       keyframes: {
+        blob: {
+          "0%": {
+            transform: "translate(0px, 0px) scale(1) rotate(0deg)",
+          },
+          "33%": {
+            transform: "translate(40px, -60px) scale(1.15) rotate(120deg)",
+          },
+          "66%": {
+            transform: "translate(-30px, 30px) scale(0.9) rotate(240deg)",
+          },
+          "100%": {
+            transform: "translate(0px, 0px) scale(1) rotate(360deg)",
+          },
+        },
         float: {
           "0%, 100%": { transform: "translateY(0)" },
           "50%": { transform: "translateY(-4px)" },
@@ -67,6 +81,7 @@ const config: Config = {
         },
       },
       animation: {
+        blob: "blob 15s ease-in-out infinite",
         float: "float 3.5s ease-in-out infinite",
         "stamp-pop": "stampPop 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
         "flame-pulse": "flameGlow 2s ease-in-out infinite",
