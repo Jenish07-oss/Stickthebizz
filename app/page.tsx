@@ -7,7 +7,6 @@ import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
 import ConfettiEffect from "@/components/ConfettiEffect";
 import PhoneFrame from "@/components/PhoneFrame";
-import LiveActivityToast from "@/components/LiveActivityToast";
 import AnimatedHero from "@/components/AnimatedHero";
 import { CategoryPreset } from "@/context/StoreContext";
 import {
@@ -186,7 +185,6 @@ export default function HomePage() {
   return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">
       <ConfettiEffect active={showConfetti} onComplete={() => setShowConfetti(false)} />
-      <LiveActivityToast />
       <Navbar />
 
       <main className="flex-1">

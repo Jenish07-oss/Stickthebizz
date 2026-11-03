@@ -289,3 +289,80 @@ export async function getMerchantLedger(merchantId: string) {
     return { visits: [], error: err.message || String(err) };
   }
 }
+
+
+/**
+ * Fetches real customer status for a specific merchant (visits count, lock status, reward readiness).
+ */
+export async function getCustomerMerchantStatus(merchantId: string, customerPhone?: string) {
+  try {
+    const supabase = createClient();
+    const cleanPhone = (customerPhone || "").replace(/\D/g, "");
+
+    let customer: any = null;
+
+    if (cleanPhone) {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, phone, full_name, email")
+        .eq("phone", cleanPhone)
+        .maybeSingle();
+      customer = data;
+    }
+
+    if (!customer) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const uPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+        if (uPhone) {
+          const { data } = await supabase
+            .from("customers")
+            .select("id, phone, full_name, email")
+            .eq("phone", uPhone)
+            .maybeSingle();
+          customer = data;
+        } else if (user.email) {
+          const { data } = await supabase
+            .from("customers")
+            .select("id, phone, full_name, email")
+            .eq("email", user.email)
+            .maybeSingle();
+          customer = data;
+        }
+      }
+    }
+
+    if (!customer) {
+      return { customer: null, visitsCount: 0, isLockedToday: false };
+    }
+
+    // 1. Check total visits for this customer at this merchant
+    const { count: visitsCount } = await supabase
+      .from("visits")
+      .select("id", { count: "exact", head: true })
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customer.id)
+      .in("status", ["APPROVED", "PENDING"]);
+
+    // 2. Check if a visit was recorded today in IST
+    const todayIST = await getVisitDateIST();
+    const { data: todayVisit } = await supabase
+      .from("visits")
+      .select("id, status")
+      .eq("merchant_id", merchantId)
+      .eq("customer_id", customer.id)
+      .eq("visit_date_ist", todayIST)
+      .maybeSingle();
+
+    return {
+      customer,
+      visitsCount: visitsCount || 0,
+      isLockedToday: Boolean(todayVisit),
+      todayVisitStatus: todayVisit?.status || null,
+    };
+  } catch (err: any) {
+    return { customer: null, visitsCount: 0, isLockedToday: false, error: err.message };
+  }
+}

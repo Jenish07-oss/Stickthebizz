@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
@@ -8,8 +9,7 @@ import RewardTicket from "@/components/RewardTicket";
 import ReviewModal from "@/components/ReviewModal";
 import ConfettiEffect from "@/components/ConfettiEffect";
 import PhoneFrame from "@/components/PhoneFrame";
-import { useStore } from "@/context/StoreContext";
-import { submitScan as submitScanAction } from "@/app/actions/scan";
+import { submitScan as submitScanAction, getCustomerMerchantStatus } from "@/app/actions/scan";
 import { playScanChime } from "@/lib/audio";
 import {
   Sparkles,
@@ -22,6 +22,10 @@ import {
   Lock,
   Clock,
   CheckCircle2,
+  Phone,
+  User,
+  LogOut,
+  AlertCircle,
 } from "lucide-react";
 
 export interface InitialMerchantData {
@@ -31,6 +35,7 @@ export interface InitialMerchantData {
   minSpend: number;
   visitsRequired: number;
   rewardName: string;
+  validityDays?: number;
 }
 
 export default function CustomerView({
@@ -38,116 +43,184 @@ export default function CustomerView({
 }: {
   initialMerchant?: InitialMerchantData;
 }) {
-  const {
-    rule: storeRule,
-    customer,
-    loginCustomer,
-    submitScan: localSubmitScan,
-    markRewardGiven,
-    getCountdownToMidnight,
-  } = useStore();
+  const merchant = initialMerchant || {
+    id: "default-store",
+    slug: "kesar-chai",
+    name: "Kesar Chai Corner",
+    minSpend: 100,
+    visitsRequired: 10,
+    rewardName: "Free Masala Chai",
+    validityDays: 30,
+  };
 
-  // Use real initialMerchant if passed from Server Component, else fallback to storeRule
-  const rule = initialMerchant
-    ? {
-        slug: initialMerchant.slug,
-        name: initialMerchant.name,
-        minSpend: initialMerchant.minSpend,
-        visitsRequired: initialMerchant.visitsRequired,
-        validityDays: storeRule.validityDays || 40,
-        rewardName: initialMerchant.rewardName,
-      }
-    : storeRule;
+  const visitsRequired = Number(merchant.visitsRequired) || 10;
+  const validityDays = Number(merchant.validityDays) || 30;
 
-  const [otpModalOpen, setOtpModalOpen] = useState(!customer.isLoggedIn);
-  const [phoneNumber, setPhoneNumber] = useState(customer.phone || "9820012345");
-  const [consentChecked, setConsentChecked] = useState(customer.hasConsent);
-  const [otpCode, setOtpCode] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
-  const [scanFeedback, setScanFeedback] = useState<string | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [isServerLocked, setIsServerLocked] = useState(false);
-  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  // Real Database State
+  const [customer, setCustomer] = useState<{ id?: string; phone: string; fullName?: string | null } | null>(null);
+  const [visitsCount, setVisitsCount] = useState<number>(0);
+  const [isLockedToday, setIsLockedToday] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  // Form Inputs for New / Unauthenticated Customer
+  const [mobileInput, setMobileInput] = useState("");
+  const [nameInput, setNameInput] = useState("");
+  const [consentChecked, setConsentChecked] = useState(true);
+
+  // UI state
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
-
-  // Live countdown ticker to 12:00 AM IST
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [countdownStr, setCountdownStr] = useState("");
+  const [changeNumberModal, setChangeNumberModal] = useState(false);
 
-  const safeVisits = Math.min(customer.visits, rule.visitsRequired);
-  const isGoalCompleted = customer.visits >= rule.visitsRequired;
-  const isLockedOut = customer.lockedUntilMidnight || isServerLocked;
-
+  // 1. Calculate Countdown to 12:00:00 AM IST
   useEffect(() => {
-    const updateCountdown = () => {
-      const { formatted } = getCountdownToMidnight();
-      setCountdownStr(formatted);
+    const calculateCountdown = () => {
+      const now = new Date();
+      // IST is UTC + 5h30m
+      const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+      const istTime = new Date(utc + 5.5 * 3600000);
+
+      const istMidnight = new Date(istTime);
+      istMidnight.setHours(24, 0, 0, 0);
+
+      const diffMs = istMidnight.getTime() - istTime.getTime();
+      if (diffMs <= 0) {
+        setCountdownStr("Unlocking now...");
+        setIsLockedToday(false);
+        return;
+      }
+
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      setCountdownStr(
+        `${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`
+      );
     };
 
-    updateCountdown();
-    const interval = setInterval(updateCountdown, 1000);
+    calculateCountdown();
+    const interval = setInterval(calculateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [getCountdownToMidnight]);
+  }, []);
 
-  // Trigger confetti if reward is ready and not yet redeemed
+  // 2. Load Real Customer Session from LocalStorage or Supabase
   useEffect(() => {
-    if (isGoalCompleted && !customer.isRedeemed) {
-      setShowConfetti(true);
+    async function loadCustomerState() {
+      try {
+        let savedPhone = "";
+        if (typeof window !== "undefined") {
+          savedPhone = localStorage.getItem("stb_customer_phone") || "";
+          const savedName = localStorage.getItem("stb_customer_name") || "";
+          if (savedPhone) {
+            setCustomer({ phone: savedPhone, fullName: savedName });
+          }
+        }
+
+        if (merchant.id) {
+          const res = await getCustomerMerchantStatus(merchant.id, savedPhone);
+          if (res.customer) {
+            setCustomer(res.customer);
+            setVisitsCount(res.visitsCount || 0);
+            setIsLockedToday(res.isLockedToday);
+            if (typeof window !== "undefined" && res.customer.phone) {
+              localStorage.setItem("stb_customer_phone", res.customer.phone);
+              if (res.customer.full_name) {
+                localStorage.setItem("stb_customer_name", res.customer.full_name);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load customer state:", err);
+      } finally {
+        setLoadingStatus(false);
+      }
     }
-  }, [isGoalCompleted, customer.isRedeemed]);
 
-  // Simulated OTP handling
-  const handleRequestOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phoneNumber || !consentChecked) return;
-    setOtpSent(true);
-    setOtpCode("8492");
-  };
+    loadCustomerState();
+  }, [merchant.id]);
 
-  const handleVerifyOtp = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otpCode.length === 4) {
-      loginCustomer(phoneNumber);
-      setOtpModalOpen(false);
+  const safeVisits = Math.min(visitsCount, visitsRequired);
+  const isGoalCompleted = visitsCount >= visitsRequired;
+
+  // 3. Claim / Punch Stamp (Connected directly to Supabase submitScan)
+  const handleClaimStamp = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setErrorMessage(null);
+    setFeedbackMessage(null);
+
+    const targetPhone = customer?.phone || mobileInput.replace(/\D/g, "");
+    const targetName = customer?.fullName || nameInput.trim();
+
+    if (!targetPhone || targetPhone.length < 10) {
+      setErrorMessage("Please enter a valid 10-digit mobile number.");
+      return;
     }
-  };
 
-  // Perform Stamp Scan (Wired to Server Action when real merchant ID is present)
-  const handleScanCounterQR = async () => {
-    if (isScanning) return;
-    setIsScanning(true);
+    if (!consentChecked && !customer) {
+      setErrorMessage("Please check the consent box to create your loyalty pass.");
+      return;
+    }
+
+    if (!merchant.id) {
+      setErrorMessage("Store configuration missing. Please reload.");
+      return;
+    }
+
+    setIsSubmitting(true);
     playScanChime();
-    setScanFeedback("Scanning counter standee QR...");
-
-    // 900ms laser sweep animation duration
-    await new Promise((resolve) => setTimeout(resolve, 900));
 
     try {
-      if (initialMerchant?.id && !initialMerchant.id.startsWith("demo-")) {
-        const res = await submitScanAction(phoneNumber, initialMerchant.id);
-        setIsScanning(false);
-        setScanFeedback(res.message);
+      const res = await submitScanAction(targetPhone, merchant.id, merchant.minSpend, targetName);
 
-        if (res.locked) {
-          setIsServerLocked(true);
-          return;
+      if (res.locked) {
+        setIsLockedToday(true);
+        setFeedbackMessage(res.message);
+        return;
+      }
+
+      if (res.success) {
+        const nextVisits = visitsCount + 1;
+        setVisitsCount(nextVisits);
+        setIsLockedToday(true);
+        setCustomer({ phone: targetPhone, fullName: targetName });
+
+        if (typeof window !== "undefined") {
+          localStorage.setItem("stb_customer_phone", targetPhone);
+          if (targetName) localStorage.setItem("stb_customer_name", targetName);
         }
 
-        if (res.success) {
-          localSubmitScan(rule.minSpend);
+        setFeedbackMessage("✓ Today's stamp punched! Cashier counter notified.");
+
+        if (nextVisits >= visitsRequired) {
+          setShowConfetti(true);
         }
       } else {
-        // In-browser client simulation fallback
-        setTimeout(() => {
-          setIsScanning(false);
-          const result = localSubmitScan(rule.minSpend);
-          setScanFeedback(result.message);
-        }, 600);
+        setErrorMessage(res.message || "Failed to verify stamp.");
       }
-    } catch {
-      setIsScanning(false);
-      const result = localSubmitScan(rule.minSpend);
-      setScanFeedback(result.message);
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred while claiming stamp.");
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleSwitchNumber = () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("stb_customer_phone");
+      localStorage.removeItem("stb_customer_name");
+    }
+    setCustomer(null);
+    setVisitsCount(0);
+    setIsLockedToday(false);
+    setMobileInput("");
+    setNameInput("");
+    setChangeNumberModal(false);
   };
 
   return (
@@ -159,9 +232,9 @@ export default function CustomerView({
         <div className="mx-auto w-full max-w-[440px]">
           {/* Top Label */}
           <div className="mb-4 text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
               <Store className="h-3.5 w-3.5 text-primary" />
-              {rule.name} Loyalty Pass
+              {merchant.name} Loyalty Pass
             </span>
           </div>
 
@@ -170,7 +243,7 @@ export default function CustomerView({
             {/* Header Strip inside phone */}
             <div className="mb-3 flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
-                Customer View
+                Official Digital Pass
               </span>
 
               <button
@@ -179,21 +252,21 @@ export default function CustomerView({
                 className="inline-flex min-h-[36px] items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-ink/75 border border-border transition hover:bg-sand"
               >
                 <Star className="h-3 w-3 fill-warning text-warning" />
-                <span>{customer.hasReviewed ? "Rated 5★" : "Rate"}</span>
+                <span>Rate Store</span>
               </button>
             </div>
 
             {/* STAMP CARD CONTAINER */}
-            <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm pb-10">
+            <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm pb-8">
               {/* Shop Header & Rule Badge */}
               <div className="border-b border-border/70 pb-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <h1 className="font-display text-xl font-extrabold tracking-tight text-secondary">
-                      {rule.name}
+                      {merchant.name}
                     </h1>
                     <p className="text-[11px] text-ink/65">
-                      Digital Counter Loyalty Card
+                      Counter Streak Loyalty Card
                     </p>
                   </div>
                   <span
@@ -210,26 +283,26 @@ export default function CustomerView({
                 {/* Rule Pills */}
                 <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-semibold">
                   <span className="rounded-md bg-sand/70 px-2 py-0.5 text-ink/80">
-                    Bill ₹{rule.minSpend}+
+                    Min Bill ₹{merchant.minSpend}+
                   </span>
                   <span className="rounded-md bg-sand/70 px-2 py-0.5 text-ink/80">
-                    {rule.visitsRequired} visits in {rule.validityDays}d
+                    {visitsRequired} visits in {validityDays}d
                   </span>
                 </div>
               </div>
 
-              {/* Visit Progress & Cycle Days (Capped at visitsRequired) */}
+              {/* Visit Progress Bar */}
               <div className="mt-4">
                 <div className="flex items-center justify-between text-xs font-bold">
                   <span className="font-display text-base text-secondary flex items-center gap-1.5">
-                    {safeVisits} of {rule.visitsRequired} visits
+                    {safeVisits} of {visitsRequired} visits
                     {isGoalCompleted && (
                       <CheckCircle2 className="h-4 w-4 text-success inline" />
                     )}
                   </span>
                   <span className="flex items-center gap-1 font-mono text-[11px] text-ink/60">
                     <Calendar className="h-3 w-3" />
-                    Day 23/{rule.validityDays}
+                    Valid {validityDays} Days
                   </span>
                 </div>
 
@@ -238,7 +311,7 @@ export default function CustomerView({
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-500"
                     style={{
-                      width: `${Math.min(100, (safeVisits / rule.visitsRequired) * 100)}%`,
+                      width: `${Math.min(100, (safeVisits / visitsRequired) * 100)}%`,
                     }}
                   />
                 </div>
@@ -247,9 +320,9 @@ export default function CustomerView({
               {/* STAMP GRID COMPONENT */}
               <div className="mt-4">
                 <StampGrid
-                  totalVisits={rule.visitsRequired}
+                  totalVisits={visitsRequired}
                   completedVisits={safeVisits}
-                  rewardName={rule.rewardName}
+                  rewardName={merchant.rewardName}
                 />
               </div>
 
@@ -258,196 +331,213 @@ export default function CustomerView({
                 <div className="mt-5 animate-stamp-pop">
                   <RewardTicket
                     ticket={{
-                      code: customer.activeRewardCode || "STB-7Q4K-29",
-                      pin: customer.redemptionPin || "8492",
-                      rewardName: rule.rewardName,
-                      expiryDate: "Valid for 14 days",
-                      isRedeemed: customer.isRedeemed,
+                      code: `STB-${targetMerchantCode(merchant.slug)}`,
+                      pin: "8492",
+                      rewardName: merchant.rewardName,
+                      expiryDate: `Valid for 14 days`,
+                      isRedeemed: false,
                     }}
                     onRedeem={() => {
-                      markRewardGiven(customer.phone);
-                      setScanFeedback("🎉 Reward voucher redeemed! Enjoy your free treat!");
+                      setFeedbackMessage("Show your 4-digit PIN above to the cashier to claim your treat!");
                     }}
                   />
                 </div>
               )}
 
-              {/* ANTI-FRAUD SCAN BUTTON OR ACTIVE COUNTDOWN */}
+              {/* USER STATUS / ACTION SECTION */}
               <div className="mt-5">
-                {isGoalCompleted && !customer.isRedeemed ? (
-                  <div className="rounded-2xl border border-success/40 bg-success/10 p-3.5 text-center">
-                    <p className="text-xs font-bold text-success flex items-center justify-center gap-1.5">
-                      <Sparkles className="h-4 w-4 text-success" />
-                      Goal reached! Show your 4-digit PIN above to cashier.
-                    </p>
-                  </div>
-                ) : isLockedOut ? (
-                  <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3.5 text-center">
-                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
-                      <Lock className="h-4 w-4 text-warning" />
-                      <span>Today&apos;s visit verified!</span>
+                {customer ? (
+                  // Identified Customer View
+                  <div>
+                    <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/50 px-3 py-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <User className="h-3.5 w-3.5 text-secondary" />
+                        <span className="font-bold text-secondary">
+                          {customer.fullName || `+91 ${customer.phone}`}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setChangeNumberModal(true)}
+                        className="text-[11px] font-semibold text-primary hover:underline"
+                      >
+                        Change
+                      </button>
                     </div>
-                    <p className="mt-1 text-[11px] text-ink/75">
-                      Next stamp unlocks at <strong>12:00 AM IST</strong>
-                    </p>
-                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
-                      <Clock className="h-3 w-3 text-primary animate-pulse" />
-                      <span>{countdownStr || "Unlocks at midnight"}</span>
-                    </div>
-                    <button
-                      disabled
-                      className="mt-2.5 flex min-h-[48px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-xs font-bold text-ink/40"
-                    >
-                      Counter Stamp Locked
-                    </button>
+
+                    {isLockedToday ? (
+                      <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
+                          <Lock className="h-4 w-4 text-warning" />
+                          <span>Today&apos;s visit verified!</span>
+                        </div>
+                        <p className="mt-1 text-[11px] text-ink/75">
+                          Next stamp unlocks at <strong>12:00 AM IST</strong>
+                        </p>
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
+                          <Clock className="h-3 w-3 text-primary animate-pulse" />
+                          <span>{countdownStr || "Unlocks at midnight"}</span>
+                        </div>
+                        <button
+                          disabled
+                          className="mt-3 flex min-h-[46px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-xs font-bold text-ink/40"
+                        >
+                          Counter Stamp Claimed Today
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled={isSubmitting}
+                        onClick={() => handleClaimStamp()}
+                        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2 disabled:opacity-70"
+                      >
+                        <QrCode className="h-4 w-4" />
+                        <span>{isSubmitting ? "Verifying Scan..." : "Punch Today's Stamp (+1 Visit)"}</span>
+                      </button>
+                    )}
                   </div>
                 ) : (
-                  <button
-                    type="button"
-                    disabled={isScanning}
-                    onClick={handleScanCounterQR}
-                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2 disabled:opacity-70"
-                  >
-                    <QrCode className="h-4 w-4" />
-                    <span>{isScanning ? "Verifying Scan..." : "Scan Counter QR (+1 Stamp)"}</span>
-                  </button>
+                  // First-Time Visitor Check-In Form (Seamless, No Fake OTP Modal!)
+                  <form onSubmit={handleClaimStamp} className="space-y-3 rounded-2xl bg-sand/30 p-4 border border-border">
+                    <div className="text-center">
+                      <p className="text-xs font-extrabold text-secondary">
+                        Claim Your Visit Stamp
+                      </p>
+                      <p className="text-[11px] text-ink/65 mt-0.5">
+                        Enter mobile number to save your progress. Zero app download.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink/70">
+                        10-Digit Mobile Number
+                      </label>
+                      <div className="relative mt-1">
+                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-bold text-ink/50">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          required
+                          maxLength={10}
+                          value={mobileInput}
+                          onChange={(e) => setMobileInput(e.target.value.replace(/\D/g, ""))}
+                          placeholder="98765 43210"
+                          className="w-full rounded-xl border border-border bg-white py-2.5 pl-12 pr-3 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink/70">
+                        Your Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        placeholder="e.g. Rahul Patel"
+                        className="mt-1 w-full rounded-xl border border-border bg-white py-2.5 px-3 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex items-start gap-2 pt-1">
+                      <input
+                        id="consent-check"
+                        type="checkbox"
+                        checked={consentChecked}
+                        onChange={(e) => setConsentChecked(e.target.checked)}
+                        className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
+                      />
+                      <label htmlFor="consent-check" className="text-[10px] leading-relaxed text-ink/70">
+                        I agree to save my loyalty visits with <strong>{merchant.name}</strong> under the DPDP Act 2023.
+                      </label>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting || mobileInput.length < 10 || !consentChecked}
+                      className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-secondary disabled:opacity-50"
+                    >
+                      <Sparkles className="h-4 w-4" />
+                      <span>{isSubmitting ? "Verifying..." : "Punch Stamp & Save Pass"}</span>
+                    </button>
+                  </form>
                 )}
 
-                {/* Scan Feedback Message */}
-                {scanFeedback && (
-                  <div className="mt-2.5 rounded-xl bg-sand p-2.5 text-center text-xs font-bold text-secondary animate-pulse">
-                    {scanFeedback}
+                {/* Feedback & Error Alerts */}
+                {feedbackMessage && (
+                  <div className="mt-3 rounded-xl bg-sand p-3 text-center text-xs font-bold text-secondary border border-border">
+                    {feedbackMessage}
+                  </div>
+                )}
+                {errorMessage && (
+                  <div className="mt-3 rounded-xl bg-primary/10 p-3 text-center text-xs font-bold text-primary border border-primary/20 flex items-center justify-center gap-1.5">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    <span>{errorMessage}</span>
                   </div>
                 )}
               </div>
 
-              {/* Next reward incentive preview */}
+              {/* Goal Reward Preview */}
               <div className="mt-4 flex items-center justify-between rounded-xl bg-sand/50 p-2.5 text-[11px] text-ink/75">
                 <div className="flex items-center gap-1.5">
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                   <span className="font-semibold">Goal Reward:</span>
                 </div>
                 <span className="font-display font-extrabold text-secondary">
-                  {rule.rewardName}
+                  {merchant.rewardName}
                 </span>
               </div>
             </div>
 
             {/* Privacy notice inside phone */}
-            <div className="mt-3 flex items-center justify-center gap-1 text-center text-[10px] text-ink/50 pb-4">
+            <div className="mt-3 flex items-center justify-center gap-1 text-center text-[10px] text-ink/50 pb-2">
               <ShieldCheck className="h-3 w-3 text-success" />
-              <span>DPDP Act 2023 Compliant • No spam</span>
+              <span>DPDP Act 2023 Compliant • Anti-Fraud Protection</span>
             </div>
           </PhoneFrame>
 
-          {/* Change Number Button */}
-          <div className="mt-3 text-center">
-            <button
-              type="button"
-              onClick={() => setOtpModalOpen(true)}
-              className="text-xs font-semibold text-secondary hover:underline"
+          {/* Quick Links at Bottom */}
+          <div className="mt-4 text-center space-y-2">
+            <Link
+              href="/customer/dashboard"
+              className="inline-flex items-center gap-1 text-xs font-semibold text-secondary hover:underline"
             >
-              Logged in as {customer.phone} (Change Mobile Number)
-            </button>
+              <span>View all my digital passes</span>
+              <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
         </div>
       </main>
 
-      {/* PASSWORDLESS ONBOARDING MODAL (SIMULATED) */}
-      {otpModalOpen && (
+      {/* Switch Number Confirmation Modal */}
+      {changeNumberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float">
-            <div className="text-center">
-              <span className="grid mx-auto h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <Sparkles className="h-6 w-6" />
-              </span>
-              <h2 className="mt-3 font-display text-xl font-extrabold text-secondary">
-                Your Digital Stamp Card
-              </h2>
-              <p className="mt-1 text-xs text-ink/65">
-                Zero app downloads. Enter your mobile number to track rewards at {rule.name}.
-              </p>
+          <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float text-center">
+            <h3 className="font-display text-lg font-extrabold text-secondary">
+              Switch Mobile Number?
+            </h3>
+            <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+              This will log you out of this pass on this device. You can log back in anytime with your mobile number.
+            </p>
+            <div className="mt-5 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setChangeNumberModal(false)}
+                className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSwitchNumber}
+                className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90"
+              >
+                Yes, Switch
+              </button>
             </div>
-
-            {!otpSent ? (
-              <form onSubmit={handleRequestOtp} className="mt-5 space-y-4">
-                <div>
-                  <label
-                    htmlFor="mobile"
-                    className="block text-xs font-bold uppercase tracking-wider text-ink/70"
-                  >
-                    10-Digit Mobile Number
-                  </label>
-                  <input
-                    id="mobile"
-                    type="tel"
-                    required
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="e.g. 9820012345"
-                    className="mt-1.5 w-full rounded-xl border border-border p-3 text-sm font-semibold text-ink placeholder:text-ink/40 focus:border-primary focus:outline-none"
-                  />
-                </div>
-
-                {/* Mandatory Consent Checkbox */}
-                <div className="flex items-start gap-2.5 rounded-xl bg-sand/40 p-3">
-                  <input
-                    id="consent"
-                    type="checkbox"
-                    required
-                    checked={consentChecked}
-                    onChange={(e) => setConsentChecked(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="consent" className="text-[11px] leading-relaxed text-ink/75">
-                    I agree that <strong>{rule.name}</strong> can view my visit count. My data is stored solely for this loyalty card under the DPDP Act.
-                  </label>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={!consentChecked || !phoneNumber}
-                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-secondary disabled:opacity-50 shadow-sm"
-                >
-                  <span>Continue with OTP</span>
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="mt-5 space-y-4">
-                <div className="rounded-xl bg-sand/60 p-3 text-center text-xs text-ink/75">
-                  Simulation OTP sent to <strong className="font-mono">{phoneNumber}</strong>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="otp"
-                    className="block text-center text-xs font-bold uppercase tracking-wider text-ink/70"
-                  >
-                    Enter 4-Digit OTP
-                  </label>
-                  <input
-                    id="otp"
-                    type="text"
-                    maxLength={4}
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value)}
-                    className="mt-2 w-full text-center font-mono text-2xl font-extrabold tracking-widest rounded-xl border border-border p-3 text-secondary focus:border-primary focus:outline-none"
-                  />
-                  <p className="mt-1 text-center font-mono text-[11px] text-ink/50">
-                    Auto-filled: 8492 (Demo Simulator)
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={otpCode.length !== 4}
-                  className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-secondary text-sm font-bold text-white transition hover:bg-primary shadow-sm"
-                >
-                  Verify &amp; Open Card
-                </button>
-              </form>
-            )}
           </div>
         </div>
       )}
@@ -461,4 +551,9 @@ export default function CustomerView({
       <Footer />
     </div>
   );
+}
+
+function targetMerchantCode(slug: string) {
+  const clean = slug.replace(/[^a-z0-9]/gi, "").toUpperCase();
+  return clean.slice(0, 4) || "CARD";
 }

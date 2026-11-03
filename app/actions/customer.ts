@@ -43,21 +43,92 @@ export interface CustomerWalletData {
 }
 
 /**
- * Fetches the aggregated multi-store digital wallet for an authenticated customer.
+ * Ensures or updates a customer profile row in the database.
  */
-export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
+export async function syncCustomerAccountAction(params: {
+  fullName?: string;
+  phone?: string;
+  email?: string;
+}) {
+  try {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    const cleanPhone = (params.phone || user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
+    const emailToUse = (params.email || user?.email || "").trim().toLowerCase();
+    const nameToUse = params.fullName || user?.user_metadata?.full_name || "Valued Regular";
+
+    if (!cleanPhone && !emailToUse) {
+      return { success: false, message: "Phone or email required" };
+    }
+
+    // Check if customer exists by phone or email
+    let existingQuery = supabase.from("customers").select("*");
+    if (cleanPhone) {
+      existingQuery = existingQuery.eq("phone", cleanPhone);
+    } else if (emailToUse) {
+      existingQuery = existingQuery.eq("email", emailToUse);
+    }
+
+    const { data: existing } = await existingQuery.maybeSingle();
+
+    if (existing) {
+      const { data: updated, error } = await supabase
+        .from("customers")
+        .update({
+          auth_id: user?.id || existing.auth_id,
+          full_name: nameToUse || existing.full_name,
+          email: emailToUse || existing.email,
+          ...(cleanPhone ? { phone: cleanPhone } : {}),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, customer: updated };
+    } else {
+      if (!cleanPhone) {
+        return { success: false, message: "A 10-digit mobile number is required to create a pass." };
+      }
+      const { data: inserted, error } = await supabase
+        .from("customers")
+        .insert({
+          auth_id: user?.id || null,
+          phone: cleanPhone,
+          email: emailToUse || null,
+          full_name: nameToUse,
+        })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, customer: inserted };
+    }
+  } catch (err: any) {
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+/**
+ * Fetches the aggregated multi-store digital wallet for an authenticated customer.
+ * 100% real Supabase data — zero mock visits or fake counters.
+ */
+export async function getCustomerWalletAction(phoneParam?: string): Promise<CustomerWalletData> {
   const supabase = createClient();
 
-  // 1. Authenticate user
+  // 1. Authenticate user session
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const userPhone = user?.phone || user?.user_metadata?.phone;
+  const userPhone = (phoneParam || user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
   const userEmail = user?.email;
   const userName = user?.user_metadata?.full_name || null;
 
-  // 2. Query customer profile
+  // 2. Query real customer profile
   let customer: any = null;
   if (userPhone) {
     const cleanPhone = userPhone.replace(/\D/g, "");
@@ -80,27 +151,17 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     if (c) customer = c;
   }
 
-  // 3. Fallback: if no profile found yet, create or use phone
-  if (!customer && (userPhone || userEmail)) {
-    const phoneToUse = userPhone ? userPhone.replace(/\D/g, "") : "9820012345";
-    const { data: newC } = await supabase
+  if (!customer && user?.id) {
+    const { data: c } = await supabase
       .from("customers")
-      .upsert(
-        {
-          phone: phoneToUse,
-          email: userEmail || null,
-          full_name: userName || "Retail Regular",
-          auth_id: user?.id || null,
-        },
-        { onConflict: "phone" }
-      )
-      .select()
-      .single();
+      .select("id, phone, full_name, email")
+      .eq("auth_id", user.id)
+      .maybeSingle();
 
-    customer = newC;
+    if (c) customer = c;
   }
 
-  // If still no customer record, fetch default merchants as starter passes
+  // 3. Fetch real merchants available on the platform
   const { data: allMerchants } = await supabase
     .from("merchants")
     .select("*")
@@ -109,63 +170,41 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
   const merchantsList = allMerchants || [];
   const todayIST = await getVisitDateIST();
 
+  // If customer is not authenticated or has no profile yet, return clean 0-visit passes
   if (!customer) {
-    // Generate default preview passes
-    const defaultPasses: CustomerStorePass[] = merchantsList.slice(0, 3).map((m: any, idx: number) => {
-      const visits = idx === 0 ? 7 : idx === 1 ? 4 : 2;
-      const displayVisits = Math.min(visits, m.visits_required);
-      const isReady = visits >= m.visits_required;
-      return {
-        merchantId: m.id,
-        merchantName: m.name,
-        merchantSlug: m.slug,
-        category: m.category || "Cafe / Chai",
-        minSpend: m.min_spend,
-        visitsRequired: m.visits_required,
-        rewardName: m.reward_name,
-        validityDays: m.validity_days || 45,
-        visitsCount: visits,
-        displayVisits,
-        progressPercent: Math.round((displayVisits / m.visits_required) * 100),
-        status: isReady ? "REWARD READY" : "COLLECTING",
-        isLockedToday: false,
-        daysRemaining: 18,
-        lastVisitDate: todayIST,
-      };
-    });
+    const emptyPasses: CustomerStorePass[] = merchantsList.map((m: any) => ({
+      merchantId: m.id,
+      merchantName: m.name,
+      merchantSlug: m.slug,
+      category: m.category || "Retail",
+      minSpend: Number(m.min_spend) || 100,
+      visitsRequired: Number(m.visits_required) || 10,
+      rewardName: m.reward_name,
+      validityDays: Number(m.validity_days) || 45,
+      visitsCount: 0,
+      displayVisits: 0,
+      progressPercent: 0,
+      status: "COLLECTING",
+      isLockedToday: false,
+      daysRemaining: Number(m.validity_days) || 45,
+      lastVisitDate: null,
+    }));
 
     return {
-      customer: {
-        id: "demo-cust",
-        phone: "+91 98200 12345",
-        fullName: "Retail Regular",
-        email: null,
-      },
-      passes: defaultPasses,
-      history: [
-        {
-          id: "hist-1",
-          merchantName: "Kesar Chai Corner",
-          merchantSlug: "kesar-chai",
-          visitDate: todayIST,
-          billAmount: 120,
-          status: "Approved",
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: "hist-2",
-          merchantName: "Patel Kirana Superstore",
-          merchantSlug: "patel-kirana",
-          visitDate: todayIST,
-          billAmount: 340,
-          status: "Approved",
-          createdAt: new Date().toISOString(),
-        },
-      ],
+      customer: user
+        ? {
+            id: user.id,
+            phone: userPhone || "",
+            fullName: userName || "Retail Regular",
+            email: userEmail || null,
+          }
+        : null,
+      passes: emptyPasses,
+      history: [],
     };
   }
 
-  // 4. Query all visits for this customer
+  // 4. Fetch real customer visits from Supabase
   const { data: visits } = await supabase
     .from("visits")
     .select("id, merchant_id, visit_date_ist, bill_amount, status, created_at, merchants (*)")
@@ -174,7 +213,7 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
 
   const visitList = visits || [];
 
-  // Group visits by merchant
+  // Group real visits by merchant
   const merchantVisitsMap: Record<string, any[]> = {};
   visitList.forEach((v) => {
     if (!merchantVisitsMap[v.merchant_id]) {
@@ -183,19 +222,15 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     merchantVisitsMap[v.merchant_id].push(v);
   });
 
-  // Build wallet passes for merchants visited, plus ensure seeded merchants are discoverable
-  const passes: CustomerStorePass[] = [];
-
-  merchantsList.forEach((m: any) => {
+  // Build real wallet passes with accurate visit counts
+  const passes: CustomerStorePass[] = merchantsList.map((m: any) => {
     const merchantVisits = merchantVisitsMap[m.id] || [];
     const approvedVisits = merchantVisits.filter(
       (v) => v.status === "APPROVED" || v.status === "REDEEMED"
     );
 
-    // Initial starter visits for Kesar Chai if empty for good UX
-    const visitsCount =
-      approvedVisits.length > 0 ? approvedVisits.length : m.slug === "kesar-chai" ? 7 : 0;
-
+    // Exact count of verified visits from database
+    const visitsCount = approvedVisits.length;
     const displayVisits = Math.min(visitsCount, m.visits_required);
     const hasScannedToday = merchantVisits.some(
       (v) => v.visit_date_ist === todayIST && v.status !== "REJECTED"
@@ -208,26 +243,29 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
       status = "LOCKED UNTIL 12:00 AM IST";
     }
 
-    passes.push({
+    // Calculate days remaining based on store validity
+    const daysRemaining = Number(m.validity_days) || 45;
+
+    return {
       merchantId: m.id,
       merchantName: m.name,
       merchantSlug: m.slug,
       category: m.category || "Retail",
-      minSpend: m.min_spend,
-      visitsRequired: m.visits_required,
+      minSpend: Number(m.min_spend) || 100,
+      visitsRequired: Number(m.visits_required) || 10,
       rewardName: m.reward_name,
-      validityDays: m.validity_days || 45,
+      validityDays: daysRemaining,
       visitsCount,
       displayVisits,
       progressPercent: Math.round((displayVisits / m.visits_required) * 100),
       status,
       isLockedToday: hasScannedToday,
-      daysRemaining: 18,
+      daysRemaining,
       lastVisitDate: merchantVisits[0]?.visit_date_ist || null,
-    });
+    };
   });
 
-  // History list
+  // History list from real database visits
   const history: CustomerVisitRecord[] = visitList.map((v) => {
     const merchantObj: any = Array.isArray(v.merchants) ? v.merchants[0] : v.merchants;
     return {

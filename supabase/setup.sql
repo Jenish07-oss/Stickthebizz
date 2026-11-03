@@ -23,6 +23,7 @@ ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES a
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Cafe / Chai';
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS validity_days INT DEFAULT 45;
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS redemption_pin TEXT DEFAULT '8492';
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS qr_token TEXT DEFAULT 'active';
 
 -- 2. CUSTOMERS TABLE
 CREATE TABLE IF NOT EXISTS public.customers (

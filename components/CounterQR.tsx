@@ -13,6 +13,10 @@ interface CounterQRProps {
   visitsNeeded?: number;
   visitsRequired?: number;
   rewardName?: string;
+  validityDays?: number;
+  qrToken?: string;
+  onRotateQr?: () => void;
+  isRotating?: boolean;
 }
 
 export default function CounterQR({
@@ -23,6 +27,10 @@ export default function CounterQR({
   visitsNeeded,
   visitsRequired,
   rewardName = "Free Masala Chai",
+  validityDays = 30,
+  qrToken,
+  onRotateQr,
+  isRotating = false,
 }: CounterQRProps) {
   const qrRef = useRef<HTMLDivElement>(null);
   const displayName = shopName || name || "Kesar Chai Corner";
@@ -37,7 +45,9 @@ export default function CounterQR({
     }
   }, []);
 
-  const scanUrl = `${baseUrl}/s/${slug}`;
+  // Formulate scan URL with monthly cycle / token parameter
+  const tokenQuery = qrToken ? `?cycle=${encodeURIComponent(qrToken)}` : "";
+  const scanUrl = `${baseUrl}/s/${slug}${tokenQuery}`;
 
   const handleCopyLink = () => {
     if (typeof navigator !== "undefined") {
@@ -103,10 +113,13 @@ export default function CounterQR({
             </p>
           </div>
 
-          {/* Anti-Fraud Notice */}
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-medium text-ink/50">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" />
-            DPDP Safe • 12H Anti-Fraud Guard
+          {/* Anti-Fraud & Monthly Expiry Notice */}
+          <div className="mt-3 flex flex-col items-center gap-1 text-[11px] font-medium text-ink/60">
+            <div className="flex items-center gap-1.5 font-bold text-secondary">
+              <ShieldCheck className="h-3.5 w-3.5 text-success" />
+              <span>Valid for {validityDays} Days • Active Standee</span>
+            </div>
+            <span className="text-[10px] text-ink/40">1-Scan Daily Limit • DPDP Safe</span>
           </div>
         </div>
 
@@ -131,8 +144,20 @@ export default function CounterQR({
             Print Counter Acrylic Stand
           </button>
 
+          {onRotateQr && (
+            <button
+              type="button"
+              disabled={isRotating}
+              onClick={onRotateQr}
+              className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-primary bg-primary/10 px-5 text-sm font-bold text-primary transition hover:bg-primary hover:text-white disabled:opacity-50"
+            >
+              <QrCode className="h-4 w-4" />
+              {isRotating ? "Rotating QR..." : "Rotate / Refresh Monthly QR"}
+            </button>
+          )}
+
           <Link
-            href={`/s/${slug}`}
+            href={`/s/${slug}${tokenQuery}`}
             target="_self"
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
           >
@@ -152,7 +177,7 @@ export default function CounterQR({
 
         {/* Scan URL Indicator */}
         <div className="mt-1 flex items-center gap-2 text-xs font-mono text-ink/60 bg-sand/60 px-3 py-1.5 rounded-xl border border-border">
-          <span className="font-bold text-secondary">QR Destination:</span>
+          <span className="font-bold text-secondary">Live QR Link:</span>
           <span className="text-primary truncate max-w-[280px] sm:max-w-md">{scanUrl}</span>
         </div>
       </div>

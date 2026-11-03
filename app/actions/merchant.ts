@@ -11,6 +11,7 @@ export interface UpdateMerchantRuleInput {
   validityDays?: number;
   redemptionPin?: string;
   category?: string;
+  qrToken?: string;
 }
 
 /**
@@ -19,20 +20,75 @@ export interface UpdateMerchantRuleInput {
 export async function updateMerchantRuleAction(input: UpdateMerchantRuleInput) {
   try {
     const supabase = createClient();
-    const { data, error } = await supabase
+    const updatePayload: any = {
+      name: input.name,
+      min_spend: input.minSpend,
+      visits_required: input.visitsRequired,
+      reward_name: input.rewardName,
+      validity_days: input.validityDays || 30,
+      redemption_pin: input.redemptionPin || "8492",
+      category: input.category || "Cafe / Chai",
+    };
+
+    if (input.qrToken) {
+      updatePayload.qr_token = input.qrToken;
+    }
+
+    let { data, error } = await supabase
       .from("merchants")
-      .update({
-        name: input.name,
-        min_spend: input.minSpend,
-        visits_required: input.visitsRequired,
-        reward_name: input.rewardName,
-        validity_days: input.validityDays || 45,
-        redemption_pin: input.redemptionPin || "8492",
-        category: input.category || "Cafe / Chai",
-      })
+      .update(updatePayload)
       .eq("id", input.merchantId)
       .select()
       .single();
+
+    if (error && error.message && error.message.includes("qr_token")) {
+      delete updatePayload.qr_token;
+      const retry = await supabase
+        .from("merchants")
+        .update(updatePayload)
+        .eq("id", input.merchantId)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, merchant: data };
+  } catch (err: any) {
+    return { success: false, error: err.message || String(err) };
+  }
+}
+
+/**
+ * Rotates merchant QR code for a fresh 30-day / 1-month cycle.
+ */
+export async function rotateMerchantQrAction(merchantId: string) {
+  try {
+    const supabase = createClient();
+    const now = new Date();
+    const monthCycle = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${Math.random().toString(36).substring(2, 6)}`;
+
+    let { data, error } = await supabase
+      .from("merchants")
+      .update({
+        qr_token: monthCycle,
+        validity_days: 30,
+      })
+      .eq("id", merchantId)
+      .select()
+      .single();
+
+    if (error && error.message && error.message.includes("qr_token")) {
+      const { data: existing } = await supabase
+        .from("merchants")
+        .select("*")
+        .eq("id", merchantId)
+        .single();
+      return { success: true, merchant: { ...existing, qr_token: monthCycle } };
+    }
 
     if (error) {
       return { success: false, error: error.message };
@@ -55,14 +111,7 @@ export async function getOwnerMerchant() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      // Fallback to primary merchant for unauthenticated demo preview
-      const { data: defaultMerchant } = await supabase
-        .from("merchants")
-        .select("*")
-        .eq("slug", "kesar-chai")
-        .maybeSingle();
-
-      return { user: null, merchant: defaultMerchant };
+      return { user: null, merchant: null };
     }
 
     // Try finding merchant by owner_id
@@ -125,7 +174,7 @@ export async function registerMerchantAction(params: {
         min_spend: 100,
         visits_required: 10,
         reward_name: "Free Special Item",
-        validity_days: 45,
+        validity_days: 30,
         redemption_pin: "8492",
       })
       .select()
@@ -139,4 +188,3 @@ export async function registerMerchantAction(params: {
     return { success: false, error: err.message || String(err) };
   }
 }
-

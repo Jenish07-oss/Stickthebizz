@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import CameraQRScanner from "@/components/CameraQRScanner";
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
@@ -40,11 +41,13 @@ export default function CustomerDashboardPage() {
   const [walletData, setWalletData] = useState<CustomerWalletData | null>(null);
   const [loading, setLoading] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
     async function loadWallet() {
       try {
-        const data = await getCustomerWalletAction();
+        const localPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const data = await getCustomerWalletAction(localPhone || undefined);
         setWalletData(data);
       } catch (err) {
         console.error("Failed to load customer wallet:", err);
@@ -56,6 +59,10 @@ export default function CustomerDashboardPage() {
   }, []);
 
   const handleSignOut = async () => {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("stb_customer_phone");
+      localStorage.removeItem("stb_customer_name");
+    }
     await supabase.auth.signOut();
     router.push("/auth/customer/login");
   };
@@ -84,32 +91,34 @@ export default function CustomerDashboardPage() {
                 {walletData?.customer?.fullName || "My Digital Passes"}
               </h1>
               <p className="mt-1 text-xs sm:text-sm text-ink/70">
-                Connected Mobile:{" "}
+                Connected Mobile / Email:{" "}
                 <span className="font-mono font-bold text-secondary">
-                  {walletData?.customer?.phone || "+91 98200 12345"}
+                  {walletData?.customer?.phone ? `+91 ${walletData.customer.phone}` : (walletData?.customer?.email || "Registered Regular")}
                 </span>
               </p>
             </div>
 
             <div className="flex items-center gap-3">
-              <Link
-                href="/s/kesar-chai"
-                replace={false}
-                className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
               >
                 <QrCode className="h-4 w-4" />
-                <span>Scan At Counter</span>
-              </Link>
+                <span>📷 Scan Counter QR</span>
+              </button>
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2.5 text-xs font-bold text-ink/65 hover:text-secondary"
+                className="inline-flex min-h-[44px] items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2.5 text-xs font-bold text-ink/65 hover:text-secondary"
               >
                 <LogOut className="h-3.5 w-3.5" />
                 <span>Log Out</span>
               </button>
             </div>
           </div>
+
+          <CameraQRScanner isOpen={scannerOpen} onClose={() => setScannerOpen(false)} />
 
           {/* Active Passes Section */}
           <div className="mt-10">

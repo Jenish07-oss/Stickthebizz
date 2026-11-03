@@ -14,7 +14,7 @@ import {
   getPendingVisits,
   getMerchantLedger,
 } from "@/app/actions/scan";
-import { getOwnerMerchant, updateMerchantRuleAction } from "@/app/actions/merchant";
+import { getOwnerMerchant, updateMerchantRuleAction, rotateMerchantQrAction } from "@/app/actions/merchant";
 import { playApprovalBell, playScanChime } from "@/lib/audio";
 import {
   Store,
@@ -74,6 +74,7 @@ export default function OwnerDashboardPage() {
   const [rewardInput, setRewardInput] = useState("Free Masala Chai");
   const [validityInput, setValidityInput] = useState(45);
   const [ruleSaveMessage, setRuleSaveMessage] = useState<string | null>(null);
+  const [isRotatingQr, setIsRotatingQr] = useState(false);
 
   // Live WebSocket Queue
   const [pendingQueue, setPendingQueue] = useState<LivePendingScan[]>([]);
@@ -92,7 +93,11 @@ export default function OwnerDashboardPage() {
   useEffect(() => {
     async function init() {
       try {
-        const { merchant: m } = await getOwnerMerchant();
+        const { user, merchant: m } = await getOwnerMerchant();
+        if (!user) {
+          router.replace("/auth/owner/login");
+          return;
+        }
         if (m) {
           setMerchant(m);
           setShopNameInput(m.name);
@@ -255,6 +260,18 @@ export default function OwnerDashboardPage() {
   const handleReject = async (scanId: string) => {
     setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
     await rejectVisit(scanId);
+  };
+
+  const handleRotateQr = async () => {
+    if (!merchant?.id) return;
+    setIsRotatingQr(true);
+    const res = await rotateMerchantQrAction(merchant.id);
+    if (res.success && res.merchant) {
+      setMerchant(res.merchant);
+      setRuleSaveMessage("✓ QR Standee rotated for fresh 30-day cycle! Old QR code expired.");
+      setTimeout(() => setRuleSaveMessage(null), 3500);
+    }
+    setIsRotatingQr(false);
   };
 
   // Rule Update
@@ -534,6 +551,10 @@ export default function OwnerDashboardPage() {
                   minSpend={Number(minSpendInput)}
                   visitsRequired={Number(visitsInput)}
                   rewardName={rewardInput}
+                  validityDays={Number(validityInput)}
+                  qrToken={merchant?.qr_token}
+                  onRotateQr={handleRotateQr}
+                  isRotating={isRotatingQr}
                 />
 
                 <button
