@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="StickTheBizz helps Indian small businesses turn walk-ins into daily regulars with simple QR punch cards."
+    />
+    <title>StickTheBizz — Turn walk-ins into regulars</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              sand: "#F5EBDD",
+              coral: "#F2765E",
+              ink: "#413333",
+              navy: "#315B8C",
+              border: "#E5D9C8",
+              success: "#16A34A",
+              warning: "#F59E0B",
+            },
+            fontFamily: {
+              display: ["Plus Jakarta Sans", "ui-sans-serif", "system-ui"],
+              sans: ["Plus Jakarta Sans", "ui-sans-serif", "system-ui"],
+              mono: ["IBM Plex Mono", "monospace"],
+            },
+            boxShadow: {
+              float: "0 22px 50px rgba(65, 51, 51, 0.12)",
+              phone: "0 28px 55px rgba(49, 91, 140, 0.22)",
+            },
+          },
+        },
+      };
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@600&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --background: #F5EBDD;
+        --primary: #F2765E;
+        --secondary: #315B8C;
+        --text: #413333;
+        --surface: #FFFFFF;
+        --border: #E5D9C8;
+        --success: #16A34A;
+        --warning: #F59E0B;
+      }
+      html { scroll-behavior: smooth; }
+      body { background: #F5EBDD; color: #413333; overflow-x: hidden; }
+      .grain {
+        background-image: radial-gradient(rgba(65, 51, 51, .08) .7px, transparent .7px);
+        background-size: 15px 15px;
+      }
+      .float-slow { animation: float 5s ease-in-out infinite; }
+      @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-9px); } }
+      .stamp { transform: rotate(-8deg); }
+      .nav-shadow { box-shadow: 0 7px 24px rgba(65, 51, 51, .06); }
+      .ticker { animation: ticker 28s linear infinite; width: max-content; }
+      @keyframes ticker { to { transform: translateX(-50%); } }
+      .stamp-pop { animation: stamp-pop .45s ease both; }
+      @keyframes stamp-pop { 0% { transform: scale(.4); opacity: .3; } 75% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+      :focus-visible { outline: 3px solid #F2765E; outline-offset: 3px; }
+    </style>
+  </head>
+  <body class="font-sans antialiased">
+    <header class="relative z-20 px-5 pt-5 sm:px-8 lg:px-12">
+      <nav class="nav-shadow mx-auto flex max-w-7xl items-center justify-between rounded-full border border-ink/10 bg-sand/90 px-5 py-3 backdrop-blur-md sm:px-7" aria-label="Main navigation">
+        <a href="#" class="flex min-h-12 items-center gap-2 font-display text-lg font-extrabold tracking-tight text-navy" aria-label="StickTheBizz home">
+          <span class="grid h-9 w-9 place-items-center rounded-full bg-coral text-lg text-white">✦</span>
+          StickTheBizz<span class="text-coral">.</span>
+        </a>
+        <div class="hidden items-center gap-7 text-sm font-semibold text-ink/80 lg:flex">
+          <a class="transition hover:text-navy" href="#how-it-works">How it Works</a>
+          <a class="transition hover:text-navy" href="#for-shops">For Shops</a>
+          <a class="transition hover:text-navy" href="#pricing">Pricing</a>
+          <a class="transition hover:text-navy" href="#faq">FAQ</a>
+        </div>
+        <a href="#for-shops" class="inline-flex min-h-12 items-center rounded-full bg-coral px-5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-navy">
+          Shop Owner Demo
+        </a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="grain relative overflow-hidden px-5 pb-20 pt-16 sm:px-8 sm:pt-24 lg:px-12 lg:pb-28">
+        <div class="pointer-events-none absolute -right-32 top-12 h-80 w-80 rounded-full border-[36px] border-coral/10"></div>
+        <div class="pointer-events-none absolute -left-20 bottom-0 h-48 w-48 rounded-full bg-navy/5"></div>
+        <div class="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-[1fr_0.85fr] lg:gap-20">
+          <div class="relative z-10">
+            <div class="mb-6 inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white/50 px-3 py-2 text-xs font-bold uppercase tracking-[.14em] text-navy">
+              <span class="h-2 w-2 rounded-full bg-coral"></span>
+              Made for Bharat's local legends
+            </div>
+            <h1 class="max-w-3xl font-display text-5xl font-extrabold leading-[1.04] tracking-[-.045em] text-navy sm:text-6xl lg:text-7xl">
+              Turn walk-in diners & kirana shoppers into <span class="text-coral">daily regulars.</span>
+            </h1>
+            <p class="mt-6 max-w-xl text-lg leading-8 text-ink/75 sm:text-xl">
+              A simple digital punch card for the chai stalls, salons and stores your neighbourhood already loves. <strong class="text-navy">Zero app downloads.</strong> Zero fuss.
+            </p>
+            <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold text-navy">
+              <span class="rounded-full border border-border bg-white/60 px-3 py-2">✓ No App to Install</span>
+              <span class="rounded-full border border-border bg-white/60 px-3 py-2">✓ Works at Any Counter</span>
+            </div>
+            <div class="mt-9 flex flex-col gap-3 sm:flex-row">
+              <a href="#customer-demo" class="inline-flex min-h-14 items-center justify-center rounded-full bg-coral px-7 text-base font-bold text-white shadow-lg shadow-coral/20 transition hover:-translate-y-1 hover:bg-navy">
+                Try Customer Stamp Card <span class="ml-2 text-lg">→</span>
+              </a>
+              <a href="#for-shops" class="inline-flex min-h-14 items-center justify-center rounded-full bg-navy px-7 text-base font-bold text-white transition hover:-translate-y-1 hover:bg-coral">
+                Open Shop Terminal <span class="ml-2 text-lg">↘</span>
+              </a>
+            </div>
+            <div class="mt-8 flex items-center gap-3 text-sm font-semibold text-ink/65">
+              <div class="flex -space-x-2" aria-hidden="true">
+                <span class="grid h-8 w-8 place-items-center rounded-full border-2 border-sand bg-coral text-xs text-white">A</span>
+                <span class="grid h-8 w-8 place-items-center rounded-full border-2 border-sand bg-navy text-xs text-white">R</span>
+                <span class="grid h-8 w-8 place-items-center rounded-full border-2 border-sand bg-ink text-xs text-white">S</span>
+              </div>
+              Loved by 2,000+ small businesses
+            </div>
+          </div>
+
+          <div class="relative mx-auto w-full max-w-[500px]">
+            <div class="absolute -left-5 top-12 z-10 hidden rounded-2xl bg-white p-4 shadow-float sm:block float-slow">
+              <p class="text-[11px] font-bold uppercase tracking-wider text-ink/45">This week</p>
+              <p class="mt-1 font-display text-2xl font-extrabold text-navy">+28 regulars</p>
+              <div class="mt-2 flex gap-1"><span class="h-1.5 w-16 rounded-full bg-coral"></span><span class="h-1.5 w-4 rounded-full bg-coral/25"></span></div>
+            </div>
+            <div class="absolute -right-4 bottom-12 z-10 rounded-2xl bg-white p-4 shadow-float sm:-right-8">
+              <div class="flex items-center gap-2 text-sm font-bold text-navy"><span class="grid h-7 w-7 place-items-center rounded-full bg-coral text-white">✓</span> Punch approved!</div>
+              <p class="mt-1 pl-9 text-xs text-ink/55">Just now · Chai Stall</p>
+            </div>
+            <div id="customer-demo" class="mx-auto w-[min(100%,330px)] rounded-[2.4rem] border-[10px] border-navy bg-navy p-2 shadow-phone">
+              <div class="overflow-hidden rounded-[1.8rem] bg-sand">
+                <div class="flex items-center justify-between bg-navy px-5 py-3 text-[10px] font-bold text-white"><span>9:41</span><span>● ● ▰</span></div>
+                <div class="px-5 pb-7 pt-5">
+                  <div class="flex items-center justify-between"><span class="font-display text-sm font-extrabold text-navy">My punch cards</span><span class="text-xs font-bold text-coral">•••</span></div>
+                  <div class="mt-5 rounded-2xl bg-white p-5 shadow-sm">
+                    <div class="flex items-start justify-between"><div><p class="text-[11px] font-bold uppercase tracking-wider text-ink/45">Chai Stall</p><p class="mt-1 font-display text-xl font-extrabold text-navy">7 of 10 visits</p></div><span class="rounded-full bg-coral/15 px-2 py-1 text-[10px] font-extrabold text-coral">ACTIVE</span></div>
+                    <p class="mt-4 text-xs leading-5 text-ink/60">Buy 6 cups, get your 7th one on us.</p>
+                    <div class="mt-5 grid grid-cols-7 gap-1.5">
+                      <span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="stamp-pop grid aspect-square place-items-center rounded-full bg-coral text-xs font-bold text-white">✓</span><span class="grid aspect-square place-items-center rounded-full border-2 border-dashed border-navy/25 text-xs font-bold text-navy">7</span>
+                    </div>
+                    <button id="approveButton" type="button" class="mt-5 flex min-h-12 w-full items-center justify-center rounded-xl bg-navy text-sm font-bold text-white transition hover:bg-coral">Approve today's punch</button>
+                    <p id="approvalMessage" class="mt-3 hidden text-center text-xs font-bold text-coral">Nice! 7th chai unlocked 🎉</p>
+                  </div>
+                  <div class="mt-4 flex items-center gap-3 rounded-xl bg-navy px-4 py-3 text-white"><span class="text-xl">☕</span><div><p class="text-xs font-bold">Keep your streak going</p><p class="mt-0.5 text-[10px] text-white/65">2 more visits this week</p></div></div>
+                </div>
+              </div>
+            </div>
+            <p class="mt-5 text-center text-xs font-bold uppercase tracking-[.18em] text-navy/60">A better habit, one scan at a time</p>
+          </div>
+        </div>
+      </section>
+
+      <section aria-label="Supported businesses" class="overflow-hidden border-y border-border bg-white py-4">
+        <div class="ticker flex gap-8 whitespace-nowrap text-sm font-bold text-navy/70">
+          <span>Tea Stalls</span><span>·</span><span>Cafés</span><span>·</span><span>Bakeries</span><span>·</span><span>Kirana Stores</span><span>·</span><span>Sweet Shops</span><span>·</span><span>Salons</span><span>·</span><span>Juice Bars</span><span>·</span><span>Fast Food Stalls</span><span>·</span>
+          <span>Tea Stalls</span><span>·</span><span>Cafés</span><span>·</span><span>Bakeries</span><span>·</span><span>Kirana Stores</span><span>·</span><span>Sweet Shops</span><span>·</span><span>Salons</span><span>·</span><span>Juice Bars</span><span>·</span><span>Fast Food Stalls</span><span>·</span>
+        </div>
+      </section>
+
+      <section id="for-shops" class="px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div class="mx-auto max-w-7xl">
+          <div class="max-w-2xl"><p class="text-sm font-bold uppercase tracking-[.18em] text-coral">Built for busy counters</p><h2 class="mt-3 font-display text-4xl font-extrabold tracking-tight text-navy sm:text-5xl">Loyalty that works as hard as you do.</h2></div>
+          <div class="mt-12 grid gap-5 md:grid-cols-3">
+            <article class="rounded-3xl border border-border bg-white p-7 shadow-float"><div class="flex items-center justify-between"><span class="grid h-12 w-12 place-items-center rounded-2xl bg-coral/15 text-2xl text-coral">↗</span><span class="font-mono text-sm font-semibold text-success">+42%</span></div><h3 class="mt-7 font-display text-xl font-extrabold text-navy">Bring Customers Back</h3><div class="mt-5 h-2 rounded-full bg-sand"><div class="h-full w-4/5 rounded-full bg-coral"></div></div><p class="mt-3 text-sm leading-6 text-ink/65">Simple progress gives every customer a reason to return.</p></article>
+            <article class="rounded-3xl border border-border bg-white p-7 shadow-float"><div class="flex items-center justify-between"><span class="grid h-12 w-12 place-items-center rounded-2xl bg-navy/10 text-2xl text-navy">◌</span><span class="font-mono text-xs font-semibold text-ink/55">LIVE</span></div><h3 class="mt-7 font-display text-xl font-extrabold text-navy">Know Your Regulars</h3><div class="mt-5 space-y-2 font-mono text-xs text-ink/65"><p class="rounded-lg bg-sand px-3 py-2">98***12 <span class="float-right text-success">ACTIVE</span></p><p class="rounded-lg bg-sand px-3 py-2">r***h@example.com</p></div><p class="mt-3 text-sm leading-6 text-ink/65">Useful signals without exposing private customer data.</p></article>
+            <article class="rounded-3xl border border-border bg-white p-7 shadow-float"><div class="flex items-center justify-between"><span class="grid h-12 w-12 place-items-center rounded-2xl bg-warning/15 text-2xl text-warning">⌁</span><span class="font-mono text-xs font-semibold text-navy">12H LOCK</span></div><h3 class="mt-7 font-display text-xl font-extrabold text-navy">Zero-Fraud Verification</h3><div class="mt-5 flex items-center gap-2 rounded-lg bg-sand px-3 py-2 text-xs font-bold text-ink/65"><span class="h-2 w-2 rounded-full bg-success"></span> Counter QR verified</div><p class="mt-3 text-sm leading-6 text-ink/65">Hardware-free, with a smart midnight lock for honest visits.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" class="bg-navy px-5 py-20 text-white sm:px-8 lg:px-12 lg:py-24">
+        <div class="mx-auto max-w-7xl">
+          <div class="max-w-2xl"><p class="text-sm font-bold uppercase tracking-[.18em] text-coral">No tech degree required</p><h2 class="mt-3 font-display text-4xl font-extrabold tracking-tight sm:text-5xl">Three tiny steps.<br /><span class="text-coral">A big boost</span> for business.</h2></div>
+          <div class="mt-14 grid gap-5 md:grid-cols-3">
+            <article class="rounded-3xl bg-white p-7 text-ink shadow-float"><span class="font-display text-5xl font-extrabold text-coral">01</span><div class="mt-8 text-4xl">▦</div><h3 class="mt-5 font-display text-xl font-extrabold text-navy">Print Your Custom QR</h3><p class="mt-3 leading-7 text-ink/65">We make you a beautiful QR card that feels right at your counter.</p></article>
+            <article class="rounded-3xl bg-white p-7 text-ink shadow-float"><span class="font-display text-5xl font-extrabold text-coral">02</span><div class="mt-8 text-4xl">◎</div><h3 class="mt-5 font-display text-xl font-extrabold text-navy">Customer Scans</h3><p class="mt-3 leading-7 text-ink/65">One camera tap opens their card in the browser. No app, no sign-up.</p></article>
+            <article class="rounded-3xl bg-white p-7 text-ink shadow-float"><span class="font-display text-5xl font-extrabold text-coral">03</span><div class="mt-8 text-4xl">✦</div><h3 class="mt-5 font-display text-xl font-extrabold text-navy">Approve & Build Streaks</h3><p class="mt-3 leading-7 text-ink/65">You tap approve. They see progress. Everyone has a reason to come back.</p></article>
+          </div>
+        </div>
+      </section>
+
+      <section id="pricing" class="px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div class="mx-auto max-w-7xl"><div class="max-w-2xl"><p class="text-sm font-bold uppercase tracking-[.18em] text-coral">Simple pricing</p><h2 class="mt-3 font-display text-4xl font-extrabold tracking-tight text-navy sm:text-5xl">Start free. Stay loyal.</h2></div>
+          <div class="mt-10 flex flex-col items-start justify-between gap-8 rounded-[2rem] bg-coral p-8 text-white shadow-float sm:p-12 md:flex-row md:items-center"><div><p class="font-mono text-sm font-semibold text-white/80">TRIAL TIER · FIRST 50 CUSTOMERS</p><h3 class="mt-3 font-display text-3xl font-extrabold sm:text-4xl">₹0 <span class="text-base font-semibold text-white/75">to get started</span></h3><ul class="mt-5 space-y-2 text-sm text-white/90"><li>✓ Counter QR generator</li><li>✓ Visit tracking & streaks</li><li>✓ Verified customer reviews</li><li>✓ Free digital menu page</li></ul></div><div class="rounded-2xl bg-navy p-6 text-white"><p class="text-sm text-white/70">Then simply</p><p class="mt-1 font-display text-3xl font-extrabold">₹199<span class="text-sm font-normal text-white/70"> / month</span></p><a href="mailto:hello@stickthebizz.in" class="mt-5 inline-flex min-h-12 items-center rounded-full bg-white px-5 text-sm font-bold text-navy transition hover:bg-sand">Get your free QR kit →</a></div></div>
+        </div>
+      </section>
+
+      <section id="faq" class="bg-white px-5 py-20 sm:px-8 lg:px-12 lg:py-24">
+        <div class="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[.8fr_1.2fr]"><div><p class="text-sm font-bold uppercase tracking-[.18em] text-coral">Got questions?</p><h2 class="mt-3 font-display text-4xl font-extrabold tracking-tight text-navy sm:text-5xl">Keep it simple.</h2></div><div class="space-y-3">
+          <details class="group rounded-2xl border border-border p-5"><summary class="flex min-h-8 cursor-pointer list-none items-center justify-between font-bold text-navy">Do customers need to install an app?<span class="text-xl text-coral group-open:rotate-45">+</span></summary><p class="mt-4 max-w-xl text-sm leading-6 text-ink/65">No. They scan your counter QR and their digital stamp card opens instantly in their browser.</p></details>
+          <details class="group rounded-2xl border border-border p-5"><summary class="flex min-h-8 cursor-pointer list-none items-center justify-between font-bold text-navy">How does the 12-hour lock prevent fraud?<span class="text-xl text-coral group-open:rotate-45">+</span></summary><p class="mt-4 max-w-xl text-sm leading-6 text-ink/65">Each customer can collect one verified stamp in the active window, keeping your rewards fair without extra hardware.</p></details>
+          <details class="group rounded-2xl border border-border p-5"><summary class="flex min-h-8 cursor-pointer list-none items-center justify-between font-bold text-navy">Can I change my reward later?<span class="text-xl text-coral group-open:rotate-45">+</span></summary><p class="mt-4 max-w-xl text-sm leading-6 text-ink/65">Yes. Update your spend rule, visit goal, or reward whenever your shop grows.</p></details>
+        </div></div>
+      </section>
+    </main>
+
+    <footer class="border-t border-ink/10 px-5 py-8 sm:px-8 lg:px-12">
+      <div class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 text-sm text-ink/60 sm:flex-row">
+        <p class="font-display font-extrabold text-navy">StickTheBizz<span class="text-coral">.</span></p><p>Made with chai & good habits in India.</p><p>© 2026 StickTheBizz</p>
+      </div>
+    </footer>
+    <script>
+      const approveButton = document.getElementById("approveButton");
+      const approvalMessage = document.getElementById("approvalMessage");
+      approveButton.addEventListener("click", () => {
+        approveButton.textContent = "Punch approved ✓";
+        approveButton.classList.remove("bg-navy");
+        approveButton.classList.add("bg-coral");
+        approvalMessage.classList.remove("hidden");
+        approveButton.setAttribute("aria-label", "Today's punch approved");
+      });
+    </script>
+  </body>
+</html>
