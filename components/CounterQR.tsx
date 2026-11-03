@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Printer, Sparkles, Store, ShieldCheck, QrCode } from "lucide-react";
+import { Printer, Sparkles, Store, ShieldCheck, QrCode, Copy, Check, ExternalLink } from "lucide-react";
 
 interface CounterQRProps {
   shopName?: string;
@@ -27,7 +27,25 @@ export default function CounterQR({
   const qrRef = useRef<HTMLDivElement>(null);
   const displayName = shopName || name || "Kesar Chai Corner";
   const displayVisits = visitsRequired || visitsNeeded || 10;
-  const scanUrl = `https://stickthebizz.in/s/${slug}`;
+
+  const [baseUrl, setBaseUrl] = useState("https://stickthebizz.in");
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBaseUrl(window.location.origin);
+    }
+  }, []);
+
+  const scanUrl = `${baseUrl}/s/${slug}`;
+
+  const handleCopyLink = () => {
+    if (typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(scanUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -102,24 +120,41 @@ export default function CounterQR({
       </div>
 
       {/* Action Buttons (Hidden on Print) */}
-      <div className="no-print mt-2 flex flex-wrap items-center justify-center gap-3">
-        <button
-          type="button"
-          onClick={handlePrint}
-          className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
-        >
-          <Printer className="h-4 w-4" />
-          Print Counter Acrylic Stand
-        </button>
+      <div className="no-print mt-2 flex flex-col items-center gap-3">
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
+          >
+            <Printer className="h-4 w-4" />
+            Print Counter Acrylic Stand
+          </button>
 
-        <Link
-          href={`/s/${slug}`}
-          target="_self"
-          className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
-        >
-          <QrCode className="h-4 w-4 text-primary" />
-          Open Live Mobile URL →
-        </Link>
+          <Link
+            href={`/s/${slug}`}
+            target="_self"
+            className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
+          >
+            <ExternalLink className="h-4 w-4 text-primary" />
+            Test Customer Pass (/s/{slug})
+          </Link>
+
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
+          >
+            {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary" />}
+            {copied ? "URL Copied!" : "Copy Scan URL"}
+          </button>
+        </div>
+
+        {/* Scan URL Indicator */}
+        <div className="mt-1 flex items-center gap-2 text-xs font-mono text-ink/60 bg-sand/60 px-3 py-1.5 rounded-xl border border-border">
+          <span className="font-bold text-secondary">QR Destination:</span>
+          <span className="text-primary truncate max-w-[280px] sm:max-w-md">{scanUrl}</span>
+        </div>
       </div>
     </div>
   );

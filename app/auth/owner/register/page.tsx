@@ -84,8 +84,8 @@ export default function OwnerRegisterPage() {
         console.warn("Merchant provisioning note:", regRes.error);
       }
 
-      // Auto-redirect to Owner Dashboard
-      router.push("/owner/dashboard");
+      // Auto-redirect to Owner Dashboard with full session reload
+      window.location.href = "/owner/dashboard";
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to complete registration. Please try again.");
     } finally {

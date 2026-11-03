@@ -119,8 +119,8 @@ export default function CustomerOtpLoginPage() {
         return;
       }
 
-      // Success -> Redirect to customer multi-store wallet dashboard
-      router.push("/customer/dashboard");
+      // Success -> Redirect to customer multi-store wallet dashboard with full session reload
+      window.location.href = "/customer/dashboard";
     } catch (err: any) {
       setErrorMessage(err.message || "Verification failed. Please retry.");
       setIsSubmitting(false);

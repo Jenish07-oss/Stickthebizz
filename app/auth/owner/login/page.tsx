@@ -32,7 +32,7 @@ export default function OwnerLoginPage() {
         return;
       }
 
-      router.push("/owner/dashboard");
+      window.location.href = "/owner/dashboard";
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to log in.");
       setIsSubmitting(false);
