@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #F5EBDD;
+  --color-primary: #F2765E;
+  --color-secondary: #315B8C;
+  --color-ink: #413333;
+  --color-surface: #FFFFFF;
+  --color-border: #E5D9C8;
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+}
+
+html {
+  scroll-behavior: smooth;
+  background-color: #F5EBDD;
+  color: #413333;
+}
+
+body {
+  background-color: #F5EBDD;
+  color: #413333;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Subtle warm background grain */
+.grain {
+  background-image: radial-gradient(rgba(65, 51, 51, 0.07) 0.8px, transparent 0.8px);
+  background-size: 16px 16px;
+}
+
+/* Focus styles for keyboard accessibility */
+:focus-visible {
+  outline: 2px solid #F2765E;
+  outline-offset: 2px;
+}
+
+/* Print styling for Counter QR */
+@media print {
+  body {
+    background: #FFFFFF !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
