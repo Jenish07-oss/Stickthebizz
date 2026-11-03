@@ -58,7 +58,7 @@ export default function ContactPage() {
                 </p>
                 <a
                   href="https://wa.me/919876543210?text=Hello%20StickTheBizz%2C%20I%20want%20to%20set%20up%20a%20loyalty%20QR%20card%20for%20my%20shop"
-                  target="_blank"
+                  target="_self"
                   rel="noopener noreferrer"
                   className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-success text-sm font-bold text-white shadow-sm transition hover:opacity-90"
                 >

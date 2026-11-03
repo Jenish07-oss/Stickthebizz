@@ -39,7 +39,7 @@ export default function OwnerRegisterPage() {
       {/* Brand Header */}
       <div className="mb-8 text-center">
         <Link
-          href="/"
+          href="/" target="_self"
           className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-secondary"
         >
           <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-white shadow-sm">
@@ -201,7 +201,7 @@ export default function OwnerRegisterPage() {
           <p className="text-xs text-ink/70">
             Already have a merchant account?{" "}
             <Link
-              href="/auth/owner/login"
+              href="/auth/owner/login" target="_self"
               className="font-bold text-secondary underline hover:text-primary"
             >
               Log in here

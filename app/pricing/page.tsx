@@ -88,7 +88,7 @@ export default function PricingPage() {
 
               <div className="mt-10">
                 <Link
-                  href="/owner"
+                  href="/owner" target="_self"
                   className="flex min-h-[48px] w-full items-center justify-center rounded-full border-2 border-secondary bg-white text-sm font-bold text-secondary transition hover:bg-secondary hover:text-white"
                 >
                   Start Free Counter Trial
@@ -144,7 +144,7 @@ export default function PricingPage() {
 
               <div className="mt-10">
                 <Link
-                  href="/owner"
+                  href="/owner" target="_self"
                   className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-white hover:text-secondary"
                 >
                   <span>Activate Unlimited Plan</span>

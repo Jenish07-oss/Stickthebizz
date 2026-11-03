@@ -114,6 +114,7 @@ export default function CounterQR({
 
         <Link
           href={`/s/${slug}`}
+          target="_self"
           className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
         >
           <QrCode className="h-4 w-4 text-primary" />

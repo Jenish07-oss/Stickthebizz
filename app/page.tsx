@@ -277,6 +277,7 @@ export default function HomePage() {
                 <div className="mt-8 flex flex-wrap items-center gap-3.5">
                   <Link
                     href="/auth/owner/register"
+                    target="_self"
                     className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
                   >
                     <span>Register My Shop Counter</span>
@@ -285,6 +286,7 @@ export default function HomePage() {
 
                   <Link
                     href="/owner"
+                    target="_self"
                     className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-secondary/30 bg-white px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-sand"
                   >
                     <Store className="h-4 w-4 text-primary" />
@@ -829,6 +831,7 @@ export default function HomePage() {
                 <div className="mt-8">
                   <Link
                     href="/pricing"
+                    target="_self"
                     className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-7 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
                   >
                     <span>View Full Pricing &amp; Plans</span>
@@ -939,6 +942,7 @@ export default function HomePage() {
             <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <Link
                 href="/auth/owner/register"
+                target="_self"
                 className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-primary px-8 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5"
               >
                 <span>Register Shop Counter (2 Mins)</span>
@@ -946,6 +950,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/customer"
+                target="_self"
                 className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-secondary bg-white px-7 text-sm font-bold text-secondary shadow-sm transition hover:bg-sand"
               >
                 <Smartphone className="h-4 w-4 text-primary" />

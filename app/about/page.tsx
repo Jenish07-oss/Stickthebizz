@@ -112,7 +112,7 @@ export default function AboutPage() {
                 </p>
               </div>
               <Link
-                href="/owner"
+                href="/owner" target="_self"
                 className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-primary px-6 text-sm font-bold text-white transition hover:bg-white hover:text-secondary shadow-sm"
               >
                 Open Shop Terminal

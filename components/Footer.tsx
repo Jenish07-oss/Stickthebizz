@@ -11,6 +11,7 @@ export default function Footer() {
           <div className="md:col-span-1">
             <Link
               href="/"
+              target="_self"
               className="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tight text-secondary"
             >
               <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-white">
@@ -36,6 +37,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/customer"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Customer Stamp Card
@@ -44,6 +46,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/owner"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Shop Owner Terminal
@@ -52,6 +55,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/#how-it-works"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   How It Works
@@ -60,6 +64,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/pricing"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Pricing Plans (₹199/mo)
@@ -77,6 +82,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/about"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   About Our Mission
@@ -85,6 +91,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/contact"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Merchant Support &amp; WhatsApp
@@ -93,6 +100,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/#faq"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Frequently Asked Questions
@@ -110,6 +118,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/privacy"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Privacy Policy (DPDP)
@@ -118,6 +127,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/terms"
+                  target="_self"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Terms of Service

@@ -26,7 +26,7 @@ export default function OwnerLoginPage() {
       {/* Brand Header */}
       <div className="mb-8 text-center">
         <Link
-          href="/"
+          href="/" target="_self"
           className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-secondary"
         >
           <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-white shadow-sm">
@@ -125,7 +125,7 @@ export default function OwnerLoginPage() {
           <p className="text-xs text-ink/70">
             Don&apos;t have a merchant account yet?{" "}
             <Link
-              href="/auth/owner/register"
+              href="/auth/owner/register" target="_self"
               className="font-bold text-secondary underline hover:text-primary"
             >
               Create free shop account

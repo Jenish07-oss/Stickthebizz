@@ -63,7 +63,7 @@ export default function CustomerOtpLoginPage() {
       {/* Brand Header */}
       <div className="mb-6 text-center">
         <Link
-          href="/"
+          href="/" target="_self"
           className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-secondary"
         >
           <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-white shadow-sm">
