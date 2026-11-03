@@ -57,15 +57,13 @@ export default function CustomerOtpLoginPage() {
       });
 
       if (error) {
-        // If Supabase Email provider is rate-limited or fails, allow graceful demo bypass for test accounts
-        console.warn("Supabase OTP note:", error.message);
-        setOtpSuccessMessage(
-          `OTP code dispatched to ${email}! Enter the 6-digit code below (or use demo code 849201 for test mode).`
-        );
-      } else {
-        setOtpSuccessMessage(`Verification code sent to ${email}!`);
+        console.error("Supabase OTP error:", error);
+        setErrorMessage(`Error: ${error.message}. (Check Supabase SMTP settings or use test code 849201)`);
+        setIsSubmitting(false);
+        return;
       }
 
+      setOtpSuccessMessage(`Verification code sent to ${email}! Check your inbox.`);
       setStep("otp");
     } catch (err: any) {
       setErrorMessage(err.message || "Unable to send verification code. Please try again.");
