@@ -36,13 +36,13 @@ export default function StampGrid({
             return (
               <div
                 key={visitNumber}
-                className="group relative flex aspect-square items-center justify-center rounded-2xl bg-primary text-white shadow-sm transition-transform duration-200 hover:scale-105"
+                className="group relative flex aspect-square items-center justify-center rounded-2xl bg-white border-2 border-success shadow-sm transition-transform duration-200 hover:scale-105"
                 title={`Visit #${visitNumber} Completed`}
               >
-                <div className="animate-stamp-pop flex items-center justify-center">
-                  <Check className="h-5 w-5 sm:h-6 sm:w-6 stroke-[3]" />
+                <div className="animate-stamp-pop flex items-center justify-center rounded-xl bg-success/15 p-2 text-success">
+                  <Check className="h-5 w-5 sm:h-6 sm:w-6 stroke-[3.5]" />
                 </div>
-                <span className="absolute bottom-1 right-1 font-mono text-[9px] font-bold text-white/80">
+                <span className="absolute bottom-1 right-1 font-mono text-[9px] font-bold text-success/80">
                   #{visitNumber}
                 </span>
               </div>
@@ -55,13 +55,13 @@ export default function StampGrid({
                 key={visitNumber}
                 className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl border-2 border-dashed p-1 text-center transition-all ${
                   isNextUp
-                    ? "border-primary bg-primary/10 text-primary"
+                    ? "border-primary bg-primary/10 text-primary animate-flame-pulse"
                     : "border-secondary/40 bg-sand/40 text-secondary"
                 }`}
                 title={`Final visit unlocks ${rewardName}`}
               >
-                <Gift className="h-5 w-5 animate-pulse sm:h-6 sm:w-6 text-primary" />
-                <span className="mt-0.5 text-[10px] font-extrabold uppercase leading-none tracking-tight">
+                <Gift className="h-5 w-5 animate-bounce sm:h-6 sm:w-6 text-primary" />
+                <span className="mt-0.5 text-[10px] font-extrabold uppercase leading-none tracking-tight text-primary">
                   Free!
                 </span>
                 <span className="absolute bottom-1 right-1 font-mono text-[9px] font-bold opacity-60">

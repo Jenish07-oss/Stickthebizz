@@ -5,7 +5,7 @@ import { FastForward, RefreshCw, Zap, SlidersHorizontal, ChevronUp, ChevronDown 
 import { useStore } from "@/context/StoreContext";
 
 export default function DemoControls() {
-  const { skip12Hours, jumpToNearReward, resetNewUser, rule } = useStore();
+  const { fastForwardTime, jumpToNearReward, resetDemo, rule } = useStore();
   const [isExpanded, setIsExpanded] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -17,7 +17,7 @@ export default function DemoControls() {
   return (
     <aside
       aria-label="Demo Simulator Controls"
-      className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 w-[min(94vw,520px)]"
+      className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 w-[min(94vw,520px)]"
     >
       {notification && (
         <div className="mb-2 animate-bounce rounded-full bg-secondary px-4 py-2 text-center text-xs font-bold text-white shadow-float">
@@ -51,37 +51,37 @@ export default function DemoControls() {
             <button
               type="button"
               onClick={() => {
-                skip12Hours();
-                showToast("⚡ Fast-forwarded 12 hours! Daily scan lock unlocked.");
+                fastForwardTime(12);
+                showToast("⚡ Fast-forwarded time! Midnight lock unlocked.");
               }}
               className="flex min-h-[48px] flex-col items-center justify-center rounded-xl bg-sand p-2 text-center text-xs font-bold text-secondary transition hover:bg-primary hover:text-white"
             >
               <FastForward className="h-4 w-4 mb-1" />
-              <span>Skip 12h Lock</span>
+              <span>Skip 12h / Midnight</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
                 jumpToNearReward();
-                showToast(`🎯 Set visits to ${rule.visitsNeeded - 1}/${rule.visitsNeeded}! Next scan unlocks reward.`);
+                showToast(`🎯 Set visits to ${rule.visitsRequired - 1}/${rule.visitsRequired}! Next scan unlocks reward.`);
               }}
               className="flex min-h-[48px] flex-col items-center justify-center rounded-xl bg-sand p-2 text-center text-xs font-bold text-secondary transition hover:bg-primary hover:text-white"
             >
               <Zap className="h-4 w-4 mb-1" />
-              <span>Near Reward</span>
+              <span>Jump to 9 Stamps</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
-                resetNewUser();
-                showToast("🔄 Reset to brand-new user (0 visits)!");
+                resetDemo();
+                showToast("🔄 Reset customer to 0 visits!");
               }}
               className="flex min-h-[48px] flex-col items-center justify-center rounded-xl bg-sand p-2 text-center text-xs font-bold text-ink/70 transition hover:bg-primary hover:text-white"
             >
               <RefreshCw className="h-4 w-4 mb-1" />
-              <span>Reset User</span>
+              <span>Reset Customer</span>
             </button>
           </div>
         )}

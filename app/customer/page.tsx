@@ -1,63 +1,91 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
 import RewardTicket from "@/components/RewardTicket";
 import DemoControls from "@/components/DemoControls";
 import ReviewModal from "@/components/ReviewModal";
+import ConfettiEffect from "@/components/ConfettiEffect";
 import { useStore } from "@/context/StoreContext";
 import {
   Sparkles,
   QrCode,
   ShieldCheck,
   Star,
-  Clock,
   ArrowRight,
   Store,
   Calendar,
   Lock,
+  Clock,
 } from "lucide-react";
 
 export default function CustomerPage() {
-  const { rule, customer, loginCustomer, scanStamp, checkLockStatus, markRewardGiven } =
-    useStore();
+  const {
+    rule,
+    customer,
+    loginCustomer,
+    submitScan,
+    markRewardGiven,
+    getCountdownToMidnight,
+  } = useStore();
 
   const [otpModalOpen, setOtpModalOpen] = useState(!customer.isLoggedIn);
-  const [phoneOrEmail, setPhoneOrEmail] = useState(customer.identifier || "");
+  const [phoneNumber, setPhoneNumber] = useState(customer.phone || "9820012345");
   const [consentChecked, setConsentChecked] = useState(customer.hasConsent);
   const [otpCode, setOtpCode] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [scanFeedback, setScanFeedback] = useState<string | null>(null);
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
-  const lockInfo = checkLockStatus();
+  // Live countdown ticker to 12:00 AM IST
+  const [countdownStr, setCountdownStr] = useState("");
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const { formatted } = getCountdownToMidnight();
+      setCountdownStr(formatted);
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [getCountdownToMidnight]);
+
+  // Trigger confetti if reward is ready and not yet redeemed
+  useEffect(() => {
+    if (customer.visits >= rule.visitsRequired && !customer.isRedeemed) {
+      setShowConfetti(true);
+    }
+  }, [customer.visits, rule.visitsRequired, customer.isRedeemed]);
 
   // Simulated OTP handling
   const handleRequestOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!phoneOrEmail || !consentChecked) return;
+    if (!phoneNumber || !consentChecked) return;
     setOtpSent(true);
-    setOtpCode("4892"); // Pre-filled simulation OTP for convenience
+    setOtpCode("8492"); // Pre-filled simulation OTP
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (otpCode.length === 4) {
-      loginCustomer(phoneOrEmail);
+      loginCustomer(phoneNumber);
       setOtpModalOpen(false);
     }
   };
 
   // Perform Stamp Scan
   const handleScanCounterQR = () => {
-    const result = scanStamp();
+    const result = submitScan(rule.minSpend);
     setScanFeedback(result.message);
   };
 
   return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">
+      <ConfettiEffect active={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Navbar />
 
       <main className="flex-1 px-4 py-8 sm:px-6">
@@ -66,7 +94,7 @@ export default function CustomerPage() {
           <div className="mb-4 flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
               <Store className="h-3.5 w-3.5 text-primary" />
-              {rule.shopName}
+              {rule.name}
             </span>
 
             <button
@@ -86,14 +114,14 @@ export default function CustomerPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <h1 className="font-display text-2xl font-extrabold tracking-tight text-secondary">
-                    {rule.shopName}
+                    {rule.name}
                   </h1>
                   <p className="mt-0.5 text-xs text-ink/65">
                     Official Digital Loyalty Card
                   </p>
                 </div>
                 <span className="rounded-full bg-coral/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
-                  {customer.visits >= rule.visitsNeeded ? "REWARD READY" : "COLLECTING"}
+                  {customer.visits >= rule.visitsRequired ? "REWARD UNLOCKED" : "COLLECTING"}
                 </span>
               </div>
 
@@ -103,7 +131,7 @@ export default function CustomerPage() {
                   Bill ₹{rule.minSpend}+ per visit
                 </span>
                 <span className="rounded-lg bg-sand/70 px-2.5 py-1 text-ink/80">
-                  {rule.visitsNeeded} visits in {rule.expiryDays} days
+                  {rule.visitsRequired} visits in {rule.validityDays} days
                 </span>
               </div>
             </div>
@@ -112,11 +140,11 @@ export default function CustomerPage() {
             <div className="mt-5">
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="font-display text-lg text-secondary">
-                  {customer.visits} of {rule.visitsNeeded} visits
+                  {customer.visits} of {rule.visitsRequired} visits
                 </span>
                 <span className="flex items-center gap-1 font-mono text-ink/60">
                   <Calendar className="h-3.5 w-3.5" />
-                  Day 23 of {rule.expiryDays}
+                  Day 23 of {rule.validityDays}
                 </span>
               </div>
 
@@ -125,7 +153,7 @@ export default function CustomerPage() {
                 <div
                   className="h-full rounded-full bg-primary transition-all duration-500"
                   style={{
-                    width: `${Math.min(100, (customer.visits / rule.visitsNeeded) * 100)}%`,
+                    width: `${Math.min(100, (customer.visits / rule.visitsRequired) * 100)}%`,
                   }}
                 />
               </div>
@@ -134,36 +162,46 @@ export default function CustomerPage() {
             {/* STAMP GRID COMPONENT */}
             <div className="mt-6">
               <StampGrid
-                totalVisits={rule.visitsNeeded}
+                totalVisits={rule.visitsRequired}
                 completedVisits={customer.visits}
                 rewardName={rule.rewardName}
               />
             </div>
 
             {/* REWARD TICKET IF UNLOCKED */}
-            {customer.rewardTicket && (
-              <div className="mt-6">
+            {customer.visits >= rule.visitsRequired && (
+              <div className="mt-6 animate-stamp-pop">
                 <RewardTicket
-                  ticket={customer.rewardTicket}
+                  ticket={{
+                    code: customer.activeRewardCode || "STB-7Q4K-29",
+                    pin: customer.redemptionPin || "8492",
+                    rewardName: rule.rewardName,
+                    expiryDate: "Valid for 14 days",
+                    isRedeemed: customer.isRedeemed,
+                  }}
                   onRedeem={() => {
-                    markRewardGiven(customer.identifier);
-                    setScanFeedback("🎉 Reward voucher redeemed! Enjoy your free treat!");
+                    markRewardGiven(customer.phone);
+                    setScanFeedback("🎉 Reward voucher marked as redeemed! Enjoy your free treat!");
                   }}
                 />
               </div>
             )}
 
-            {/* ANTI-FRAUD SCAN BUTTON */}
+            {/* ANTI-FRAUD SCAN BUTTON OR ACTIVE COUNTDOWN */}
             <div className="mt-6">
-              {lockInfo.isLocked ? (
+              {customer.lockedUntilMidnight ? (
                 <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
-                  <div className="flex items-center justify-center gap-2 text-xs font-bold text-ink">
+                  <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
                     <Lock className="h-4 w-4 text-warning" />
-                    <span>Already checked in today!</span>
+                    <span>Today&apos;s visit verified!</span>
                   </div>
-                  <p className="mt-1 font-mono text-xs text-ink/75">
-                    Next stamp opens in {lockInfo.hoursRemaining} hours (at {lockInfo.nextOpenTime}).
+                  <p className="mt-1.5 text-xs text-ink/75">
+                    Next stamp unlocks at <strong>12:00 AM IST</strong>
                   </p>
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
+                    <Clock className="h-3.5 w-3.5 text-primary animate-pulse" />
+                    <span>{countdownStr || "Unlocks at midnight"}</span>
+                  </div>
                   <button
                     disabled
                     className="mt-3 flex min-h-[48px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-sm font-bold text-ink/40"
@@ -184,7 +222,7 @@ export default function CustomerPage() {
 
               {/* Scan Feedback Message */}
               {scanFeedback && (
-                <div className="mt-3 rounded-xl bg-sand p-3 text-center text-xs font-bold text-secondary">
+                <div className="mt-3 rounded-xl bg-sand p-3 text-center text-xs font-bold text-secondary animate-pulse">
                   {scanFeedback}
                 </div>
               )}
@@ -215,7 +253,7 @@ export default function CustomerPage() {
               onClick={() => setOtpModalOpen(true)}
               className="text-[11px] font-semibold text-secondary hover:underline"
             >
-              Logged in as {customer.identifier} (Change)
+              Logged in as {customer.phone} (Change)
             </button>
           </div>
         </div>
@@ -233,7 +271,7 @@ export default function CustomerPage() {
                 Your Digital Stamp Card
               </h2>
               <p className="mt-1 text-xs text-ink/65">
-                Zero app downloads. Log in with your phone or email to track rewards at {rule.shopName}.
+                Zero app downloads. Enter your mobile number to track rewards at {rule.name}.
               </p>
             </div>
 
@@ -241,18 +279,18 @@ export default function CustomerPage() {
               <form onSubmit={handleRequestOtp} className="mt-5 space-y-4">
                 <div>
                   <label
-                    htmlFor="identifier"
+                    htmlFor="mobile"
                     className="block text-xs font-bold uppercase tracking-wider text-ink/70"
                   >
-                    Mobile Number or Email
+                    10-Digit Mobile Number
                   </label>
                   <input
-                    id="identifier"
-                    type="text"
+                    id="mobile"
+                    type="tel"
                     required
-                    value={phoneOrEmail}
-                    onChange={(e) => setPhoneOrEmail(e.target.value)}
-                    placeholder="e.g. 9820012345 or you@email.com"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    placeholder="e.g. 9820012345"
                     className="mt-1.5 w-full rounded-xl border border-border p-3 text-sm font-semibold text-ink placeholder:text-ink/40 focus:border-primary focus:outline-none"
                   />
                 </div>
@@ -268,13 +306,13 @@ export default function CustomerPage() {
                     className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   <label htmlFor="consent" className="text-[11px] leading-relaxed text-ink/75">
-                    I agree that <strong>{rule.shopName}</strong> can view my visit count. My data is stored solely for this loyalty card under the DPDP Act.
+                    I agree that <strong>{rule.name}</strong> can view my visit count. My data is stored solely for this loyalty card under the DPDP Act.
                   </label>
                 </div>
 
                 <button
                   type="submit"
-                  disabled={!consentChecked || !phoneOrEmail}
+                  disabled={!consentChecked || !phoneNumber}
                   className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white transition hover:bg-secondary disabled:opacity-50 shadow-sm"
                 >
                   <span>Continue with OTP</span>
@@ -284,7 +322,7 @@ export default function CustomerPage() {
             ) : (
               <form onSubmit={handleVerifyOtp} className="mt-5 space-y-4">
                 <div className="rounded-xl bg-sand/60 p-3 text-center text-xs text-ink/75">
-                  Simulation OTP sent to <strong className="font-mono">{phoneOrEmail}</strong>
+                  Simulation OTP sent to <strong className="font-mono">{phoneNumber}</strong>
                 </div>
 
                 <div>
@@ -303,7 +341,7 @@ export default function CustomerPage() {
                     className="mt-2 w-full text-center font-mono text-2xl font-extrabold tracking-widest rounded-xl border border-border p-3 text-secondary focus:border-primary focus:outline-none"
                   />
                   <p className="mt-1 text-center font-mono text-[11px] text-ink/50">
-                    Auto-filled: 4892 (Demo Simulator)
+                    Auto-filled: 8492 (Demo Simulator)
                   </p>
                 </div>
 

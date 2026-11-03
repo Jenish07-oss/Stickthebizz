@@ -68,22 +68,20 @@ export default function Navbar() {
           <div className="flex items-center rounded-full border border-border bg-white/70 p-1 text-xs">
             <Link
               href="/customer"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${
-                isCustomer
-                  ? "bg-secondary text-white shadow-sm"
-                  : "text-ink/70 hover:text-secondary"
-              }`}
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${isCustomer
+                ? "bg-secondary text-white shadow-sm"
+                : "text-ink/70 hover:text-secondary"
+                }`}
             >
               <Smartphone className="h-3.5 w-3.5" />
               Customer View
             </Link>
             <Link
               href="/owner"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${
-                isOwner
-                  ? "bg-secondary text-white shadow-sm"
-                  : "text-ink/70 hover:text-secondary"
-              }`}
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${isOwner
+                ? "bg-secondary text-white shadow-sm"
+                : "text-ink/70 hover:text-secondary"
+                }`}
             >
               <Store className="h-3.5 w-3.5" />
               Owner Terminal
@@ -97,7 +95,7 @@ export default function Navbar() {
             href="/owner"
             className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-primary px-6 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
           >
-            Shop Owner Demo
+            Open Shop Counter
           </Link>
         </div>
 
@@ -180,3 +178,4 @@ export default function Navbar() {
     </header>
   );
 }
+

@@ -5,21 +5,27 @@ import { QRCodeSVG } from "qrcode.react";
 import { Printer, Sparkles, Store, ShieldCheck } from "lucide-react";
 
 interface CounterQRProps {
-  shopName: string;
-  slug: string;
-  minSpend: number;
-  visitsNeeded: number;
-  rewardName: string;
+  shopName?: string;
+  name?: string;
+  slug?: string;
+  minSpend?: number;
+  visitsNeeded?: number;
+  visitsRequired?: number;
+  rewardName?: string;
 }
 
 export default function CounterQR({
-  shopName = "Kesar Chai Corner",
+  shopName,
+  name,
   slug = "kesar-chai",
   minSpend = 100,
-  visitsNeeded = 10,
+  visitsNeeded,
+  visitsRequired,
   rewardName = "Free Masala Chai",
 }: CounterQRProps) {
   const qrRef = useRef<HTMLDivElement>(null);
+  const displayName = shopName || name || "Kesar Chai Corner";
+  const displayVisits = visitsRequired || visitsNeeded || 10;
   const scanUrl = `https://stickthebizz.in/s/${slug}`;
 
   const handlePrint = () => {
@@ -41,7 +47,7 @@ export default function CounterQR({
 
         {/* Shop Name */}
         <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-secondary">
-          {shopName}
+          {displayName}
         </h2>
         <p className="mt-1 text-xs font-semibold text-ink/65">
           Scan with your Phone Camera • No App Needed
@@ -63,13 +69,13 @@ export default function CounterQR({
         <div className="rounded-2xl bg-secondary p-4 text-white">
           <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-primary">
             <Sparkles className="h-4 w-4" />
-            <span>LOYSALTY REWARD</span>
+            <span>LOYALTY REWARD</span>
           </div>
           <p className="mt-1 font-display text-lg font-extrabold">
             {rewardName}
           </p>
           <p className="mt-1 font-mono text-xs text-white/80">
-            Spend ₹{minSpend}+ • Collect {visitsNeeded} stamps
+            Spend ₹{minSpend}+ • Collect {displayVisits} stamps
           </p>
         </div>
 
@@ -92,7 +98,7 @@ export default function CounterQR({
         </button>
 
         <a
-          href="/customer"
+          href={`/s/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"

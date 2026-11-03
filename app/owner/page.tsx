@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CounterQR from "@/components/CounterQR";
+import ConfettiEffect from "@/components/ConfettiEffect";
 import { useStore } from "@/context/StoreContext";
 import {
   Store,
@@ -12,21 +13,45 @@ import {
   Star,
   QrCode,
   CheckCircle2,
+  XCircle,
   Clock,
   Sparkles,
   Sliders,
   Award,
+  Search,
+  KeyRound,
+  BellRing,
 } from "lucide-react";
 
 export default function OwnerPage() {
-  const { rule, updateRule, customers, reviews, markRewardGiven } = useStore();
+  const {
+    rule,
+    updateRule,
+    pendingQueue,
+    approveScan,
+    rejectScan,
+    verifyPin,
+    customers,
+    reviews,
+    markRewardGiven,
+  } = useStore();
 
-  const [shopNameInput, setShopNameInput] = useState(rule.shopName);
+  const [shopNameInput, setShopNameInput] = useState(rule.name);
   const [minSpendInput, setMinSpendInput] = useState(rule.minSpend);
-  const [visitsInput, setVisitsInput] = useState(rule.visitsNeeded);
-  const [expiryInput, setExpiryInput] = useState(rule.expiryDays);
+  const [visitsInput, setVisitsInput] = useState(rule.visitsRequired);
+  const [expiryInput, setExpiryInput] = useState(rule.validityDays);
   const [rewardInput, setRewardInput] = useState(rule.rewardName);
   const [ruleSaveMessage, setRuleSaveMessage] = useState<string | null>(null);
+
+  // Search filter for regulars
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // PIN Redemption states
+  const [pinInput, setPinInput] = useState("");
+  const [pinFeedback, setPinFeedback] = useState<{ success: boolean; message: string } | null>(
+    null
+  );
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Compute live KPIs
   const visitsToday = customers.filter(
@@ -34,11 +59,11 @@ export default function OwnerPage() {
   ).length;
 
   const closeToReward = customers.filter(
-    (c) => c.visits >= rule.visitsNeeded - 2 && c.visits < rule.visitsNeeded
+    (c) => c.visits >= rule.visitsRequired - 2 && c.visits < rule.visitsRequired
   ).length;
 
   const rewardsWaiting = customers.filter(
-    (c) => c.visits >= rule.visitsNeeded && !c.rewardRedeemed
+    (c) => c.visits >= rule.visitsRequired && !c.rewardRedeemed
   ).length;
 
   const avgRating =
@@ -51,18 +76,35 @@ export default function OwnerPage() {
   const handleSaveRule = (e: React.FormEvent) => {
     e.preventDefault();
     updateRule({
-      shopName: shopNameInput,
+      name: shopNameInput,
       minSpend: Number(minSpendInput),
-      visitsNeeded: Number(visitsInput),
-      expiryDays: Number(expiryInput),
+      visitsRequired: Number(visitsInput),
+      validityDays: Number(expiryInput),
       rewardName: rewardInput,
     });
     setRuleSaveMessage("✓ Rule updated instantly across all customer cards!");
     setTimeout(() => setRuleSaveMessage(null), 3000);
   };
 
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pinInput || pinInput.length !== 4) return;
+    const res = verifyPin(pinInput);
+    setPinFeedback(res);
+    if (res.success) {
+      setShowConfetti(true);
+      setPinInput("");
+    }
+  };
+
+  const filteredCustomers = customers.filter((c) =>
+    c.masked.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    c.status.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">
+      <ConfettiEffect active={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Navbar />
 
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
@@ -75,7 +117,7 @@ export default function OwnerPage() {
                 SHOP OWNER TERMINAL
               </div>
               <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-secondary sm:text-4xl">
-                {rule.shopName}
+                {rule.name}
               </h1>
               <p className="mt-1 text-sm text-ink/75">
                 Live counter telemetry, customer streak progress &amp; reward redemptions.
@@ -85,7 +127,7 @@ export default function OwnerPage() {
             <div className="flex items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-success shadow-sm border border-border">
                 <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                Terminal Online
+                Terminal Online &amp; Listening
               </span>
             </div>
           </div>
@@ -105,7 +147,7 @@ export default function OwnerPage() {
               <p className="mt-4 font-display text-4xl font-extrabold text-secondary">
                 {visitsToday}
               </p>
-              <p className="mt-1 text-xs text-ink/65">+18% vs yesterday</p>
+              <p className="mt-1 text-xs text-ink/65">+22% repeat rate</p>
             </div>
 
             {/* KPI 2 */}
@@ -121,7 +163,7 @@ export default function OwnerPage() {
               <p className="mt-4 font-display text-4xl font-extrabold text-secondary">
                 {closeToReward}
               </p>
-              <p className="mt-1 text-xs text-ink/65">&gt;= {rule.visitsNeeded - 2} visits logged</p>
+              <p className="mt-1 text-xs text-ink/65">&gt;= {rule.visitsRequired - 2} visits logged</p>
             </div>
 
             {/* KPI 3 (Highlighted in gold/coral) */}
@@ -159,9 +201,149 @@ export default function OwnerPage() {
             </div>
           </div>
 
-          {/* TWO COLUMN GRID: RULE CUSTOMIZATION & COUNTER QR */}
+          {/* 2. LIVE PENDING QUEUE & PIN REDEMPTION (TWO-COLUMN SECTION) */}
+          <div className="mt-8 grid gap-8 lg:grid-cols-12">
+            {/* LIVE PENDING QUEUE (7 cols) */}
+            <div className="rounded-[2.2rem] border-2 border-secondary bg-secondary p-6 text-white shadow-card sm:p-8 lg:col-span-7">
+              <div className="flex items-center justify-between border-b border-white/15 pb-4">
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-white/10 text-primary">
+                    <BellRing className="h-5 w-5 animate-bell-ring" />
+                  </span>
+                  <div>
+                    <h2 className="font-display text-xl font-extrabold text-white">
+                      Live Customer Check-In Queue
+                    </h2>
+                    <p className="text-xs text-white/70">
+                      Real-time approval stream from customer camera scans.
+                    </p>
+                  </div>
+                </div>
+                <span className="font-mono text-xs font-bold rounded-full bg-primary px-3 py-1 text-white">
+                  {pendingQueue.filter((q) => q.status === "pending").length} Pending
+                </span>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                {pendingQueue.filter((q) => q.status === "pending").length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-white/20 p-8 text-center text-white/75">
+                    <p className="font-semibold text-sm">All customer check-ins verified!</p>
+                    <p className="mt-1 text-xs text-white/55">
+                      New customer camera scans will appear here instantly with counter audio chimes.
+                    </p>
+                  </div>
+                ) : (
+                  pendingQueue
+                    .filter((q) => q.status === "pending")
+                    .map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-4 text-ink shadow-sm animate-stamp-pop"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-base font-extrabold text-secondary">
+                              {item.customerMasked}
+                            </span>
+                            <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/75">
+                              Bill ₹{item.amount}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-ink/50">
+                            {item.formattedTime} • Counter Scan
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => approveScan(item.id)}
+                            className="flex min-h-[48px] items-center gap-1.5 rounded-xl bg-success px-5 text-xs font-bold text-white shadow-sm transition hover:opacity-90"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            1-Tap Approve
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => rejectScan(item.id)}
+                            className="flex min-h-[48px] items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-4 text-xs font-bold text-primary transition hover:bg-primary hover:text-white"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            Reject
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+            </div>
+
+            {/* PIN REDEMPTION BOX (5 cols) */}
+            <div className="rounded-[2.2rem] border border-border bg-white p-6 shadow-card sm:p-8 lg:col-span-5">
+              <div className="flex items-center gap-2.5 border-b border-border/70 pb-4">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-sand text-secondary">
+                  <KeyRound className="h-5 w-5" />
+                </span>
+                <div>
+                  <h2 className="font-display text-xl font-extrabold text-secondary">
+                    Voucher PIN Redemption
+                  </h2>
+                  <p className="text-xs text-ink/65">
+                    Verify customer&apos;s 4-digit code to give reward.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handlePinSubmit} className="mt-6 space-y-4">
+                <div>
+                  <label
+                    htmlFor="pin"
+                    className="block text-xs font-bold uppercase tracking-wider text-ink/70"
+                  >
+                    Enter Customer 4-Digit PIN
+                  </label>
+                  <input
+                    id="pin"
+                    type="text"
+                    maxLength={4}
+                    value={pinInput}
+                    onChange={(e) => setPinInput(e.target.value)}
+                    placeholder="e.g. 8492"
+                    className="mt-2 w-full text-center font-mono text-3xl font-extrabold tracking-widest rounded-xl border border-border p-3 text-secondary focus:border-primary focus:outline-none"
+                  />
+                  <p className="mt-1 text-center font-mono text-[11px] text-ink/50">
+                    Try demo PIN: 8492
+                  </p>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={pinInput.length !== 4}
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-secondary disabled:opacity-50"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Verify &amp; Redeem Reward
+                </button>
+
+                {pinFeedback && (
+                  <div
+                    className={`rounded-xl p-3 text-center text-xs font-bold ${
+                      pinFeedback.success
+                        ? "bg-success/15 text-success"
+                        : "bg-primary/15 text-primary"
+                    }`}
+                  >
+                    {pinFeedback.message}
+                  </div>
+                )}
+              </form>
+            </div>
+          </div>
+
+          {/* TWO COLUMN GRID: RULE SETUP & COUNTER QR */}
           <div className="mt-10 grid gap-8 lg:grid-cols-12">
-            {/* 2. RULE CUSTOMIZATION FORM (5 cols) */}
+            {/* RULE CUSTOMIZATION FORM (5 cols) */}
             <div className="rounded-[2.2rem] border border-border bg-white p-6 shadow-card sm:p-8 lg:col-span-5">
               <div className="flex items-center gap-2 border-b border-border/70 pb-4">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-sand text-secondary">
@@ -213,18 +395,19 @@ export default function OwnerPage() {
                       <option value={200}>₹200</option>
                       <option value={300}>₹300</option>
                       <option value={500}>₹500</option>
+                      <option value={3000}>₹3000 (Kirana)</option>
                     </select>
                   </div>
 
                   <div>
                     <label
-                      htmlFor="visitsNeeded"
+                      htmlFor="visitsInput"
                       className="block text-xs font-bold uppercase tracking-wider text-ink/70"
                     >
                       Visits Needed
                     </label>
                     <select
-                      id="visitsNeeded"
+                      id="visitsInput"
                       value={visitsInput}
                       onChange={(e) => setVisitsInput(Number(e.target.value))}
                       className="mt-1.5 w-full rounded-xl border border-border p-3 text-sm font-semibold text-ink bg-white focus:border-primary focus:outline-none"
@@ -291,7 +474,7 @@ export default function OwnerPage() {
               </form>
             </div>
 
-            {/* 3. COUNTER QR CODE GENERATOR (7 cols) */}
+            {/* COUNTER QR CODE GENERATOR (7 cols) */}
             <div className="rounded-[2.2rem] border border-border bg-white p-6 shadow-card sm:p-8 lg:col-span-7">
               <div className="flex items-center gap-2 border-b border-border/70 pb-4">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-sand text-secondary">
@@ -309,19 +492,19 @@ export default function OwnerPage() {
 
               <div className="mt-6 flex justify-center">
                 <CounterQR
-                  shopName={rule.shopName}
+                  name={rule.name}
                   slug={rule.slug}
                   minSpend={rule.minSpend}
-                  visitsNeeded={rule.visitsNeeded}
+                  visitsRequired={rule.visitsRequired}
                   rewardName={rule.rewardName}
                 />
               </div>
             </div>
           </div>
 
-          {/* 4. CUSTOMER PROGRESS TABLE */}
+          {/* 3. SEARCHABLE CUSTOMER REGULARS DIRECTORY */}
           <div className="mt-10 rounded-[2.2rem] border border-border bg-white p-6 shadow-card sm:p-8">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/70 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/70 pb-4">
               <div>
                 <h2 className="font-display text-xl font-extrabold text-secondary">
                   Customer Regulars Directory
@@ -331,9 +514,17 @@ export default function OwnerPage() {
                 </p>
               </div>
 
-              <span className="font-mono text-xs font-bold text-secondary">
-                {customers.length} Tracked Regulars
-              </span>
+              {/* Search Bar */}
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink/40" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search masked number..."
+                  className="w-full rounded-full border border-border py-2 pl-9 pr-4 text-xs font-semibold text-ink placeholder:text-ink/40 focus:border-primary focus:outline-none"
+                />
+              </div>
             </div>
 
             <div className="mt-6 overflow-x-auto">
@@ -348,7 +539,7 @@ export default function OwnerPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {customers.map((c) => {
+                  {filteredCustomers.map((c) => {
                     const isRewardReady = c.visits >= c.targetVisits && !c.rewardRedeemed;
                     return (
                       <tr key={c.id} className="transition hover:bg-sand/30">
@@ -421,7 +612,7 @@ export default function OwnerPage() {
             </div>
           </div>
 
-          {/* 5. VERIFIED RATINGS FEED */}
+          {/* 4. VERIFIED RATINGS FEED */}
           <div className="mt-10 rounded-[2.2rem] border border-border bg-white p-6 shadow-card sm:p-8">
             <div className="flex items-center justify-between border-b border-border/70 pb-4">
               <div className="flex items-center gap-2">
