@@ -10,6 +10,7 @@ import ConfettiEffect from "@/components/ConfettiEffect";
 import PhoneFrame from "@/components/PhoneFrame";
 import { useStore } from "@/context/StoreContext";
 import { submitScan as submitScanAction } from "@/app/actions/scan";
+import { playScanChime } from "@/lib/audio";
 import {
   Sparkles,
   QrCode,
@@ -114,7 +115,11 @@ export default function CustomerView({
   const handleScanCounterQR = async () => {
     if (isScanning) return;
     setIsScanning(true);
-    setScanFeedback("Scanning counter QR stand...");
+    playScanChime();
+    setScanFeedback("Scanning counter standee QR...");
+
+    // 900ms laser sweep animation duration
+    await new Promise((resolve) => setTimeout(resolve, 900));
 
     try {
       if (initialMerchant?.id && !initialMerchant.id.startsWith("demo-")) {

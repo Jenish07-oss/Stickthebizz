@@ -81,7 +81,7 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none select-none fixed inset-0 z-30 h-full w-full"
+      className="pointer-events-none select-none fixed inset-0 z-50 h-full w-full"
     />
   );
 }

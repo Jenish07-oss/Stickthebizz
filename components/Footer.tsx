@@ -11,13 +11,13 @@ export default function Footer() {
           <div className="md:col-span-1">
             <Link
               href="/"
-              target="_self"
+              replace={false}
               className="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tight text-secondary"
             >
               <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-white">
                 <Sparkles className="h-4 w-4" />
               </span>
-              StickTheBizz<span className="text-primary">.</span>
+              <span>StickTheBizz</span>
             </Link>
             <p className="mt-4 text-sm leading-relaxed text-ink/75">
               Empowering India&apos;s chai stalls, bakeries, cafes, and local stores with simple digital punch cards. No customer app downloads required.
@@ -36,17 +36,17 @@ export default function Footer() {
             <ul className="mt-4 space-y-1">
               <li>
                 <Link
-                  href="/customer"
-                  target="_self"
+                  href="/auth/customer/login"
+                  replace={false}
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
-                  Customer Stamp Card
+                  Customer Pass Wallet
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/owner"
-                  target="_self"
+                  href="/auth/owner/login"
+                  replace={false}
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Shop Owner Terminal
@@ -55,7 +55,7 @@ export default function Footer() {
               <li>
                 <Link
                   href="/#how-it-works"
-                  target="_self"
+                  replace={false}
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   How It Works
@@ -64,10 +64,10 @@ export default function Footer() {
               <li>
                 <Link
                   href="/pricing"
-                  target="_self"
+                  replace={false}
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
-                  Pricing Plans (₹199/mo)
+                  Pricing Plan (₹499/mo)
                 </Link>
               </li>
             </ul>

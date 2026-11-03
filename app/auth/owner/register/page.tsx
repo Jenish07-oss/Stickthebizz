@@ -4,34 +4,93 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Sparkles, Store, User, Phone, Mail, Lock, ArrowRight, ShieldCheck } from "lucide-react";
-import { useStore } from "@/context/StoreContext";
+import { createClient } from "@/lib/supabase/client";
+import { registerMerchantAction } from "@/app/actions/merchant";
+
+const CATEGORIES = [
+  "Cafe / Chai",
+  "Bakery",
+  "Kirana / Grocery",
+  "Quick Service Restaurant",
+  "Salon / Spa",
+  "Other Retail",
+];
 
 export default function OwnerRegisterPage() {
   const router = useRouter();
-  const { updateRule } = useStore();
+  const supabase = createClient();
 
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
+  const [category, setCategory] = useState("Cafe / Chai");
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    setErrorMessage(null);
 
-    if (shopName.trim()) {
-      updateRule({
-        name: shopName.trim(),
-        slug: shopName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      });
+    const cleanPhone = mobile.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      setErrorMessage("Please enter a valid 10-digit mobile number.");
+      return;
     }
 
-    setTimeout(() => {
+    if (!password || password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters long.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 1. Sign up merchant in Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+        options: {
+          data: {
+            full_name: ownerName.trim(),
+            phone: cleanPhone,
+            shop_name: shopName.trim(),
+            role: "merchant",
+          },
+        },
+      });
+
+      if (authError) {
+        // If user already exists or signup needs signin
+        if (authError.message.includes("already registered")) {
+          setErrorMessage("This email is already registered. Please login to your account.");
+          setIsSubmitting(false);
+          return;
+        }
+        console.warn("Auth signup error:", authError.message);
+      }
+
+      const ownerId = authData?.user?.id;
+
+      // 2. Provision row in merchants table via Server Action
+      const regRes = await registerMerchantAction({
+        name: shopName.trim(),
+        category,
+        ownerId,
+        phone: cleanPhone,
+      });
+
+      if (!regRes.success) {
+        console.warn("Merchant provisioning note:", regRes.error);
+      }
+
+      // Auto-redirect to Owner Dashboard
+      router.push("/owner/dashboard");
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to complete registration. Please try again.");
+    } finally {
       setIsSubmitting(false);
-      router.push("/owner");
-    }, 800);
+    }
   };
 
   return (
@@ -39,15 +98,14 @@ export default function OwnerRegisterPage() {
       {/* Brand Header */}
       <div className="mb-8 text-center">
         <Link
-          href="/" target="_self"
+          href="/"
+          replace={false}
           className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-secondary"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-primary text-white shadow-sm">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white shadow-sm">
             <Sparkles className="h-5 w-5" />
           </span>
-          <span>
-            StickTheBizz<span className="text-primary">.</span>
-          </span>
+          <span>StickTheBizz</span>
         </Link>
         <p className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary/70">
           Merchant Counter Registration
@@ -55,156 +113,165 @@ export default function OwnerRegisterPage() {
       </div>
 
       {/* Floating White Card */}
-      <div className="w-full max-w-md rounded-[2.5rem] border border-border bg-white p-8 sm:p-10 shadow-float">
+      <div className="w-full max-w-lg rounded-[2.5rem] border border-border bg-white p-8 sm:p-10 shadow-float">
         <div className="text-center">
           <h1 className="font-display text-2xl font-extrabold text-secondary">
-            Register Your Counter
+            Set Up Your Shop Counter
           </h1>
-          <p className="mt-1.5 text-xs text-ink/65 leading-relaxed">
-            Start issuing digital punch cards with your custom QR standee in under 2 minutes.
+          <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+            Instant activation. Generate your counter standee QR and turn walk-in footfall into daily regulars.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+        {errorMessage && (
+          <div className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs font-bold text-primary text-center">
+            {errorMessage}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           {/* Shop Name */}
           <div>
-            <label
-              htmlFor="shopName"
-              className="block text-xs font-bold uppercase tracking-wider text-ink/70"
-            >
-              Shop / Business Name
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+              Shop Name
             </label>
             <div className="relative mt-1.5">
-              <Store className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/40" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
+                <Store className="h-4 w-4" />
+              </span>
               <input
-                id="shopName"
                 type="text"
                 required
                 value={shopName}
                 onChange={(e) => setShopName(e.target.value)}
-                placeholder="e.g. Chai Shai Corner"
-                className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-ink placeholder:text-ink/40 transition focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                placeholder="e.g. Sharma Sweets & Dairy"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          {/* Owner Name */}
+          {/* Owner Full Name */}
           <div>
-            <label
-              htmlFor="ownerName"
-              className="block text-xs font-bold uppercase tracking-wider text-ink/70"
-            >
-              Owner Name
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+              Owner Full Name
             </label>
             <div className="relative mt-1.5">
-              <User className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/40" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
+                <User className="h-4 w-4" />
+              </span>
               <input
-                id="ownerName"
                 type="text"
                 required
                 value={ownerName}
                 onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="e.g. Ramesh Patel"
-                className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-ink placeholder:text-ink/40 transition focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                placeholder="e.g. Vikram Sharma"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          {/* 10-Digit Mobile */}
+          {/* Business Category */}
           <div>
-            <label
-              htmlFor="mobile"
-              className="block text-xs font-bold uppercase tracking-wider text-ink/70"
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+              Business Category
+            </label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="mt-1.5 w-full rounded-xl border border-border bg-white py-3 px-3.5 text-sm font-semibold text-secondary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mobile (+91) */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
               10-Digit Mobile Number
             </label>
             <div className="relative mt-1.5">
-              <Phone className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/40" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 font-mono text-xs font-bold text-ink/60">
+                +91
+              </span>
               <input
-                id="mobile"
                 type="tel"
                 required
-                pattern="[0-9]{10}"
                 maxLength={10}
                 value={mobile}
-                onChange={(e) => setMobile(e.target.value)}
-                placeholder="e.g. 9820012345"
-                className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-4 font-mono text-sm font-semibold text-ink placeholder:text-ink/40 transition focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+                placeholder="9820012345"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-12 pr-4 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
           {/* Email */}
           <div>
-            <label
-              htmlFor="email"
-              className="block text-xs font-bold uppercase tracking-wider text-ink/70"
-            >
-              Email Address
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+              Email Address (for Login)
             </label>
             <div className="relative mt-1.5">
-              <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/40" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
+                <Mail className="h-4 w-4" />
+              </span>
               <input
-                id="email"
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-ink placeholder:text-ink/40 transition focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                placeholder="sharma.dairy@example.com"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          {/* Password */}
+          {/* Password (min 8 characters) */}
           <div>
-            <label
-              htmlFor="password"
-              className="block text-xs font-bold uppercase tracking-wider text-ink/70"
-            >
-              Password
+            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+              Password (Min. 8 Characters)
             </label>
             <div className="relative mt-1.5">
-              <Lock className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-ink/40" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
+                <Lock className="h-4 w-4" />
+              </span>
               <input
-                id="password"
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="h-12 w-full rounded-xl border border-border bg-white pl-11 pr-4 text-sm font-semibold text-ink placeholder:text-ink/40 transition focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent"
+                placeholder="••••••••••••"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
           </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="mt-6 flex h-12 min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary disabled:opacity-50"
-          >
-            <span>{isSubmitting ? "Setting Up Counter..." : "Create Shop Account"}</span>
-            <ArrowRight className="h-4 w-4" />
-          </button>
+          {/* Submit CTA */}
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-card transition hover:bg-primary/90 disabled:opacity-50 active:scale-95"
+            >
+              <span>{isSubmitting ? "Provisioning Terminal..." : "Create My Shop Counter"}</span>
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
         </form>
 
-        {/* DPDP Compliance Notice */}
-        <div className="mt-6 flex items-center justify-center gap-1.5 text-center text-[11px] text-ink/50">
-          <ShieldCheck className="h-3.5 w-3.5 text-success shrink-0" />
-          <span>DPDP Act 2023 Compliant • Bank-Grade TLS 1.3</span>
-        </div>
-
-        {/* Existing Account Link */}
-        <div className="mt-6 border-t border-border/70 pt-4 text-center">
+        <div className="mt-6 border-t border-border pt-4 text-center">
           <p className="text-xs text-ink/70">
-            Already have a merchant account?{" "}
+            Already registered?{" "}
             <Link
-              href="/auth/owner/login" target="_self"
-              className="font-bold text-secondary underline hover:text-primary"
+              href="/auth/owner/login"
+              replace={false}
+              className="font-bold text-primary hover:underline"
             >
-              Log in here
+              Login to Cashier Terminal
             </Link>
           </p>
         </div>
@@ -212,4 +279,3 @@ export default function OwnerRegisterPage() {
     </div>
   );
 }
-

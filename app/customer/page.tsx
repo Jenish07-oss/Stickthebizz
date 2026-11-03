@@ -1,5 +1,5 @@
-import CustomerView from "@/components/CustomerView";
+import { redirect } from "next/navigation";
 
 export default function CustomerPage() {
-  return <CustomerView />;
+  redirect("/customer/dashboard");
 }

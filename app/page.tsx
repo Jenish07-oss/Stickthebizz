@@ -198,7 +198,7 @@ export default function HomePage() {
               <div className="lg:col-span-7 flex flex-col items-start text-left">
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-                  Made for Bharat&apos;s Retail Counters
+                  MADE FOR BHARAT&apos;S RETAIL COUNTERS
                 </div>
 
                 <h1 className="font-display text-4xl font-extrabold leading-[1.08] tracking-tight text-secondary sm:text-5xl lg:text-6xl">
@@ -209,7 +209,7 @@ export default function HomePage() {
                 </h1>
 
                 <p className="mt-5 text-lg leading-relaxed text-ink/80 sm:text-xl">
-                  Zero app downloads. One counter QR standee. Watch how an interactive punch card on a customer&apos;s phone rewards repeat visits with zero cashier friction.
+                  Zero app downloads. No costly POS machines. One counter QR stand that turns first-time footfall into habit-forming daily customer streaks.
                 </p>
 
                 {/* Category Preset Selector */}
@@ -263,7 +263,7 @@ export default function HomePage() {
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
                   <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
                     <AntiFraudIcon size={20} />
-                    <span>12-Hour Midnight Anti-Fraud Guard</span>
+                    <span>Strict 1-Scan Per Day (12:00 AM Reset)</span>
                   </div>
                   <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
                     <CustomersIcon size={20} />
@@ -461,101 +461,109 @@ export default function HomePage() {
           </div>
         </AnimatedHero>
 
-        {/* TRUSTED BY BANNER (TICKER BELOW HERO WITH LOCATION ICON) */}
-        <section aria-label="Trusted Stores Across Bharat" className="border-y border-border bg-white py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-8">
-            <div className="flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-secondary/75">
-              <LocationIcon size={18} />
-              <span>Trusted by 500+ daily retail counters across Bharat</span>
+        {/* LIVE MOVING RETAIL TICKER */}
+        <section aria-label="Trusted Stores Across Bharat" className="border-y border-border bg-white py-4 overflow-hidden">
+          <div className="mx-auto max-w-7xl px-4 sm:px-8 mb-2.5 text-center">
+            <div className="inline-flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-secondary/75">
+              <LocationIcon size={16} />
+              <span>Trusted by 500+ Daily Retail Counters across Bharat</span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-6 sm:gap-10 text-xs sm:text-sm font-bold text-ink/70">
-              <span className="flex items-center gap-1.5">
-                <ChaiCupIcon size={18} />
-                Sharma Sweets &amp; Dairy (Jaipur)
-              </span>
-              <span className="hidden sm:inline text-border">•</span>
-              <span className="flex items-center gap-1.5">
-                <Store className="h-4 w-4 text-secondary" />
-                The Daily Grind Cafe (Bengaluru)
-              </span>
-              <span className="hidden sm:inline text-border">•</span>
-              <span className="flex items-center gap-1.5">
-                <BasketIcon size={18} />
-                Patel Kirana Superstore (Ahmedabad)
-              </span>
-              <span className="hidden sm:inline text-border">•</span>
-              <span className="flex items-center gap-1.5">
-                <ChaiCupIcon size={18} />
-                Chai Shai Express (Mumbai)
-              </span>
-              <span className="hidden sm:inline text-border">•</span>
-              <span className="flex items-center gap-1.5">
-                <StreakIcon size={18} />
-                The Bun Co. (Pune)
-              </span>
+          </div>
+          <div className="relative flex overflow-x-hidden">
+            <div className="flex animate-marquee whitespace-nowrap gap-8 text-xs sm:text-sm font-bold text-ink/75">
+              <span>Sharma Sweets (Jaipur)</span>
+              <span className="text-border">•</span>
+              <span>Kesar Chai Corner (Ahmedabad)</span>
+              <span className="text-border">•</span>
+              <span>Royal Bakers (Bengaluru)</span>
+              <span className="text-border">•</span>
+              <span>Patel Kirana Superstore (Surat)</span>
+              <span className="text-border">•</span>
+              <span>Chai Tapri (Pune)</span>
+              <span className="text-border">•</span>
+              <span>Madras Coffee House (Chennai)</span>
+              <span className="text-border">•</span>
+              <span>Punjab Dairy &amp; Sweets (Amritsar)</span>
+              <span className="text-border">•</span>
+            </div>
+            <div className="flex animate-marquee whitespace-nowrap gap-8 text-xs sm:text-sm font-bold text-ink/75" aria-hidden="true">
+              <span>Sharma Sweets (Jaipur)</span>
+              <span className="text-border">•</span>
+              <span>Kesar Chai Corner (Ahmedabad)</span>
+              <span className="text-border">•</span>
+              <span>Royal Bakers (Bengaluru)</span>
+              <span className="text-border">•</span>
+              <span>Patel Kirana Superstore (Surat)</span>
+              <span className="text-border">•</span>
+              <span>Chai Tapri (Pune)</span>
+              <span className="text-border">•</span>
+              <span>Madras Coffee House (Chennai)</span>
+              <span className="text-border">•</span>
+              <span>Punjab Dairy &amp; Sweets (Amritsar)</span>
+              <span className="text-border">•</span>
             </div>
           </div>
         </section>
 
-        {/* THREE-PILLAR VALUE PROPOSITION WITH 12 BRAND ICONS */}
+        {/* THREE DISTINCT PILLARS WITH DEDICATED TRUST CARDS */}
         <section id="for-shops" className="px-4 py-20 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-widest text-primary flex items-center gap-1.5">
                 <StreakIcon size={16} />
-                Built for busy counters
+                BUILT FOR BUSY BHARAT COUNTERS
               </p>
               <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-secondary sm:text-4xl">
-                Loyalty that works as hard as your cash desk.
+                Loyalty that protects your margins and delights customers.
               </h2>
             </div>
 
             <div className="mt-12 grid gap-6 md:grid-cols-3">
-              {/* Card 1: Bring Customers Back */}
-              <article className="rounded-3xl border border-border bg-white p-8 shadow-card transition hover:shadow-float">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-coral/15 text-primary">
-                    <StreakIcon size={28} />
-                  </span>
-                  <span className="font-mono text-sm font-bold text-success">+42% Retention</span>
-                </div>
-                <h3 className="mt-6 font-display text-xl font-extrabold text-secondary">
-                  Bring Customers Back
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-ink/75">
-                  Visual punch progress bars tap into human habit psychology. Diners and shoppers return to complete their streak instead of going to competitors.
-                </p>
-              </article>
-
-              {/* Card 2: Know Your Regulars */}
-              <article className="rounded-3xl border border-border bg-white p-8 shadow-card transition hover:shadow-float">
-                <div className="flex items-center justify-between">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-secondary/10 text-secondary">
-                    <CustomersIcon size={28} />
-                  </span>
-                  <span className="font-mono text-xs font-bold text-ink/50">DPDP SAFE</span>
-                </div>
-                <h3 className="mt-6 font-display text-xl font-extrabold text-secondary">
-                  Know Your Regulars
-                </h3>
-                <p className="mt-3 text-sm leading-relaxed text-ink/75">
-                  Masked customer directory (<span className="font-mono font-bold">98***12</span>) protects customer phone privacy while letting you know who your top 20% high-value regulars are.
-                </p>
-              </article>
-
-              {/* Card 3: Zero-Fraud Verification */}
+              {/* Pillar 1: Daily Frequency Restriction */}
               <article className="rounded-3xl border border-border bg-white p-8 shadow-card transition hover:shadow-float">
                 <div className="flex items-center justify-between">
                   <span className="grid h-12 w-12 place-items-center rounded-2xl bg-warning/15 text-warning">
                     <AntiFraudIcon size={28} />
                   </span>
-                  <span className="font-mono text-xs font-bold text-secondary">12H LOCK</span>
+                  <span className="font-mono text-xs font-bold text-secondary">DAILY LIMIT</span>
                 </div>
                 <h3 className="mt-6 font-display text-xl font-extrabold text-secondary">
-                  Zero-Fraud Verification
+                  Strict 1-Scan Per Calendar Day
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-ink/75">
-                  100% hardware-free. Counter QR stand + 12-hour midnight lock prevents multiple scans in the same visit without holding up checkout queues.
+                  Protects shopkeeper margins. Customer passes automatically lock upon verification and reset strictly at 12:00:00 AM IST. Customers cannot spam repeat scans on the same day.
+                </p>
+              </article>
+
+              {/* Pillar 2: 100% Privacy & Zero-Download Convenience */}
+              <article className="rounded-3xl border border-border bg-white p-8 shadow-card transition hover:shadow-float">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-secondary/10 text-secondary">
+                    <MobilePhoneIcon size={28} />
+                  </span>
+                  <span className="font-mono text-xs font-bold text-success">ZERO DOWNLOAD</span>
+                </div>
+                <h3 className="mt-6 font-display text-xl font-extrabold text-secondary">
+                  No App Store Downloads
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink/75">
+                  Customers simply point their camera, verify with an instant OTP, and save their pass to their browser. Zero invasive app permissions, zero passwords.
+                </p>
+              </article>
+
+              {/* Pillar 3: Cashier-Controlled Verification */}
+              <article className="rounded-3xl border border-border bg-white p-8 shadow-card transition hover:shadow-float">
+                <div className="flex items-center justify-between">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-coral/15 text-primary">
+                    <CheckCircle2 className="h-7 w-7 text-primary" />
+                  </span>
+                  <span className="font-mono text-xs font-bold text-secondary">1-TAP CHIME</span>
+                </div>
+                <h3 className="mt-6 font-display text-xl font-extrabold text-secondary">
+                  1-Tap Merchant Approval
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-ink/75">
+                  Rewards are only claimed when the cashier approves the check-in or verifies a 4-digit PIN on the counter screen. Eliminates employee theft and fake stamps.
                 </p>
               </article>
             </div>
@@ -811,69 +819,74 @@ export default function HomePage() {
           <div className="mx-auto max-w-7xl">
             <div className="max-w-2xl">
               <p className="text-xs font-bold uppercase tracking-widest text-primary">
-                Honest Pricing
+                PREDICTABLE RETAIL PRICING
               </p>
               <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-secondary sm:text-4xl">
-                Start Free. Upgrade to ₹199/Month.
+                Flat ₹499/Month. Zero Commission.
               </h2>
             </div>
 
-            <div className="mt-10 overflow-hidden rounded-[2.5rem] border border-border bg-white shadow-float md:grid md:grid-cols-2">
-              <div className="p-8 sm:p-12">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-xs font-bold text-primary">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  FIRST 50 SCANS FREE
-                </span>
-                <h3 className="mt-4 font-display text-3xl font-extrabold text-secondary">
-                  Zero Risk Trial
-                </h3>
-                <p className="mt-2 text-sm text-ink/70">
-                  Test customer engagement directly at your cashier counter without committing upfront.
-                </p>
-
-                <ul className="mt-6 space-y-3 text-sm font-semibold text-ink/80">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span>Printable Acrylic QR Table Standee</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span>12-Hour Midnight Anti-Fraud Protection</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span>Verified Customer Ratings &amp; Feedback</span>
-                  </li>
-                </ul>
+            <div className="mt-10 overflow-hidden rounded-[2.5rem] border-2 border-primary bg-secondary text-white shadow-float md:grid md:grid-cols-2">
+              <div className="p-8 sm:p-12 flex flex-col justify-between">
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/20 border border-coral/40 px-3 py-1 font-mono text-xs font-bold text-coral">
+                    <Sparkles className="h-3.5 w-3.5" />
+                    ALL-INCLUSIVE PRO COUNTER TIER
+                  </span>
+                  <h3 className="mt-4 font-display text-3xl sm:text-4xl font-extrabold text-white">
+                    Unlimited Counter Plan
+                  </h3>
+                  <div className="mt-4 flex items-baseline gap-2">
+                    <span className="font-display text-5xl sm:text-6xl font-extrabold text-white">₹499</span>
+                    <span className="text-sm font-semibold text-white/70">/ month (flat rate)</span>
+                  </div>
+                  <p className="mt-3 text-sm text-white/80">
+                    No hardware rental, no per-scan cuts, no hidden fees. Generates thousands in repeat revenue.
+                  </p>
+                </div>
 
                 <div className="mt-8">
                   <Link
-                    href="/pricing"
-                    target="_self"
-                    className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-7 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
+                    href="/auth/owner/register"
+                    replace={false}
+                    className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
                   >
-                    <span>View Full Pricing &amp; Plans</span>
+                    <span>Register My Shop Counter</span>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
               </div>
 
-              <div className="flex flex-col justify-between bg-secondary p-8 text-white sm:p-12">
-                <div>
-                  <p className="font-mono text-xs font-bold uppercase tracking-wider text-white/70">
-                    Pro Unlimited Plan
-                  </p>
-                  <div className="mt-3 flex items-baseline gap-2">
-                    <span className="font-display text-5xl font-extrabold text-primary">₹199</span>
-                    <span className="text-sm font-semibold text-white/75">/ month</span>
-                  </div>
-                  <p className="mt-3 text-sm text-white/80">
-                    Unlimited scans, unlimited customer regulars, zero SMS fees, and zero commissions on sales.
-                  </p>
-                </div>
+              <div className="flex flex-col justify-between bg-white/5 border-t md:border-t-0 md:border-l border-white/10 p-8 sm:p-12">
+                <ul className="space-y-3.5 text-sm font-semibold text-white/95">
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Unlimited customer passes &amp; digital punch cards</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Unlimited counter QR scans &amp; automated daily resets</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Multi-category custom streak rules</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Printable 5x7 acrylic counter QR standee artwork</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Real-time cashier terminal with WebSockets audio chime</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0" />
+                    <span>Full customer analytics &amp; visit ledger</span>
+                  </li>
+                </ul>
 
                 <div className="mt-8 rounded-2xl bg-white/10 p-4 text-xs text-white/85">
-                  💡 Generates an estimated <strong>₹15,000+</strong> in repeat sales for the cost of two special chais.
+                  💡 Generates an estimated <strong>₹15,000+</strong> in repeat sales for the cost of two special chais per month.
                 </div>
               </div>
             </div>
@@ -917,7 +930,7 @@ export default function HomePage() {
                   </span>
                 </summary>
                 <p className="mt-3 text-sm leading-relaxed text-ink/75">
-                  StickTheBizz enforces an automated 12-hour anti-fraud lock. Once a customer verifies a visit, their punch card locks until 12:00 AM IST midnight. Furthermore, each stamp requires 1-tap confirmation from your cashier terminal.
+                  StickTheBizz enforces a strict 1-scan per calendar day frequency restriction. Once a customer verifies a visit, their punch card automatically locks and resets strictly at 12:00:00 AM IST. Furthermore, each stamp requires 1-tap confirmation from your cashier terminal.
                 </p>
               </details>
 

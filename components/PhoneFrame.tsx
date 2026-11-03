@@ -11,23 +11,23 @@ interface PhoneFrameProps {
 export default function PhoneFrame({ children, className = "" }: PhoneFrameProps) {
   return (
     <div
-      className={`relative mx-auto w-full max-w-[390px] rounded-[3.2rem] border-[10px] border-secondary/90 bg-slate-900 p-2.5 shadow-[0_30px_70px_-15px_rgba(49,91,140,0.35)] transition-all ${className}`}
+      className={`max-w-[360px] h-[720px] rounded-[3rem] p-3 bg-[#09090b] shadow-2xl relative mx-auto ${className}`}
     >
-      {/* Outer Phone Bezel Buttons Accent */}
-      <div className="absolute -left-3.5 top-24 h-10 w-1 rounded-l-md bg-secondary/70 hidden sm:block" />
-      <div className="absolute -left-3.5 top-36 h-10 w-1 rounded-l-md bg-secondary/70 hidden sm:block" />
-      <div className="absolute -right-3.5 top-28 h-14 w-1 rounded-r-md bg-secondary/70 hidden sm:block" />
+      {/* Outer Phone Bezel Buttons */}
+      <div className="absolute -left-1 top-24 h-10 w-1 rounded-l-md bg-zinc-800" />
+      <div className="absolute -left-1 top-36 h-10 w-1 rounded-l-md bg-zinc-800" />
+      <div className="absolute -right-1 top-28 h-14 w-1 rounded-r-md bg-zinc-800" />
 
-      {/* Screen Inner */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-sand flex flex-col h-[670px] max-h-[85vh]">
-        {/* Phone Dynamic Island / Status Bar */}
-        <div className="shrink-0 z-10 flex items-center justify-between bg-sand/95 px-7 pt-3 pb-2 text-[11px] font-bold text-ink border-b border-ink/5">
-          <span className="font-mono">9:41 AM</span>
+      {/* Screen Inner Viewport */}
+      <div className="h-full w-full rounded-[2.5rem] bg-[#F5EBDD] overflow-y-auto scrollbar-hide pb-24 relative flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* Dynamic Island Notch & Status Bar */}
+        <div className="shrink-0 z-30 sticky top-0 flex items-center justify-between bg-[#F5EBDD]/90 backdrop-blur-sm px-6 pt-3 pb-2 text-[11px] font-bold text-ink">
+          <span className="font-mono text-xs">9:41 AM</span>
 
-          {/* Dynamic Island Notch Pill */}
-          <div className="h-5 w-24 rounded-full bg-slate-900 flex items-center justify-end px-2 gap-1.5 shadow-inner">
-            <span className="h-2 w-2 rounded-full bg-slate-800" />
-            <span className="h-2 w-2 rounded-full bg-blue-950/60" />
+          {/* Dynamic Island Pill */}
+          <div className="w-24 h-6 bg-black rounded-full flex items-center justify-end px-2 gap-1.5 shadow-inner">
+            <span className="h-2 w-2 rounded-full bg-zinc-800" />
+            <span className="h-2 w-2 rounded-full bg-zinc-900" />
           </div>
 
           <div className="flex items-center gap-1.5 text-ink/80">
@@ -37,14 +37,9 @@ export default function PhoneFrame({ children, className = "" }: PhoneFrameProps
           </div>
         </div>
 
-        {/* Screen Content - Scrollable without visible scrollbar */}
-        <div className="flex-1 overflow-y-auto px-4 pt-2 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {/* Content Area */}
+        <div className="flex-1 px-3 pt-2">
           {children}
-        </div>
-
-        {/* Home Indicator Gesture Bar (Sticky at bottom) */}
-        <div className="shrink-0 bg-sand/95 py-2.5 border-t border-ink/5">
-          <div className="mx-auto h-1 w-28 rounded-full bg-ink/30" />
         </div>
       </div>
     </div>

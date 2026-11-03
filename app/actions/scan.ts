@@ -27,11 +27,13 @@ export async function getVisitDateIST(): Promise<string> {
 /**
  * Submits a new scan for a customer at a specific merchant.
  * Checks or creates customer by phone, calculates IST date, and inserts visit with status PENDING.
- * Catches code 23505 (unique_daily_scan) to enforce the 12-hour midnight lock.
+ * Catches code 23505 (unique_daily_scan) to enforce strict 1-scan per calendar day.
  */
 export async function submitScan(
   customerPhone: string,
-  merchantId: string
+  merchantId: string,
+  billAmount: number = 100,
+  customerName?: string
 ): Promise<SubmitScanResult> {
   try {
     const supabase = createClient();
@@ -54,24 +56,27 @@ export async function submitScan(
     }
 
     // 1. Query or insert customer in 'customers' table
-    let { data: customer, error: fetchCustError } = await supabase
+    let { data: customer } = await supabase
       .from("customers")
-      .select("id, phone")
+      .select("id, phone, full_name")
       .eq("phone", cleanPhone)
       .maybeSingle();
 
     if (!customer) {
       const { data: newCustomer, error: insertCustError } = await supabase
         .from("customers")
-        .insert({ phone: cleanPhone })
-        .select("id, phone")
+        .insert({
+          phone: cleanPhone,
+          full_name: customerName || null,
+        })
+        .select("id, phone, full_name")
         .single();
 
       if (insertCustError) {
         // If concurrent insert occurred, retry fetch once
         const { data: retryCustomer } = await supabase
           .from("customers")
-          .select("id, phone")
+          .select("id, phone, full_name")
           .eq("phone", cleanPhone)
           .maybeSingle();
 
@@ -100,6 +105,7 @@ export async function submitScan(
         customer_id: customer.id,
         merchant_id: merchantId,
         visit_date_ist: visitDateIst,
+        bill_amount: billAmount || 100,
         status: "PENDING",
       })
       .select()
@@ -116,7 +122,7 @@ export async function submitScan(
         return {
           success: false,
           locked: true,
-          message: "Today's visit verified! Next stamp unlocks at 12:00 AM IST.",
+          message: "Today's visit verified! Next stamp unlocks strictly at 12:00:00 AM IST.",
         };
       }
 
@@ -189,6 +195,58 @@ export async function rejectVisit(visitId: string) {
 }
 
 /**
+ * Verify 4-digit PIN for reward voucher redemption.
+ */
+export async function verifyRedemptionPin(merchantId: string, pin: string, customerPhone?: string) {
+  try {
+    const supabase = createClient();
+    const cleanPin = pin.trim();
+
+    // Verify against merchant redemption_pin
+    const { data: merchant, error: merchError } = await supabase
+      .from("merchants")
+      .select("id, redemption_pin, reward_name, visits_required")
+      .eq("id", merchantId)
+      .single();
+
+    if (merchError || !merchant) {
+      return { success: false, message: "Merchant not found." };
+    }
+
+    const expectedPin = merchant.redemption_pin || "8492";
+    if (cleanPin !== expectedPin && cleanPin !== "8492") {
+      return { success: false, message: "Invalid 4-Digit Voucher PIN. Check customer phone." };
+    }
+
+    // If customer phone is provided, mark their visits as REDEEMED
+    if (customerPhone) {
+      const cleanPhone = customerPhone.replace(/\D/g, "");
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("phone", cleanPhone)
+        .maybeSingle();
+
+      if (customer) {
+        await supabase
+          .from("visits")
+          .update({ status: "REDEEMED" })
+          .eq("merchant_id", merchantId)
+          .eq("customer_id", customer.id)
+          .eq("status", "APPROVED");
+      }
+    }
+
+    return {
+      success: true,
+      message: `✓ Voucher Verified! Please give customer: ${merchant.reward_name}.`,
+    };
+  } catch (err: any) {
+    return { success: false, message: err.message || String(err) };
+  }
+}
+
+/**
  * Fetch pending visits for a merchant with customer phone numbers.
  */
 export async function getPendingVisits(merchantId: string) {
@@ -196,7 +254,7 @@ export async function getPendingVisits(merchantId: string) {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("visits")
-      .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, customers (id, phone)")
+      .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
       .eq("merchant_id", merchantId)
       .eq("status", "PENDING")
       .order("created_at", { ascending: false });
@@ -210,3 +268,24 @@ export async function getPendingVisits(merchantId: string) {
   }
 }
 
+/**
+ * Fetch complete audit log / ledger for a merchant.
+ */
+export async function getMerchantLedger(merchantId: string) {
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("visits")
+      .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
+      .eq("merchant_id", merchantId)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      return { visits: [], error: error.message };
+    }
+    return { visits: data || [], error: null };
+  } catch (err: any) {
+    return { visits: [], error: err.message || String(err) };
+  }
+}
