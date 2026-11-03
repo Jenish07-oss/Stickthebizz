@@ -19,9 +19,9 @@ export default function PhoneFrame({ children, className = "" }: PhoneFrameProps
       <div className="absolute -right-3.5 top-28 h-14 w-1 rounded-r-md bg-secondary/70 hidden sm:block" />
 
       {/* Screen Inner */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-sand flex flex-col min-h-[580px]">
+      <div className="relative overflow-hidden rounded-[2.5rem] bg-sand flex flex-col h-[670px] max-h-[85vh]">
         {/* Phone Dynamic Island / Status Bar */}
-        <div className="flex items-center justify-between bg-sand px-7 pt-3 pb-2 text-[11px] font-bold text-ink">
+        <div className="shrink-0 z-10 flex items-center justify-between bg-sand/95 px-7 pt-3 pb-2 text-[11px] font-bold text-ink border-b border-ink/5">
           <span className="font-mono">9:41 AM</span>
 
           {/* Dynamic Island Notch Pill */}
@@ -37,12 +37,14 @@ export default function PhoneFrame({ children, className = "" }: PhoneFrameProps
           </div>
         </div>
 
-        {/* Screen Content */}
-        <div className="flex-1 p-4 pb-2">{children}</div>
+        {/* Screen Content - Scrollable without visible scrollbar */}
+        <div className="flex-1 overflow-y-auto px-4 pt-2 pb-20 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {children}
+        </div>
 
-        {/* Home Indicator Gesture Bar */}
-        <div className="pb-3 pt-1">
-          <div className="mx-auto h-1 w-28 rounded-full bg-ink/25" />
+        {/* Home Indicator Gesture Bar (Sticky at bottom) */}
+        <div className="shrink-0 bg-sand/95 py-2.5 border-t border-ink/5">
+          <div className="mx-auto h-1 w-28 rounded-full bg-ink/30" />
         </div>
       </div>
     </div>

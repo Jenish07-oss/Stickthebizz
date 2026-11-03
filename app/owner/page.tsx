@@ -227,9 +227,9 @@ export default function OwnerPage() {
               <div className="mt-6 space-y-3">
                 {pendingQueue.filter((q) => q.status === "pending").length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-white/20 p-8 text-center text-white/75">
-                    <p className="font-semibold text-sm">All customer check-ins verified!</p>
+                    <p className="font-semibold text-sm">No pending scans right now. Waiting for customers...</p>
                     <p className="mt-1 text-xs text-white/55">
-                      New customer camera scans will appear here instantly with counter audio chimes.
+                      When a customer scans your counter QR stand, their 1-tap check-in will appear here with an audio chime.
                     </p>
                   </div>
                 ) : (

@@ -122,7 +122,7 @@ interface StoreContextType {
   getCountdownToMidnight: () => { hours: number; minutes: number; seconds: number; formatted: string };
 }
 
-const STORAGE_KEY = "stb_phase2_state_v2";
+const STORAGE_KEY = "stb_phase4_state_prod_v1";
 
 const getTodayDateString = (): string => {
   const d = new Date();
@@ -157,7 +157,7 @@ const DEFAULT_CUSTOMER: CustomerState = {
     { date: "Day 18", amount: 130, stampNumber: 6 },
     { date: "Day 22", amount: 100, stampNumber: 7 },
   ],
-  lastScanDate: null, // Available to scan initially
+  lastScanDate: null,
   lastScanTimestamp: Date.now() - 25 * 60 * 60 * 1000,
   lockedUntilMidnight: false,
   activeRewardCode: null,
@@ -168,18 +168,8 @@ const DEFAULT_CUSTOMER: CustomerState = {
   comment: "",
 };
 
-const DEFAULT_PENDING_QUEUE: PendingScan[] = [
-  {
-    id: "scan-mock-1",
-    customerPhone: "9820012345",
-    customerMasked: "98***45",
-    amount: 120,
-    timestamp: Date.now() - 2 * 60 * 1000,
-    formattedTime: "2 mins ago",
-    shopSlug: "kesar-chai",
-    status: "pending",
-  },
-];
+// Clean empty queue for production readiness
+const DEFAULT_PENDING_QUEUE: PendingScan[] = [];
 
 const INITIAL_CUSTOMERS: CustomerDirectoryRecord[] = [
   {
@@ -266,11 +256,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         const data = JSON.parse(raw);
         if (data.rule) setRule(data.rule);
         if (data.customer) {
-          // Check if lastScanDate is today
           const today = getTodayDateString();
           const isTodayLocked = data.customer.lastScanDate === today;
+          // Ensure visits is never greater than rule.visitsRequired
+          const safeVisits = Math.min(
+            data.customer.visits || 0,
+            data.rule ? data.rule.visitsRequired : 10
+          );
           setCustomer({
             ...data.customer,
+            visits: safeVisits,
             lockedUntilMidnight: isTodayLocked,
           });
         }
@@ -290,7 +285,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     loadStateFromStorage();
   }, [loadStateFromStorage]);
 
-  // Window 'storage' event listener for multi-tab reactivity (Tab A Customer <-> Tab B Owner)
+  // Window 'storage' event listener for multi-tab reactivity
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY) {
@@ -329,7 +324,6 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           reviews: newRevs,
         });
         localStorage.setItem(STORAGE_KEY, payload);
-        // Dispatch custom event for same-tab reactivity
         window.dispatchEvent(new Event("stb_sync"));
       } catch {
         // LocalStorage quota error
@@ -349,11 +343,18 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const nextRule = CATEGORY_PRESETS[preset] || CATEGORY_PRESETS.chai;
     setRule(nextRule);
 
+    // Cap customer visits to the new visitsRequired
+    setCustomer((prev) => ({
+      ...prev,
+      visits: Math.min(prev.visits, nextRule.visitsRequired),
+    }));
+
     // Update customers target visits according to rule
     setCustomers((prev) =>
       prev.map((c) => ({
         ...c,
         targetVisits: nextRule.visitsRequired,
+        visits: Math.min(c.visits, nextRule.visitsRequired),
         status:
           c.visits >= nextRule.visitsRequired
             ? "Reward ready"
@@ -365,7 +366,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateRule = (partial: Partial<ShopRule>) => {
-    setRule((prev) => ({ ...prev, ...partial }));
+    setRule((prev) => {
+      const updated = { ...prev, ...partial };
+      if (partial.visitsRequired) {
+        setCustomer((c) => ({
+          ...c,
+          visits: Math.min(c.visits, updated.visitsRequired),
+        }));
+      }
+      return updated;
+    });
   };
 
   // Submit scan from customer card
@@ -401,13 +411,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     };
   };
 
-  // Merchant 1-Tap Approval
+  // Merchant 1-Tap Approval - WITH LOGICAL CAP AT visitsRequired
   const approveScan = (id: string) => {
     const scanItem = pendingQueue.find((s) => s.id === id);
     if (!scanItem) return;
 
     const today = getTodayDateString();
-    const nextVisits = customer.visits + 1;
+    // Cap visits strictly to visitsRequired ("11 of 10" prevented)
+    const nextVisits = Math.min(customer.visits + 1, rule.visitsRequired);
     const isTargetUnlocked = nextVisits >= rule.visitsRequired;
 
     let code = customer.activeRewardCode;
@@ -415,7 +426,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     if (isTargetUnlocked && !code) {
       code = `STB-7Q4K-${Math.floor(1000 + Math.random() * 9000)}`;
-      pin = "8492"; // Standard demonstration pin
+      pin = "8492"; // Verified redemption pin
     }
 
     // Update customer

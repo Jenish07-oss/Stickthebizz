@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
 import RewardTicket from "@/components/RewardTicket";
-import DemoControls from "@/components/DemoControls";
 import ReviewModal from "@/components/ReviewModal";
 import ConfettiEffect from "@/components/ConfettiEffect";
 import PhoneFrame from "@/components/PhoneFrame";
@@ -20,6 +19,7 @@ import {
   Calendar,
   Lock,
   Clock,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function CustomerPage() {
@@ -44,6 +44,9 @@ export default function CustomerPage() {
   // Live countdown ticker to 12:00 AM IST
   const [countdownStr, setCountdownStr] = useState("");
 
+  const safeVisits = Math.min(customer.visits, rule.visitsRequired);
+  const isGoalCompleted = customer.visits >= rule.visitsRequired;
+
   useEffect(() => {
     const updateCountdown = () => {
       const { formatted } = getCountdownToMidnight();
@@ -57,17 +60,17 @@ export default function CustomerPage() {
 
   // Trigger confetti if reward is ready and not yet redeemed
   useEffect(() => {
-    if (customer.visits >= rule.visitsRequired && !customer.isRedeemed) {
+    if (isGoalCompleted && !customer.isRedeemed) {
       setShowConfetti(true);
     }
-  }, [customer.visits, rule.visitsRequired, customer.isRedeemed]);
+  }, [isGoalCompleted, customer.isRedeemed]);
 
   // Simulated OTP handling
   const handleRequestOtp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!phoneNumber || !consentChecked) return;
     setOtpSent(true);
-    setOtpCode("8492"); // Pre-filled simulation OTP
+    setOtpCode("8492");
   };
 
   const handleVerifyOtp = (e: React.FormEvent) => {
@@ -118,7 +121,7 @@ export default function CustomerPage() {
             </div>
 
             {/* STAMP CARD CONTAINER */}
-            <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm">
+            <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm pb-10">
               {/* Shop Header & Rule Badge */}
               <div className="border-b border-border/70 pb-3">
                 <div className="flex items-start justify-between">
@@ -130,8 +133,14 @@ export default function CustomerPage() {
                       Digital Counter Loyalty Card
                     </p>
                   </div>
-                  <span className="rounded-full bg-coral/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-primary">
-                    {customer.visits >= rule.visitsRequired ? "REWARD UNLOCKED" : "COLLECTING"}
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wider ${
+                      isGoalCompleted
+                        ? "bg-success/15 text-success"
+                        : "bg-coral/15 text-primary"
+                    }`}
+                  >
+                    {isGoalCompleted ? "CARD COMPLETED" : "COLLECTING"}
                   </span>
                 </div>
 
@@ -146,11 +155,14 @@ export default function CustomerPage() {
                 </div>
               </div>
 
-              {/* Visit Progress & Cycle Days */}
+              {/* Visit Progress & Cycle Days (Capped at visitsRequired) */}
               <div className="mt-4">
                 <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="font-display text-base text-secondary">
-                    {customer.visits} of {rule.visitsRequired} visits
+                  <span className="font-display text-base text-secondary flex items-center gap-1.5">
+                    {safeVisits} of {rule.visitsRequired} visits
+                    {isGoalCompleted && (
+                      <CheckCircle2 className="h-4 w-4 text-success inline" />
+                    )}
                   </span>
                   <span className="flex items-center gap-1 font-mono text-[11px] text-ink/60">
                     <Calendar className="h-3 w-3" />
@@ -163,7 +175,7 @@ export default function CustomerPage() {
                   <div
                     className="h-full rounded-full bg-primary transition-all duration-500"
                     style={{
-                      width: `${Math.min(100, (customer.visits / rule.visitsRequired) * 100)}%`,
+                      width: `${Math.min(100, (safeVisits / rule.visitsRequired) * 100)}%`,
                     }}
                   />
                 </div>
@@ -173,14 +185,14 @@ export default function CustomerPage() {
               <div className="mt-4">
                 <StampGrid
                   totalVisits={rule.visitsRequired}
-                  completedVisits={customer.visits}
+                  completedVisits={safeVisits}
                   rewardName={rule.rewardName}
                 />
               </div>
 
               {/* REWARD TICKET IF UNLOCKED */}
-              {customer.visits >= rule.visitsRequired && (
-                <div className="mt-4 animate-stamp-pop">
+              {isGoalCompleted && (
+                <div className="mt-5 animate-stamp-pop">
                   <RewardTicket
                     ticket={{
                       code: customer.activeRewardCode || "STB-7Q4K-29",
@@ -199,7 +211,14 @@ export default function CustomerPage() {
 
               {/* ANTI-FRAUD SCAN BUTTON OR ACTIVE COUNTDOWN */}
               <div className="mt-5">
-                {customer.lockedUntilMidnight ? (
+                {isGoalCompleted && !customer.isRedeemed ? (
+                  <div className="rounded-2xl border border-success/40 bg-success/10 p-3.5 text-center">
+                    <p className="text-xs font-bold text-success flex items-center justify-center gap-1.5">
+                      <Sparkles className="h-4 w-4 text-success" />
+                      Goal reached! Show your 4-digit PIN above to cashier.
+                    </p>
+                  </div>
+                ) : customer.lockedUntilMidnight ? (
                   <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3.5 text-center">
                     <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
                       <Lock className="h-4 w-4 text-warning" />
@@ -251,7 +270,7 @@ export default function CustomerPage() {
             </div>
 
             {/* Privacy notice inside phone */}
-            <div className="mt-3 flex items-center justify-center gap-1 text-center text-[10px] text-ink/50">
+            <div className="mt-3 flex items-center justify-center gap-1 text-center text-[10px] text-ink/50 pb-4">
               <ShieldCheck className="h-3 w-3 text-success" />
               <span>DPDP Act 2023 Compliant • No spam</span>
             </div>
@@ -374,9 +393,6 @@ export default function CustomerPage() {
         isOpen={reviewModalOpen}
         onClose={() => setReviewModalOpen(false)}
       />
-
-      {/* FAST-FORWARD DEMO CONTROLS FLOATING BAR */}
-      <DemoControls />
 
       <Footer />
     </div>

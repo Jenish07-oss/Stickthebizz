@@ -22,17 +22,17 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
     canvas.height = window.innerHeight;
 
     const colors = ["#F2765E", "#315B8C", "#16A34A", "#F59E0B", "#F5EBDD"];
-    const particleCount = 70;
+    const particleCount = 55;
     const particles = Array.from({ length: particleCount }).map(() => ({
-      x: canvas.width / 2 + (Math.random() - 0.5) * 120,
-      y: canvas.height * 0.4 + (Math.random() - 0.5) * 80,
-      vx: (Math.random() - 0.5) * 12,
-      vy: -(Math.random() * 8 + 6),
-      size: Math.random() * 8 + 4,
+      x: canvas.width / 2 + (Math.random() - 0.5) * 140,
+      y: canvas.height * 0.35 + (Math.random() - 0.5) * 60,
+      vx: (Math.random() - 0.5) * 10,
+      vy: -(Math.random() * 7 + 5),
+      size: Math.random() * 7 + 4,
       color: colors[Math.floor(Math.random() * colors.length)],
       rotation: Math.random() * 360,
-      vRotation: (Math.random() - 0.5) * 15,
-      alpha: 1,
+      vRotation: (Math.random() - 0.5) * 12,
+      alpha: 0.9,
     }));
 
     let animationFrameId: number;
@@ -45,10 +45,10 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
       particles.forEach((p) => {
         p.x += p.vx;
         p.y += p.vy;
-        p.vy += 0.3; // Gravity
+        p.vy += 0.28; // Gravity
         p.vx *= 0.98; // Air resistance
         p.rotation += p.vRotation;
-        p.alpha -= 0.012;
+        p.alpha -= 0.015;
 
         if (p.alpha > 0) {
           ctx.save();
@@ -61,7 +61,7 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
         }
       });
 
-      if (elapsed < 120 && particles.some((p) => p.alpha > 0)) {
+      if (elapsed < 100 && particles.some((p) => p.alpha > 0)) {
         animationFrameId = requestAnimationFrame(render);
       } else {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -81,8 +81,7 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
   return (
     <canvas
       ref={canvasRef}
-      className="pointer-events-none fixed inset-0 z-50 h-full w-full"
+      className="pointer-events-none select-none fixed inset-0 z-30 h-full w-full"
     />
   );
 }
-

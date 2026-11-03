@@ -256,7 +256,7 @@ export default function HomePage() {
                       {pendingQueue.filter((q) => q.status === "pending").length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-white/20 p-8 text-center">
                           <p className="text-sm font-semibold text-white/80">
-                            Queue is currently clear!
+                            No pending scans right now. Waiting for customers...
                           </p>
                           <p className="mt-1.5 text-xs text-white/60">
                             Tap &ldquo;Simulate Customer Camera Scan&rdquo; on the left phone to send a live check-in.

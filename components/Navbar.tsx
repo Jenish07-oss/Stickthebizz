@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Smartphone, Store, Sparkles } from "lucide-react";
+import { Menu, X, Smartphone, Store, Sparkles, UserCheck } from "lucide-react";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -104,6 +104,12 @@ export default function Navbar() {
         {/* Action Button (Desktop) */}
         <div className="hidden items-center gap-3 sm:flex">
           <Link
+            href="/auth/owner/login"
+            className="inline-flex min-h-[48px] items-center justify-center rounded-full border border-secondary bg-white px-5 text-sm font-bold text-secondary shadow-sm transition hover:bg-sand"
+          >
+            Login
+          </Link>
+          <Link
             href="/owner"
             className="inline-flex min-h-[48px] items-center justify-center rounded-full bg-primary px-6 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
           >
@@ -169,27 +175,45 @@ export default function Navbar() {
             >
               Merchant Support &amp; WhatsApp
             </Link>
+
+            <div className="my-2 border-t border-border pt-2">
+              <Link
+                href="/auth/owner/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold text-secondary hover:bg-sand"
+              >
+                <UserCheck className="h-4 w-4" /> Merchant Login
+              </Link>
+              <Link
+                href="/auth/customer/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex min-h-[44px] items-center gap-2 rounded-xl px-4 text-sm font-bold text-ink/75 hover:bg-sand"
+              >
+                <Smartphone className="h-4 w-4" /> Customer OTP Login
+              </Link>
+            </div>
+
             <Link
               href="/privacy"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex min-h-[48px] items-center rounded-xl px-4 text-sm text-ink/70 hover:bg-sand"
+              className="flex min-h-[40px] items-center rounded-xl px-4 text-xs text-ink/65 hover:bg-sand"
             >
               Privacy Policy (DPDP Act)
             </Link>
             <Link
               href="/terms"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex min-h-[48px] items-center rounded-xl px-4 text-sm text-ink/70 hover:bg-sand"
+              className="flex min-h-[40px] items-center rounded-xl px-4 text-xs text-ink/65 hover:bg-sand"
             >
               Terms &amp; Conditions
             </Link>
 
             <Link
-              href="/owner"
+              href="/auth/owner/register"
               onClick={() => setMobileMenuOpen(false)}
               className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-full bg-primary text-center font-bold text-white shadow-sm"
             >
-              Open Shop Counter
+              Register Shop Counter
             </Link>
           </div>
         </div>
