@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>StickTheBizz — Complete Project & Architecture Report</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 14mm 18mm 14mm;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #413333;
+      background-color: #FFFFFF;
+      line-height: 1.55;
+      font-size: 11pt;
+      margin: 0;
+      padding: 0;
+    }
+    .page-break {
+      page-break-after: always;
+    }
+    h1, h2, h3, h4 {
+      color: #315B8C;
+      margin-top: 1.2em;
+      margin-bottom: 0.4em;
+      font-weight: 800;
+    }
+    h1 {
+      font-size: 24pt;
+      color: #315B8C;
+      border-bottom: 3px solid #F2765E;
+      padding-bottom: 8px;
+      margin-top: 0;
+    }
+    h2 {
+      font-size: 15pt;
+      border-bottom: 1px solid #E5D9C8;
+      padding-bottom: 5px;
+      margin-top: 1.5em;
+    }
+    h3 {
+      font-size: 12pt;
+      color: #F2765E;
+      margin-top: 1em;
+    }
+    p {
+      margin: 0.5em 0;
+    }
+    .badge {
+      display: inline-block;
+      background: #F5EBDD;
+      color: #315B8C;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 9pt;
+      font-weight: bold;
+      border: 1px solid #E5D9C8;
+    }
+    .badge-coral {
+      background: #F2765E;
+      color: #FFFFFF;
+    }
+    .meta-box {
+      background: #F5EBDD;
+      border: 1px solid #E5D9C8;
+      border-radius: 10px;
+      padding: 14px 18px;
+      margin: 16px 0;
+    }
+    .meta-box table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .meta-box td {
+      padding: 4px 6px;
+      font-size: 10pt;
+    }
+    .meta-box td.label {
+      font-weight: bold;
+      color: #315B8C;
+      width: 140px;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 9.5pt;
+    }
+    table.data-table th {
+      background-color: #315B8C;
+      color: #FFFFFF;
+      text-align: left;
+      padding: 8px 10px;
+      font-weight: bold;
+    }
+    table.data-table td {
+      border-bottom: 1px solid #E5D9C8;
+      padding: 7px 10px;
+      vertical-align: top;
+    }
+    table.data-table tr:nth-child(even) {
+      background-color: #FAF6F0;
+    }
+    code {
+      background: #F5EBDD;
+      color: #315B8C;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: 9.5pt;
+    }
+    pre {
+      background: #2D3748;
+      color: #F7FAFC;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 8.5pt;
+      overflow-x: auto;
+      line-height: 1.4;
+      margin: 12px 0;
+    }
+    .screenshot-card {
+      background: #FAF6F0;
+      border: 1px solid #E5D9C8;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 16px 0;
+      text-align: center;
+    }
+    .screenshot-card img {
+      width: 95%;
+      max-height: 380px;
+      object-fit: contain;
+      border-radius: 6px;
+      border: 1px solid #D8CBB7;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+    .screenshot-caption {
+      font-size: 9pt;
+      color: #315B8C;
+      font-weight: bold;
+      margin-top: 6px;
+    }
+    ul, ol {
+      padding-left: 20px;
+      margin: 6px 0;
+    }
+    li {
+      margin-bottom: 4px;
+    }
+    .alert {
+      border-left: 4px solid #F2765E;
+      background: #FFF5F3;
+      padding: 10px 14px;
+      margin: 12px 0;
+      font-size: 9.5pt;
+      border-radius: 0 6px 6px 0;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- COVER / HEADER -->
+  <div style="text-align: center; padding-top: 25px; padding-bottom: 20px;">
+    <div style="display: inline-block; background: #F2765E; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 11pt; letter-spacing: 1px;">
+      STICKTHEBIZZ • TECHNICAL & ARCHITECTURE REPORT
+    </div>
+    <h1 style="border: none; margin-top: 15px; font-size: 28pt; margin-bottom: 6px;">StickTheBizz SaaS Platform</h1>
+    <p style="font-size: 13pt; color: #315B8C; font-weight: 600;">
+      Zero-App Frictionless Digital Stamp Loyalty System for Offline Indian Retail
+    </p>
+    <p style="font-size: 10pt; color: #887B75;">
+      Complete Changelog, System Design, Supabase Database Architecture & Security Report
+    </p>
+  </div>
+
+  <div class="meta-box">
+    <table>
+      <tr>
+        <td class="label">Date:</td>
+        <td>November 03, 2026</td>
+        <td class="label">Git Repository:</td>
+        <td><code>github.com/Jenish07-oss/Stickthebizz</code> (Public)</td>
+      </tr>
+      <tr>
+        <td class="label">Production Host:</td>
+        <td>Vercel (Auto-deploy tracking <code>main</code> branch)</td>
+        <td class="label">Primary Stack:</td>
+        <td>Next.js 14 (App Router) + Supabase (PostgreSQL + RLS + Realtime)</td>
+      </tr>
+      <tr>
+        <td class="label">Pricing Model:</td>
+        <td>₹499 / Month Flat Subscription</td>
+        <td class="label">Target Audience:</td>
+        <td>Chai Cafes, Bakeries, Kirana Stores, QSRs, Salons</td>
+      </tr>
+    </table>
+  </div>
+
+  <h2>1. Executive Summary & Purpose</h2>
+  <p>
+    <strong>StickTheBizz</strong> is a modern, privacy-first customer loyalty SaaS platform built specifically for Indian local merchants (Chai stalls, bakeries, kirana stores, cafes). The platform eliminates traditional plastic loyalty cards, paper punch slips, and complex app downloads. Instead, it pairs a physical <strong>5x7 Acrylic Counter QR Standee</strong> with an instant browser-based <strong>Digital Loyalty Pass</strong> accessed via any smartphone camera.
+  </p>
+  <p>
+    This report documents the transformation of the codebase from an initial mock/demo prototype into a <strong>100% live, production-hardened platform</strong> connected to a real Supabase database, real Google SMTP OTP delivery, anti-fraud daily visit guards, an in-app Camera QR scanner, and dynamic monthly standee rotation.
+  </p>
+
+  <div class="page-break"></div>
+
+  <h2>2. Key Problems Resolved & What Was Removed</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 25%;">Component</th>
+        <th style="width: 35%;">Old Simulated Behavior (Removed)</th>
+        <th style="width: 40%;">New Production Behavior (Implemented)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Customer Onboarding</strong></td>
+        <td>Modal dialog with hardcoded phone <code>9820012345</code> and fake mock OTP code <code>8492</code>.</td>
+        <td>Seamless 1-tap mobile check-in on the pass page; real Supabase OTP email authentication with dual tabs for Returning Customers vs. New Passes.</td>
+      </tr>
+      <tr>
+        <td><strong>QR Standee Scanning</strong></td>
+        <td>QR was hardcoded to <code>stickthebizz.in</code>; in-browser scan hung in an infinite loading animation.</td>
+        <td>Dynamic origin detection (<code>window.location.origin</code>) working on localhost, Vercel preview, and production; verified Server Action execution with 1-scan anti-fraud.</td>
+      </tr>
+      <tr>
+        <td><strong>Standee Cycle & Expiry</strong></td>
+        <td>Static QR that never changed; no mechanism to expire standees or prevent customers bookmarking links forever.</td>
+        <td>Dynamic 30-Day / 1-Month validity cycle. Shop owners can click <strong>"Rotate / Refresh Monthly QR"</strong> to roll a new cryptographic token and expire old QR standees.</td>
+      </tr>
+      <tr>
+        <td><strong>Shop Owner Terminal</strong></td>
+        <td>Unauthenticated visitors saw a demo preview of Kesar Chai Corner; no auto-redirect.</td>
+        <td>Strict authentication guard: unauthenticated users redirect to <code>/auth/owner/login</code>; authenticated shop owners automatically skip login on return.</td>
+      </tr>
+      <tr>
+        <td><strong>Customer Stamp Wallet</strong></td>
+        <td>Hardcoded simulation showing fake 7 visits; no way for customers to scan standees inside the app.</td>
+        <td>Real Supabase multi-store wallet aggregating live visits across all visited shops; built an in-app Camera QR Scanner with live viewfinder.</td>
+      </tr>
+      <tr>
+        <td><strong>Home Screen UI</strong></td>
+        <td>Dark background solar blobs and fake notification toasts popping up every 6 seconds.</td>
+        <td>Clean Warm Sand (<code>#F5EBDD</code>) hero canvas; zero fake activity toasts; clean typography and high-contrast buttons.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>3. Core Architecture & System Modules</h2>
+
+  <h3>A. Dynamic Counter QR Standee & 30-Day Rotation</h3>
+  <p>
+    The QR standee component (<code>components/CounterQR.tsx</code>) renders a photorealistic 3D acrylic tabletop standee with reflections and depth shadows. The embedded QR code points to <code>/s/[slug]?cycle=[token]</code>.
+  </p>
+  <ul>
+    <li><strong>Shop Owner Customization:</strong> In the Cashier Terminal (<code>/owner/dashboard</code>), owners can edit Store Name, Minimum Bill Spend (₹), Visits Required, Reward Name, and Streak Expiry Period (e.g., 30 Days). All updates instantly redraw the printable standee artwork.</li>
+    <li><strong>Monthly Standee Rotation:</strong> When a new month begins or an owner suspects fraud, clicking <strong>"Rotate / Refresh Monthly QR"</strong> generates a new token in Supabase (<code>qr_token</code>), expiring any old standees.</li>
+    <li><strong>Print Optimization:</strong> Built-in <code>window.print()</code> CSS media queries format the standee for standard 5x7 inch acrylic counter frames.</li>
+  </ul>
+
+  <h3>B. Daily Anti-Fraud Check-In Guard (12:00:00 AM IST)</h3>
+  <p>
+    To prevent customers from scanning the counter standee multiple times in one day or sharing the link via WhatsApp, the platform enforces strict 1-scan-per-calendar-day rules:
+  </p>
+  <ul>
+    <li><strong>Server Action:</strong> <code>submitScan()</code> calculates the exact calendar date in <code>Asia/Kolkata</code> timezone (IST, UTC+5:30) in <code>YYYY-MM-DD</code> format.</li>
+    <li><strong>PostgreSQL Constraint:</strong> The <code>visits</code> table has a unique composite constraint: <code>CONSTRAINT unique_daily_scan UNIQUE (customer_id, merchant_id, visit_date_ist)</code>.</li>
+    <li><strong>Client Experience:</strong> When locked, the customer's pass disables the stamp button and displays a live ticking countdown: <em>"Today's visit verified! Next stamp unlocks at 12:00:00 AM IST."</em></li>
+  </ul>
+
+  <div class="page-break"></div>
+
+  <h2>4. Live Application Visual Walkthrough</h2>
+
+  <div class="screenshot-card">
+    <img src="file:///E:/SaaS/report_assets/customer_pass.png" alt="Customer Loyalty Pass Screen">
+    <div class="screenshot-caption">Figure 1: Live Customer Digital Stamp Pass (/s/kesar-chai) with Real Stamp Grid & Anti-Fraud Lock</div>
+  </div>
+
+  <div class="screenshot-card">
+    <img src="file:///E:/SaaS/report_assets/homepage.png" alt="Homepage Clean Design">
+    <div class="screenshot-caption">Figure 2: Clean Landing Page (Warm Sand #F5EBDD, Zero Blobs, High-Contrast Typography)</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <div class="screenshot-card">
+    <img src="file:///E:/SaaS/report_assets/customer_auth.png" alt="Customer Authentication Screen">
+    <div class="screenshot-caption">Figure 3: Dedicated Customer Sign In & Sign Up Dual-Tab Portal (/auth/customer/login)</div>
+  </div>
+
+  <div class="screenshot-card">
+    <img src="file:///E:/SaaS/report_assets/owner_auth.png" alt="Shop Owner Terminal Login">
+    <div class="screenshot-caption">Figure 4: Shop Owner Cashier Terminal Authentication with Auto-Redirect (/auth/owner/login)</div>
+  </div>
+
+  <div class="page-break"></div>
+
+  <h2>5. Database Schema & Row-Level Security (RLS)</h2>
+  <p>The Supabase PostgreSQL database uses three core tables with hardened RLS policies:</p>
+
+  <pre>-- 1. MERCHANTS TABLE
+CREATE TABLE IF NOT EXISTS public.merchants (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,
+  category TEXT DEFAULT 'Cafe / Chai',
+  min_spend NUMERIC DEFAULT 100,
+  visits_required INT DEFAULT 10,
+  reward_name TEXT NOT NULL,
+  validity_days INT DEFAULT 30,
+  redemption_pin TEXT DEFAULT '8492',
+  qr_token TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. CUSTOMERS TABLE
+CREATE TABLE IF NOT EXISTS public.customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  auth_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  phone TEXT UNIQUE NOT NULL,
+  email TEXT,
+  full_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. VISITS TABLE (WITH STRICT DAILY SCAN CONSTRAINT)
+CREATE TABLE IF NOT EXISTS public.visits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
+  merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE CASCADE,
+  visit_date_ist TEXT NOT NULL, -- Format: 'YYYY-MM-DD' (Asia/Kolkata)
+  bill_amount NUMERIC DEFAULT 100,
+  status TEXT DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'REDEEMED')),
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+  CONSTRAINT unique_daily_scan UNIQUE (customer_id, merchant_id, visit_date_ist)
+);
+
+-- 4. REALTIME REPLICATION (SAFE IDEMPOTENT PUBLICATION)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;</pre>
+
+  <h2>6. File Change Manifest</h2>
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th style="width: 32%;">File Path</th>
+        <th style="width: 68%;">Key Changes Implemented</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>components/CustomerView.tsx</code></td>
+        <td>Rewrote to connect directly to Supabase. Removed fake OTP modal and mock phone. Added real-time countdown to 12:00 AM IST and audio chime on punch.</td>
+      </tr>
+      <tr>
+        <td><code>components/CounterQR.tsx</code></td>
+        <td>Dynamic origin host resolution (<code>window.location.origin</code>). Added 30-Day monthly validity badge, QR rotation button, URL copy, and print styling.</td>
+      </tr>
+      <tr>
+        <td><code>components/CameraQRScanner.tsx</code></td>
+        <td>Brand-new component! HTML5 camera video stream with native <code>BarcodeDetector</code> fallback, viewfinder laser animation, and manual slug entry.</td>
+      </tr>
+      <tr>
+        <td><code>app/owner/dashboard/page.tsx</code></td>
+        <td>Auto-redirect if unauthenticated. Live WebSocket subscription to new scans. Added <strong>"Rotate / Refresh Monthly QR"</strong> action.</td>
+      </tr>
+      <tr>
+        <td><code>app/customer/dashboard/page.tsx</code></td>
+        <td>Customer multi-store digital wallet displaying real database visits across shops. Wired in camera QR scanner button and session persistence.</td>
+      </tr>
+      <tr>
+        <td><code>app/auth/customer/login/page.tsx</code></td>
+        <td>Dual tabs: "Returning Customer Login" via email OTP vs. "New Pass Sign Up". Fixed TypeScript ref typing and removed bypass codes.</td>
+      </tr>
+      <tr>
+        <td><code>app/auth/owner/login/page.tsx</code></td>
+        <td>Added auto-login redirect on mount so returning shop owners bypass credentials entry.</td>
+      </tr>
+      <tr>
+        <td><code>app/actions/scan.ts</code></td>
+        <td>Added <code>getCustomerMerchantStatus()</code> for real-time customer visits and IST daily lock evaluation.</td>
+      </tr>
+      <tr>
+        <td><code>app/actions/merchant.ts</code></td>
+        <td>Added <code>rotateMerchantQrAction()</code> to roll monthly QR tokens and reset the 30-day validity cycle.</td>
+      </tr>
+      <tr>
+        <td><code>supabase/setup.sql</code></td>
+        <td>Added <code>qr_token</code> column and wrapped realtime publication inside an idempotent <code>DO $$ BEGIN ... EXCEPTION</code> block.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>7. Verification & Deployment Status</h2>
+  <div class="alert">
+    <strong>Production Status:</strong> Tested and verified with <code>npx tsc --noEmit</code> (0 errors) and <code>npm run build</code> (all 16 routes compiled with exit code 0). Both <code>main</code> and <code>dev</code> branches are tracked and pushed to GitHub (<code>github.com/Jenish07-oss/Stickthebizz</code>).
+  </div>
+
+</body>
+</html>
