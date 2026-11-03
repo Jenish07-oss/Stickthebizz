@@ -293,16 +293,13 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const handleCustomSync = () => {
-      loadStateFromStorage();
-    };
 
     window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("stb_sync", handleCustomSync);
+
 
     return () => {
       window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("stb_sync", handleCustomSync);
+
     };
   }, [loadStateFromStorage]);
 
@@ -324,7 +321,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
           reviews: newRevs,
         });
         localStorage.setItem(STORAGE_KEY, payload);
-        window.dispatchEvent(new Event("stb_sync"));
+        
       } catch {
         // LocalStorage quota error
       }
