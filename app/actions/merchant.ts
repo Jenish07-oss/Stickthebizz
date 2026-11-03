@@ -139,3 +139,4 @@ export async function registerMerchantAction(params: {
     return { success: false, error: err.message || String(err) };
   }
 }
+

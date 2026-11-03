@@ -35,11 +35,11 @@ export default function Navbar() {
         </Link>
 
         {/* Center: Desktop Navigation Links */}
-        <div className="hidden items-center gap-7 text-sm font-semibold text-ink/80 md:flex">
+        <div className="hidden items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-ink/80 xl:flex">
           <Link
             href="/#how-it-works"
             replace={false}
-            className="transition-colors hover:text-secondary"
+            className="whitespace-nowrap transition-colors hover:text-secondary"
           >
             How It Works
           </Link>
@@ -47,7 +47,7 @@ export default function Navbar() {
           <Link
             href="/#for-shops"
             replace={false}
-            className="transition-colors hover:text-secondary"
+            className="whitespace-nowrap transition-colors hover:text-secondary"
           >
             For Shops
           </Link>
@@ -55,7 +55,7 @@ export default function Navbar() {
           <Link
             href="/pricing"
             replace={false}
-            className={`transition-colors hover:text-secondary ${
+            className={`whitespace-nowrap transition-colors hover:text-secondary ${
               isPricing ? "text-primary font-bold" : ""
             }`}
           >
@@ -65,7 +65,7 @@ export default function Navbar() {
           <Link
             href="/#faq"
             replace={false}
-            className="transition-colors hover:text-secondary"
+            className="whitespace-nowrap transition-colors hover:text-secondary"
           >
             FAQ
           </Link>
@@ -73,7 +73,7 @@ export default function Navbar() {
           <Link
             href="/about"
             replace={false}
-            className={`transition-colors hover:text-secondary ${
+            className={`whitespace-nowrap transition-colors hover:text-secondary ${
               isAbout ? "text-primary font-bold" : ""
             }`}
           >
@@ -83,7 +83,7 @@ export default function Navbar() {
           <Link
             href="/contact"
             replace={false}
-            className={`transition-colors hover:text-secondary ${
+            className={`whitespace-nowrap transition-colors hover:text-secondary ${
               isContact ? "text-primary font-bold" : ""
             }`}
           >
@@ -92,11 +92,11 @@ export default function Navbar() {
         </div>
 
         {/* Right: Actions */}
-        <div className="hidden items-center gap-4 sm:flex shrink-0">
+        <div className="hidden items-center gap-2 sm:gap-3 xl:gap-4 md:flex shrink-0">
           <Link
             href="/auth/customer/login"
             replace={false}
-            className="text-sm font-bold text-ink/75 hover:text-secondary transition px-3 py-2"
+            className="whitespace-nowrap text-xs lg:text-sm font-bold text-ink/75 hover:text-secondary transition px-2.5 py-2"
           >
             Customer Portal
           </Link>
@@ -104,14 +104,14 @@ export default function Navbar() {
           <Link
             href="/auth/owner/login"
             replace={false}
-            className="inline-flex items-center justify-center rounded-full bg-[#F2765E] hover:bg-[#F2765E]/90 text-white font-medium text-sm px-5 py-2.5 transition shadow-sm active:scale-95"
+            className="whitespace-nowrap inline-flex items-center justify-center rounded-full bg-[#F2765E] hover:bg-[#F2765E]/90 text-white font-medium text-xs lg:text-sm px-4 lg:px-5 py-2 lg:py-2.5 transition shadow-sm active:scale-95"
           >
             Merchant Login
           </Link>
         </div>
 
         {/* Mobile Hamburger Toggle */}
-        <div className="flex md:hidden">
+        <div className="flex xl:hidden">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -125,7 +125,7 @@ export default function Navbar() {
 
       {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-b border-border bg-white px-6 py-6 shadow-xl animate-stamp-pop">
+        <div className="xl:hidden border-b border-border bg-white px-6 py-6 shadow-xl animate-stamp-pop">
           <div className="flex flex-col space-y-4 text-base font-bold text-ink/85">
             <Link
               href="/#how-it-works"

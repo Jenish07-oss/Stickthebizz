@@ -63,7 +63,7 @@ export default function LiveActivityToast() {
 
   return (
     <div
-      className={`fixed bottom-5 left-5 z-40 max-w-sm transition-all duration-400 transform ${
+      className={`fixed bottom-5 left-5 z-40 max-w-sm hidden md:block transition-all duration-400 transform ${
         isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2 pointer-events-none"
       }`}
     >
