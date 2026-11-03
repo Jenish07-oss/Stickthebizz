@@ -59,6 +59,12 @@ const config: Config = {
           "0%": { transform: "translateX(0%)" },
           "100%": { transform: "translateX(-50%)" },
         },
+        laserSweep: {
+          "0%": { top: "0%", opacity: "0.2" },
+          "15%": { opacity: "1" },
+          "85%": { opacity: "1" },
+          "100%": { top: "100%", opacity: "0.2" },
+        },
       },
       animation: {
         float: "float 3.5s ease-in-out infinite",
@@ -66,6 +72,7 @@ const config: Config = {
         "flame-pulse": "flameGlow 2s ease-in-out infinite",
         "bell-ring": "bellRing 0.6s ease-in-out",
         marquee: "marquee 25s linear infinite",
+        "laser-sweep": "laserSweep 1s ease-in-out forwards",
       },
     },
   },

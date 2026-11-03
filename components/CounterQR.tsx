@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef } from "react";
+import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer, Sparkles, Store, ShieldCheck, QrCode } from "lucide-react";
 
@@ -111,15 +112,13 @@ export default function CounterQR({
           Print Counter Acrylic Stand
         </button>
 
-        <a
+        <Link
           href={`/s/${slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
           className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
         >
           <QrCode className="h-4 w-4 text-primary" />
           Open Live Mobile URL →
-        </a>
+        </Link>
       </div>
     </div>
   );
