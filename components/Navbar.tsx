@@ -9,9 +9,9 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
-  const isHome = pathname === "/";
   const isCustomer = pathname === "/customer";
   const isOwner = pathname === "/owner";
+  const isPricing = pathname === "/pricing";
 
   return (
     <header className="sticky top-0 z-40 px-4 pt-4 sm:px-6 lg:px-8">
@@ -35,53 +35,65 @@ export default function Navbar() {
 
         {/* Desktop Navigation Links */}
         <div className="hidden items-center gap-6 text-sm font-semibold text-ink/80 lg:flex">
-          {isHome ? (
-            <>
-              <a href="#how-it-works" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                How It Works
-              </a>
-              <a href="#for-shops" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                For Shops
-              </a>
-              <a href="#pricing" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                Pricing
-              </a>
-              <a href="#faq" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                FAQ
-              </a>
-            </>
-          ) : (
-            <>
-              <Link href="/" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                Home
-              </Link>
-              <Link href="/about" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                About
-              </Link>
-              <Link href="/contact" className="min-h-[48px] inline-flex items-center transition hover:text-secondary">
-                Contact
-              </Link>
-            </>
-          )}
+          <Link
+            href="/#how-it-works"
+            className="min-h-[48px] inline-flex items-center transition hover:text-secondary"
+          >
+            How It Works
+          </Link>
+          <Link
+            href="/#for-shops"
+            className="min-h-[48px] inline-flex items-center transition hover:text-secondary"
+          >
+            For Shops
+          </Link>
+          <Link
+            href="/pricing"
+            className={`min-h-[48px] inline-flex items-center transition hover:text-secondary ${
+              isPricing ? "text-primary font-bold" : ""
+            }`}
+          >
+            Pricing (₹199/mo)
+          </Link>
+          <Link
+            href="/#faq"
+            className="min-h-[48px] inline-flex items-center transition hover:text-secondary"
+          >
+            FAQ
+          </Link>
+          <Link
+            href="/about"
+            className="min-h-[48px] inline-flex items-center transition hover:text-secondary"
+          >
+            About
+          </Link>
+          <Link
+            href="/contact"
+            className="min-h-[48px] inline-flex items-center transition hover:text-secondary"
+          >
+            Contact
+          </Link>
 
           {/* View Switcher Pills */}
           <div className="flex items-center rounded-full border border-border bg-white/70 p-1 text-xs">
             <Link
               href="/customer"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${isCustomer
-                ? "bg-secondary text-white shadow-sm"
-                : "text-ink/70 hover:text-secondary"
-                }`}
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${
+                isCustomer
+                  ? "bg-secondary text-white shadow-sm"
+                  : "text-ink/70 hover:text-secondary"
+              }`}
             >
               <Smartphone className="h-3.5 w-3.5" />
               Customer View
             </Link>
             <Link
               href="/owner"
-              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${isOwner
-                ? "bg-secondary text-white shadow-sm"
-                : "text-ink/70 hover:text-secondary"
-                }`}
+              className={`inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-1 font-bold transition ${
+                isOwner
+                  ? "bg-secondary text-white shadow-sm"
+                  : "text-ink/70 hover:text-secondary"
+              }`}
             >
               <Store className="h-3.5 w-3.5" />
               Owner Terminal
@@ -137,6 +149,13 @@ export default function Navbar() {
               <Store className="h-5 w-5" /> Shop Owner Terminal
             </Link>
             <Link
+              href="/pricing"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex min-h-[48px] items-center rounded-xl px-4 text-base font-semibold text-ink hover:bg-sand"
+            >
+              Pricing (₹199/mo)
+            </Link>
+            <Link
               href="/about"
               onClick={() => setMobileMenuOpen(false)}
               className="flex min-h-[48px] items-center rounded-xl px-4 text-base font-semibold text-ink hover:bg-sand"
@@ -148,7 +167,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="flex min-h-[48px] items-center rounded-xl px-4 text-base font-semibold text-ink hover:bg-sand"
             >
-              Merchant Support & WhatsApp
+              Merchant Support &amp; WhatsApp
             </Link>
             <Link
               href="/privacy"
@@ -162,7 +181,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="flex min-h-[48px] items-center rounded-xl px-4 text-sm text-ink/70 hover:bg-sand"
             >
-              Terms & Conditions
+              Terms &amp; Conditions
             </Link>
 
             <Link
@@ -170,7 +189,7 @@ export default function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="mt-3 flex min-h-[48px] w-full items-center justify-center rounded-full bg-primary text-center font-bold text-white shadow-sm"
             >
-              Open Shop Terminal
+              Open Shop Counter
             </Link>
           </div>
         </div>
@@ -178,4 +197,3 @@ export default function Navbar() {
     </header>
   );
 }
-

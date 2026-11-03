@@ -8,6 +8,7 @@ import RewardTicket from "@/components/RewardTicket";
 import DemoControls from "@/components/DemoControls";
 import ReviewModal from "@/components/ReviewModal";
 import ConfettiEffect from "@/components/ConfettiEffect";
+import PhoneFrame from "@/components/PhoneFrame";
 import { useStore } from "@/context/StoreContext";
 import {
   Sparkles,
@@ -89,171 +90,181 @@ export default function CustomerPage() {
       <Navbar />
 
       <main className="flex-1 px-4 py-8 sm:px-6">
-        <div className="mx-auto w-full max-w-[420px]">
-          {/* Header Strip */}
-          <div className="mb-4 flex items-center justify-between">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-3 py-1 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
+        <div className="mx-auto w-full max-w-[440px]">
+          {/* Top Label */}
+          <div className="mb-4 text-center">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
               <Store className="h-3.5 w-3.5 text-primary" />
-              {rule.name}
+              {rule.name} Loyalty Pass
             </span>
-
-            <button
-              type="button"
-              onClick={() => setReviewModalOpen(true)}
-              className="inline-flex min-h-[36px] items-center gap-1 rounded-full bg-white/80 px-3 py-1 text-xs font-bold text-ink/75 border border-border transition hover:bg-white"
-            >
-              <Star className="h-3.5 w-3.5 fill-warning text-warning" />
-              <span>{customer.hasReviewed ? "Rated 5★" : "Rate Shop"}</span>
-            </button>
           </div>
 
-          {/* MAIN STAMP CARD CONTAINER */}
-          <div className="rounded-[2.4rem] border-2 border-secondary/20 bg-white p-6 shadow-float">
-            {/* Shop Header & Rule Badge */}
-            <div className="border-b border-border/70 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="font-display text-2xl font-extrabold tracking-tight text-secondary">
-                    {rule.name}
-                  </h1>
-                  <p className="mt-0.5 text-xs text-ink/65">
-                    Official Digital Loyalty Card
-                  </p>
-                </div>
-                <span className="rounded-full bg-coral/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-primary">
-                  {customer.visits >= rule.visitsRequired ? "REWARD UNLOCKED" : "COLLECTING"}
-                </span>
-              </div>
-
-              {/* Rule Pills */}
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                <span className="rounded-lg bg-sand/70 px-2.5 py-1 text-ink/80">
-                  Bill ₹{rule.minSpend}+ per visit
-                </span>
-                <span className="rounded-lg bg-sand/70 px-2.5 py-1 text-ink/80">
-                  {rule.visitsRequired} visits in {rule.validityDays} days
-                </span>
-              </div>
-            </div>
-
-            {/* Visit Progress & Cycle Days */}
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs font-bold">
-                <span className="font-display text-lg text-secondary">
-                  {customer.visits} of {rule.visitsRequired} visits
-                </span>
-                <span className="flex items-center gap-1 font-mono text-ink/60">
-                  <Calendar className="h-3.5 w-3.5" />
-                  Day 23 of {rule.validityDays}
-                </span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="mt-2.5 h-3 w-full overflow-hidden rounded-full bg-sand">
-                <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
-                  style={{
-                    width: `${Math.min(100, (customer.visits / rule.visitsRequired) * 100)}%`,
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* STAMP GRID COMPONENT */}
-            <div className="mt-6">
-              <StampGrid
-                totalVisits={rule.visitsRequired}
-                completedVisits={customer.visits}
-                rewardName={rule.rewardName}
-              />
-            </div>
-
-            {/* REWARD TICKET IF UNLOCKED */}
-            {customer.visits >= rule.visitsRequired && (
-              <div className="mt-6 animate-stamp-pop">
-                <RewardTicket
-                  ticket={{
-                    code: customer.activeRewardCode || "STB-7Q4K-29",
-                    pin: customer.redemptionPin || "8492",
-                    rewardName: rule.rewardName,
-                    expiryDate: "Valid for 14 days",
-                    isRedeemed: customer.isRedeemed,
-                  }}
-                  onRedeem={() => {
-                    markRewardGiven(customer.phone);
-                    setScanFeedback("🎉 Reward voucher marked as redeemed! Enjoy your free treat!");
-                  }}
-                />
-              </div>
-            )}
-
-            {/* ANTI-FRAUD SCAN BUTTON OR ACTIVE COUNTDOWN */}
-            <div className="mt-6">
-              {customer.lockedUntilMidnight ? (
-                <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
-                    <Lock className="h-4 w-4 text-warning" />
-                    <span>Today&apos;s visit verified!</span>
-                  </div>
-                  <p className="mt-1.5 text-xs text-ink/75">
-                    Next stamp unlocks at <strong>12:00 AM IST</strong>
-                  </p>
-                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
-                    <Clock className="h-3.5 w-3.5 text-primary animate-pulse" />
-                    <span>{countdownStr || "Unlocks at midnight"}</span>
-                  </div>
-                  <button
-                    disabled
-                    className="mt-3 flex min-h-[48px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-sm font-bold text-ink/40"
-                  >
-                    Counter Stamp Locked
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleScanCounterQR}
-                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl bg-primary text-base font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2"
-                >
-                  <QrCode className="h-5 w-5" />
-                  <span>Scan Counter QR (+1 Stamp)</span>
-                </button>
-              )}
-
-              {/* Scan Feedback Message */}
-              {scanFeedback && (
-                <div className="mt-3 rounded-xl bg-sand p-3 text-center text-xs font-bold text-secondary animate-pulse">
-                  {scanFeedback}
-                </div>
-              )}
-            </div>
-
-            {/* Next reward incentive preview */}
-            <div className="mt-5 flex items-center justify-between rounded-2xl bg-sand/50 p-3 text-xs text-ink/75">
-              <div className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span className="font-semibold">Goal Reward:</span>
-              </div>
-              <span className="font-display font-extrabold text-secondary">
-                {rule.rewardName}
+          {/* REALISTIC SMARTPHONE BEZEL */}
+          <PhoneFrame>
+            {/* Header Strip inside phone */}
+            <div className="mb-3 flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
+                Customer View
               </span>
+
+              <button
+                type="button"
+                onClick={() => setReviewModalOpen(true)}
+                className="inline-flex min-h-[36px] items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-ink/75 border border-border transition hover:bg-sand"
+              >
+                <Star className="h-3 w-3 fill-warning text-warning" />
+                <span>{customer.hasReviewed ? "Rated 5★" : "Rate"}</span>
+              </button>
             </div>
-          </div>
 
-          {/* Privacy & Anti-Fraud Footer */}
-          <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-ink/50">
-            <ShieldCheck className="h-3.5 w-3.5 text-success" />
-            <span>DPDP Act 2023 Compliant • No phone spam</span>
-          </div>
+            {/* STAMP CARD CONTAINER */}
+            <div className="rounded-[2rem] border border-border bg-white p-5 shadow-sm">
+              {/* Shop Header & Rule Badge */}
+              <div className="border-b border-border/70 pb-3">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h1 className="font-display text-xl font-extrabold tracking-tight text-secondary">
+                      {rule.name}
+                    </h1>
+                    <p className="text-[11px] text-ink/65">
+                      Digital Counter Loyalty Card
+                    </p>
+                  </div>
+                  <span className="rounded-full bg-coral/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-primary">
+                    {customer.visits >= rule.visitsRequired ? "REWARD UNLOCKED" : "COLLECTING"}
+                  </span>
+                </div>
 
-          {/* Re-Open Login / Change Number Button */}
-          <div className="mt-2 text-center">
+                {/* Rule Pills */}
+                <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] font-semibold">
+                  <span className="rounded-md bg-sand/70 px-2 py-0.5 text-ink/80">
+                    Bill ₹{rule.minSpend}+
+                  </span>
+                  <span className="rounded-md bg-sand/70 px-2 py-0.5 text-ink/80">
+                    {rule.visitsRequired} visits in {rule.validityDays}d
+                  </span>
+                </div>
+              </div>
+
+              {/* Visit Progress & Cycle Days */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="font-display text-base text-secondary">
+                    {customer.visits} of {rule.visitsRequired} visits
+                  </span>
+                  <span className="flex items-center gap-1 font-mono text-[11px] text-ink/60">
+                    <Calendar className="h-3 w-3" />
+                    Day 23/{rule.validityDays}
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-sand">
+                  <div
+                    className="h-full rounded-full bg-primary transition-all duration-500"
+                    style={{
+                      width: `${Math.min(100, (customer.visits / rule.visitsRequired) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* STAMP GRID COMPONENT */}
+              <div className="mt-4">
+                <StampGrid
+                  totalVisits={rule.visitsRequired}
+                  completedVisits={customer.visits}
+                  rewardName={rule.rewardName}
+                />
+              </div>
+
+              {/* REWARD TICKET IF UNLOCKED */}
+              {customer.visits >= rule.visitsRequired && (
+                <div className="mt-4 animate-stamp-pop">
+                  <RewardTicket
+                    ticket={{
+                      code: customer.activeRewardCode || "STB-7Q4K-29",
+                      pin: customer.redemptionPin || "8492",
+                      rewardName: rule.rewardName,
+                      expiryDate: "Valid for 14 days",
+                      isRedeemed: customer.isRedeemed,
+                    }}
+                    onRedeem={() => {
+                      markRewardGiven(customer.phone);
+                      setScanFeedback("🎉 Reward voucher redeemed! Enjoy your free treat!");
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* ANTI-FRAUD SCAN BUTTON OR ACTIVE COUNTDOWN */}
+              <div className="mt-5">
+                {customer.lockedUntilMidnight ? (
+                  <div className="rounded-2xl border border-warning/40 bg-warning/10 p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
+                      <Lock className="h-4 w-4 text-warning" />
+                      <span>Today&apos;s visit verified!</span>
+                    </div>
+                    <p className="mt-1 text-[11px] text-ink/75">
+                      Next stamp unlocks at <strong>12:00 AM IST</strong>
+                    </p>
+                    <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
+                      <Clock className="h-3 w-3 text-primary animate-pulse" />
+                      <span>{countdownStr || "Unlocks at midnight"}</span>
+                    </div>
+                    <button
+                      disabled
+                      className="mt-2.5 flex min-h-[48px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-xs font-bold text-ink/40"
+                    >
+                      Counter Stamp Locked
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleScanCounterQR}
+                    className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    <span>Scan Counter QR (+1 Stamp)</span>
+                  </button>
+                )}
+
+                {/* Scan Feedback Message */}
+                {scanFeedback && (
+                  <div className="mt-2.5 rounded-xl bg-sand p-2.5 text-center text-xs font-bold text-secondary animate-pulse">
+                    {scanFeedback}
+                  </div>
+                )}
+              </div>
+
+              {/* Next reward incentive preview */}
+              <div className="mt-4 flex items-center justify-between rounded-xl bg-sand/50 p-2.5 text-[11px] text-ink/75">
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-semibold">Goal Reward:</span>
+                </div>
+                <span className="font-display font-extrabold text-secondary">
+                  {rule.rewardName}
+                </span>
+              </div>
+            </div>
+
+            {/* Privacy notice inside phone */}
+            <div className="mt-3 flex items-center justify-center gap-1 text-center text-[10px] text-ink/50">
+              <ShieldCheck className="h-3 w-3 text-success" />
+              <span>DPDP Act 2023 Compliant • No spam</span>
+            </div>
+          </PhoneFrame>
+
+          {/* Change Number Button */}
+          <div className="mt-3 text-center">
             <button
               type="button"
               onClick={() => setOtpModalOpen(true)}
-              className="text-[11px] font-semibold text-secondary hover:underline"
+              className="text-xs font-semibold text-secondary hover:underline"
             >
-              Logged in as {customer.phone} (Change)
+              Logged in as {customer.phone} (Change Mobile Number)
             </button>
           </div>
         </div>

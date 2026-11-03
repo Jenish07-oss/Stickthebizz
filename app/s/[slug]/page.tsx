@@ -26,3 +26,4 @@ export default function ShopSlugPage({ params }: { params: { slug: string } }) {
 
   return <CustomerPage />;
 }
+

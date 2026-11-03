@@ -85,3 +85,4 @@ export default function ConfettiEffect({ active, onComplete }: ConfettiEffectPro
     />
   );
 }
+

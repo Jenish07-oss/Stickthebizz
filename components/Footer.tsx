@@ -50,20 +50,20 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#how-it-works"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   How It Works
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="/#pricing"
+                <Link
+                  href="/pricing"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Pricing Plans (₹199/mo)
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -87,16 +87,16 @@ export default function Footer() {
                   href="/contact"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
-                  Merchant Support & WhatsApp
+                  Merchant Support &amp; WhatsApp
                 </Link>
               </li>
               <li>
-                <a
+                <Link
                   href="/#faq"
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Frequently Asked Questions
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -104,7 +104,7 @@ export default function Footer() {
           {/* Legal */}
           <div>
             <h3 className="font-display text-sm font-bold uppercase tracking-wider text-secondary">
-              Legal & Trust
+              Legal &amp; Trust
             </h3>
             <ul className="mt-4 space-y-1">
               <li>
@@ -136,11 +136,10 @@ export default function Footer() {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ink/10 pt-8 text-xs text-ink/60 sm:flex-row">
           <p>© {new Date().getFullYear()} StickTheBizz Technologies Pvt Ltd. All rights reserved.</p>
           <p className="flex items-center gap-1.5 font-medium">
-            Crafted with <Heart className="h-3.5 w-3.5 text-primary fill-primary" /> & cutting chai for Bharat&apos;s counters.
+            Crafted with <Heart className="h-3.5 w-3.5 text-primary fill-primary" /> &amp; cutting chai for Bharat&apos;s counters.
           </p>
         </div>
       </div>
     </footer>
   );
 }
-
