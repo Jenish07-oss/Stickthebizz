@@ -54,8 +54,13 @@ CREATE TABLE IF NOT EXISTS public.visits (
 -- Ensure newly added columns exist if table was already created
 ALTER TABLE public.visits ADD COLUMN IF NOT EXISTS bill_amount NUMERIC DEFAULT 100;
 
--- 4. REALTIME REPLICATION
-ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;
+-- 4. REALTIME REPLICATION (Safely ignore if already added)
+DO $$
+BEGIN
+  ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
 
 -- 5. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
