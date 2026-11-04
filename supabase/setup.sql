@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.merchants (
   visits_required INT DEFAULT 10,
   reward_name TEXT NOT NULL,
   validity_days INT DEFAULT 45,
-  redemption_pin TEXT DEFAULT '8492',
+  redemption_pin TEXT DEFAULT '4921',
   created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.merchants (
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL;
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'Cafe / Chai';
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS validity_days INT DEFAULT 45;
-ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS redemption_pin TEXT DEFAULT '8492';
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS redemption_pin TEXT DEFAULT '4921';
 ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS qr_token TEXT DEFAULT 'active';
 
 -- 2. CUSTOMERS TABLE
@@ -72,7 +72,74 @@ CREATE INDEX IF NOT EXISTS idx_audit_user ON public.audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_action ON public.audit_logs(action);
 CREATE INDEX IF NOT EXISTS idx_audit_created ON public.audit_logs(created_at);
 
--- 5. REALTIME REPLICATION (Safely ignore if already added)
+-- 5. REDEMPTIONS TABLE (Audit-safe, Restricted Deletion)
+CREATE TABLE IF NOT EXISTS public.redemptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id UUID NOT NULL REFERENCES public.merchants(id) ON DELETE RESTRICT,
+  customer_id UUID NOT NULL REFERENCES public.customers(id) ON DELETE RESTRICT,
+  cycle_number INTEGER NOT NULL DEFAULT 1,
+  reward_name TEXT NOT NULL,
+  required_visits INTEGER NOT NULL CHECK (required_visits BETWEEN 1 AND 100),
+  stamps_consumed INTEGER NOT NULL CHECK (stamps_consumed >= 0),
+  voucher_code_hash TEXT NOT NULL,
+  voucher_code_last4 TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ISSUED' CHECK (status IN ('ISSUED', 'REDEEMED', 'CANCELLED', 'EXPIRED')),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (timezone('utc'::text, now()) + INTERVAL '48 hours'),
+  redeemed_at TIMESTAMPTZ,
+  redeemed_by_user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_redemptions_one_active_per_customer
+  ON public.redemptions (merchant_id, customer_id)
+  WHERE status = 'ISSUED';
+
+CREATE INDEX IF NOT EXISTS idx_redemptions_merchant_created_at
+  ON public.redemptions (merchant_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_redemptions_customer_created_at
+  ON public.redemptions (customer_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_redemptions_voucher_hash
+  ON public.redemptions (voucher_code_hash);
+
+-- Safe View (Hides voucher_code_hash from public/client queries)
+CREATE OR REPLACE VIEW public.redemptions_safe AS
+SELECT
+  id,
+  merchant_id,
+  customer_id,
+  cycle_number,
+  reward_name,
+  required_visits,
+  stamps_consumed,
+  voucher_code_last4,
+  status,
+  issued_at,
+  expires_at,
+  redeemed_at,
+  created_at
+FROM public.redemptions;
+
+-- 6. IDEMPOTENCY KEYS TABLE
+CREATE TABLE IF NOT EXISTS public.idempotency_keys (
+  key TEXT NOT NULL,
+  endpoint TEXT NOT NULL,
+  user_id UUID,
+  request_hash TEXT NOT NULL,
+  response_status INTEGER,
+  response_body JSONB,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  expires_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (key, endpoint)
+);
+
+CREATE INDEX IF NOT EXISTS idx_idempotency_expires_at
+  ON public.idempotency_keys (expires_at);
+
+-- 7. REALTIME REPLICATION (Safely ignore if already added)
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;
@@ -85,6 +152,8 @@ ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.redemptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.idempotency_keys ENABLE ROW LEVEL SECURITY;
 
 -- 7. HARDENED RLS POLICIES
 
@@ -93,7 +162,7 @@ DO $$
 DECLARE
   pol RECORD;
 BEGIN
-  FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('merchants','customers','visits','audit_logs')
+  FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('merchants','customers','visits','audit_logs','redemptions','idempotency_keys')
   LOOP
     EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
   END LOOP;
@@ -183,6 +252,20 @@ CREATE POLICY "Merchant owner read visits" ON public.visits
     merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
   );
 
+
+-- ==========================================
+-- REDEMPTIONS POLICIES
+-- ==========================================
+-- Merchant owner can read redemptions for their store
+CREATE POLICY "Merchant read own redemptions" ON public.redemptions
+  FOR SELECT TO authenticated
+  USING (merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid()));
+
+-- Customer can read own redemptions
+CREATE POLICY "Customer read own redemptions" ON public.redemptions
+  FOR SELECT TO authenticated
+  USING (customer_id IN (SELECT id FROM public.customers WHERE auth_id = auth.uid()));
+
 -- ==========================================
 -- AUDIT LOGS POLICIES
 -- ==========================================
@@ -193,7 +276,7 @@ CREATE POLICY "Service role audit access" ON public.audit_logs
 -- 8. SEED INITIAL VERIFIED MERCHANTS
 INSERT INTO public.merchants (id, name, slug, category, min_spend, visits_required, reward_name, validity_days, redemption_pin)
 VALUES
-  ('5cc30c25-3711-4b65-891b-13af808a556f', 'Kesar Chai Corner', 'kesar-chai', 'Cafe / Chai', 100, 10, 'Free Masala Chai', 45, '8492'),
+  ('5cc30c25-3711-4b65-891b-13af808a556f', 'Kesar Chai Corner', 'kesar-chai', 'Cafe / Chai', 100, 10, 'Free Masala Chai', 45, '4921'),
   ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12', 'Patel Kirana Superstore', 'patel-kirana', 'Kirana / Grocery', 250, 10, '1L Cooking Oil Pouch', 45, '1234'),
   ('a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a13', 'The Bun Co. Burgers', 'burger-joint', 'Quick Service Restaurant', 150, 7, 'Free Crispy Burger', 30, '5678')
 ON CONFLICT (slug) DO UPDATE

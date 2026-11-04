@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedMerchant } from "@/lib/utils/auth";
 import { sanitizeHtml, sanitizeError, maskPhone } from "@/lib/utils/sanitize";
 import { auditLog } from "@/lib/utils/audit";
+import { updateMerchantRuleSchema } from "@/lib/utils/validation";
+import crypto from "crypto";
 
 export interface UpdateMerchantRuleInput {
   merchantId: string;
@@ -18,39 +20,48 @@ export interface UpdateMerchantRuleInput {
 }
 
 /**
- * Updates merchant rule in the database.
+ * Updates merchant rule in the database with strict Zod validation.
  */
 export async function updateMerchantRuleAction(input: UpdateMerchantRuleInput) {
   try {
-    // ✅ VERIFY OWNERSHIP FIRST
+    // 1. Zod Validation
+    const validation = updateMerchantRuleSchema.safeParse({
+      merchantId: input.merchantId,
+      name: input.name,
+      minSpend: input.minSpend,
+      visitsRequired: input.visitsRequired,
+      rewardName: input.rewardName,
+      validityDays: input.validityDays || 30,
+      redemptionPin: input.redemptionPin || undefined,
+    });
+
+    if (!validation.success) {
+      return { success: false, error: validation.error.issues[0]?.message || "Invalid merchant rule input." };
+    }
+
+    // 2. Ownership verification
     await getAuthenticatedMerchant(input.merchantId);
-    
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
-    
-    const updatePayload: {
-      name: string;
-      min_spend: number;
-      visits_required: number;
-      reward_name: string;
-      validity_days: number;
-      redemption_pin: string;
-      category: string;
-      qr_token?: string;
-    } = {
+
+    const updatePayload: Record<string, any> = {
       name: sanitizeHtml(input.name),
       min_spend: input.minSpend,
       visits_required: input.visitsRequired,
       reward_name: sanitizeHtml(input.rewardName),
       validity_days: input.validityDays || 30,
-      redemption_pin: input.redemptionPin || "8492",
       category: sanitizeHtml(input.category || "Cafe / Chai"),
     };
-    
+
+    if (input.redemptionPin && /^\d{4}$/.test(input.redemptionPin)) {
+      updatePayload.redemption_pin = input.redemptionPin;
+    }
+
     if (input.qrToken) {
       updatePayload.qr_token = input.qrToken;
     }
-    
+
     let { data, error } = await supabase
       .from("merchants")
       .update(updatePayload)
@@ -73,18 +84,18 @@ export async function updateMerchantRuleAction(input: UpdateMerchantRuleInput) {
     if (error) {
       return { success: false, error: sanitizeError(error) };
     }
-    
-    // ✅ AUDIT LOG
+
+    // 3. Security Audit Log
     if (user) {
       await auditLog({
         userId: user.id,
-        action: 'merchant_rule_update',
-        resourceType: 'merchant',
+        action: "merchant_rule_update",
+        resourceType: "merchant",
         resourceId: input.merchantId,
         metadata: { fields: Object.keys(updatePayload) },
       });
     }
-    
+
     return { success: true, merchant: data };
   } catch (err: any) {
     return { success: false, error: sanitizeError(err) };
@@ -96,9 +107,8 @@ export async function updateMerchantRuleAction(input: UpdateMerchantRuleInput) {
  */
 export async function rotateMerchantQrAction(merchantId: string) {
   try {
-    // ✅ VERIFY OWNERSHIP FIRST
     await getAuthenticatedMerchant(merchantId);
-    
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     const now = new Date();
@@ -126,17 +136,16 @@ export async function rotateMerchantQrAction(merchantId: string) {
     if (error) {
       return { success: false, error: sanitizeError(error) };
     }
-    
-    // ✅ AUDIT LOG
+
     if (user) {
       await auditLog({
         userId: user.id,
-        action: 'merchant_qr_rotate',
-        resourceType: 'merchant',
+        action: "merchant_qr_rotate",
+        resourceType: "merchant",
         resourceId: merchantId,
       });
     }
-    
+
     return { success: true, merchant: data };
   } catch (err: any) {
     return { success: false, error: sanitizeError(err) };
@@ -145,7 +154,6 @@ export async function rotateMerchantQrAction(merchantId: string) {
 
 /**
  * Fetches merchant details for current logged-in owner.
- * If user has no merchant yet, links or provisions one.
  */
 export async function getOwnerMerchant() {
   try {
@@ -158,7 +166,6 @@ export async function getOwnerMerchant() {
       return { user: null, merchant: null };
     }
 
-    // Try finding merchant by owner_id
     let { data: merchant } = await supabase
       .from("merchants")
       .select("*")
@@ -166,7 +173,6 @@ export async function getOwnerMerchant() {
       .maybeSingle();
 
     if (!merchant) {
-      // Check if user has an existing merchant with their email or fallback
       const { data: existing } = await supabase
         .from("merchants")
         .select("*")
@@ -175,7 +181,6 @@ export async function getOwnerMerchant() {
         .maybeSingle();
 
       if (existing && !existing.owner_id) {
-        // Claim the unassigned merchant
         await supabase.from("merchants").update({ owner_id: user.id }).eq("id", existing.id);
         merchant = { ...existing, owner_id: user.id };
       } else {
@@ -191,6 +196,7 @@ export async function getOwnerMerchant() {
 
 /**
  * Registers a new merchant with a unique slug and links to authenticated owner.
+ * Uses a cryptographically random 4-digit PIN (NO hardcoded default).
  */
 export async function registerMerchantAction(params: {
   name: string;
@@ -207,6 +213,7 @@ export async function registerMerchantAction(params: {
       .replace(/^-|-$/g, "");
 
     const uniqueSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
+    const randomPin = crypto.randomInt(1000, 10000).toString();
 
     const { data: merchant, error } = await supabase
       .from("merchants")
@@ -219,7 +226,7 @@ export async function registerMerchantAction(params: {
         visits_required: 10,
         reward_name: "Free Special Item",
         validity_days: 30,
-        redemption_pin: "8492",
+        redemption_pin: randomPin,
       })
       .select()
       .single();

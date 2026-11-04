@@ -6,6 +6,8 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import {
   getCustomerWalletAction,
+  exportCustomerDataAction,
+  deleteCustomerAccountAction,
   CustomerWalletData,
   CustomerStorePass,
 } from "@/app/actions/customer";
@@ -29,6 +31,9 @@ import {
   LogOut,
   Calendar,
   Lock,
+  Download,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
@@ -64,6 +69,52 @@ export default function CustomerDashboardPage() {
     }
     await supabase.auth.signOut();
     router.push("/auth/customer/login");
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleExportData = async () => {
+    try {
+      setIsExporting(true);
+      const res = await exportCustomerDataAction();
+      if (res.success && res.data) {
+        const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "stickthebizz-customer-data-" + new Date().toISOString().slice(0, 10) + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } else {
+        alert(res.error || "Unable to export data at this time.");
+      }
+    } catch (err: any) {
+      alert("Export failed: " + err.message);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeleting(true);
+      const res = await deleteCustomerAccountAction();
+      if (res.success) {
+        alert("Your account and phone number have been permanently anonymized per DPDP Act standards.");
+        router.push("/auth/customer/login");
+      } else {
+        alert(res.error || "Failed to delete account.");
+      }
+    } catch (err: any) {
+      alert("Deletion failed: " + err.message);
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalOpen(false);
+    }
   };
 
   const getCategoryIcon = (category: string) => {
@@ -303,6 +354,82 @@ export default function CustomerDashboardPage() {
               </div>
             )}
           </div>
+
+          {/* DPDP Act 2023 Customer Privacy & Data Rights Card */}
+          <div className="mt-10 rounded-3xl border border-secondary/20 bg-white p-6 sm:p-8 shadow-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <div className="inline-flex items-center gap-1.5 font-mono text-xs font-bold text-success">
+                  <ShieldCheck className="h-4 w-4" />
+                  DPDP ACT 2023 PRIVACY GUARANTEE
+                </div>
+                <h2 className="mt-1 font-display text-xl font-extrabold text-secondary">
+                  Your Privacy &amp; Data Rights
+                </h2>
+                <p className="mt-1 text-xs text-ink/70">
+                  StickTheBizz never sells or monetizes your data. You have the full legal right to export or permanently delete your account at any time.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleExportData}
+                  disabled={isExporting}
+                  className="inline-flex items-center gap-2 rounded-xl border border-border bg-sand/60 px-4 py-2.5 text-xs font-bold text-secondary transition hover:bg-sand"
+                >
+                  <Download className="h-3.5 w-3.5 text-primary" />
+                  {isExporting ? "Exporting..." : "Export My Data (JSON)"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs font-bold text-red-700 transition hover:bg-red-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-red-600" />
+                  Delete My Account
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Delete Confirmation Modal */}
+          {deleteModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+              <div className="w-full max-w-md rounded-[2rem] border border-border bg-white p-6 sm:p-8 shadow-2xl">
+                <div className="flex items-center gap-3 text-red-600">
+                  <div className="grid h-10 w-10 place-items-center rounded-full bg-red-100">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <h3 className="font-display text-lg font-extrabold text-secondary">
+                    Delete Customer Account?
+                  </h3>
+                </div>
+                <p className="mt-3 text-xs leading-relaxed text-ink/75">
+                  Under India&apos;s DPDP Act 2023, this will <strong>permanently anonymize your phone number and identity</strong>.
+                  Your existing punch card stamps and passes will be permanently decoupled. This action cannot be undone.
+                </p>
+                <div className="mt-6 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModalOpen(false)}
+                    className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-ink/70 hover:bg-sand/40"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteAccount}
+                    disabled={isDeleting}
+                    className="rounded-xl bg-red-600 px-4 py-2 text-xs font-bold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {isDeleting ? "Anonymizing..." : "Yes, Delete Everything"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </main>
 

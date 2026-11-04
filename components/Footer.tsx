@@ -134,9 +134,22 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <span className="flex min-h-[48px] items-center text-xs text-ink/60">
-                  Zero Customer Data Resale Guarantee
-                </span>
+                <Link
+                  href="/refund"
+                  target="_self"
+                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                >
+                  Refund Policy (7-Day Guarantee)
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/grievance"
+                  target="_self"
+                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                >
+                  DPDP Grievance Redressal
+                </Link>
               </li>
             </ul>
           </div>

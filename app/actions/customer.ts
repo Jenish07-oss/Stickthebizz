@@ -2,7 +2,18 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getVisitDateIST } from "./scan";
-import { sanitizeError } from "@/lib/utils/sanitize";
+import { sanitizeError, maskPhone } from "@/lib/utils/sanitize";
+import { auditLog } from "@/lib/utils/audit";
+import {
+  otpRequestSchema,
+  otpVerifySchema,
+  phoneSchema,
+} from "@/lib/utils/validation";
+import {
+  generateSecureOtp,
+  storeOtp,
+  verifySecureOtp,
+} from "@/lib/utils/otp";
 
 export interface CustomerStorePass {
   merchantId: string;
@@ -44,6 +55,106 @@ export interface CustomerWalletData {
 }
 
 /**
+ * Request a 6-digit cryptographically secure OTP for customer authentication.
+ */
+export async function requestCustomerOtpAction(phone: string) {
+  try {
+    const validation = otpRequestSchema.safeParse({ phone });
+    if (!validation.success) {
+      return { success: false, message: validation.error.issues[0]?.message || "Invalid phone number." };
+    }
+
+    const cleanPhone = validation.data.phone;
+    const otp = generateSecureOtp();
+
+    // Store hashed with pepper and 3-minute expiry
+    const { expiresAt } = storeOtp(cleanPhone, otp);
+
+    const supabase = await createClient();
+
+    // Call Supabase Auth OTP or sign in with OTP
+    const { error: authError } = await supabase.auth.signInWithOtp({
+      phone: `+91${cleanPhone}`,
+    });
+
+    if (authError) {
+      // In local development or if SMS gateway is in sandbox, OTP is stored in memory utility
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[DEV ONLY] Secure OTP for +91${cleanPhone}: ${otp}`);
+      }
+    }
+
+    return {
+      success: true,
+      message: "6-digit OTP sent successfully. Valid for 3 minutes.",
+      expiresAt: expiresAt.toISOString(),
+    };
+  } catch (err: any) {
+    return { success: false, message: sanitizeError(err) };
+  }
+}
+
+/**
+ * Verify customer 6-digit OTP with single-use invalidation and 5-attempt brute-force protection.
+ */
+export async function verifyCustomerOtpAction(phone: string, inputOtp: string) {
+  try {
+    const validation = otpVerifySchema.safeParse({ phone, otp: inputOtp });
+    if (!validation.success) {
+      return { success: false, message: validation.error.issues[0]?.message || "Invalid OTP code." };
+    }
+
+    const cleanPhone = validation.data.phone;
+
+    // Verify using cryptographic utility first
+    const memoryVerify = verifySecureOtp(cleanPhone, inputOtp);
+    if (!memoryVerify.valid) {
+      if (memoryVerify.locked) {
+        return { success: false, message: "Too many failed attempts. This OTP is locked. Please request a new one." };
+      }
+      if (memoryVerify.reason === "EXPIRED") {
+        return { success: false, message: "OTP has expired. Please request a new 6-digit code." };
+      }
+    }
+
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone: `+91${cleanPhone}`,
+      token: inputOtp,
+      type: "sms",
+    });
+
+    if (error && !memoryVerify.valid) {
+      return { success: false, message: "Invalid verification code. Please check your SMS." };
+    }
+
+    // Ensure customer record exists
+    let { data: customer } = await supabase
+      .from("customers")
+      .select("id")
+      .eq("phone", cleanPhone)
+      .maybeSingle();
+
+    if (!customer) {
+      await supabase.from("customers").insert({
+        phone: cleanPhone,
+        auth_id: data?.user?.id || null,
+        full_name: "Valued Regular",
+      });
+    } else if (data?.user?.id) {
+      await supabase
+        .from("customers")
+        .update({ auth_id: data.user.id })
+        .eq("id", customer.id);
+    }
+
+    return { success: true, message: "Authentication successful." };
+  } catch (err: any) {
+    return { success: false, message: sanitizeError(err) };
+  }
+}
+
+/**
  * Ensures or updates a customer profile row in the database.
  */
 export async function syncCustomerAccountAction(params: {
@@ -65,7 +176,6 @@ export async function syncCustomerAccountAction(params: {
       return { success: false, message: "Phone or email required" };
     }
 
-    // Check if customer exists by phone or email
     let existingQuery = supabase.from("customers").select("*");
     if (cleanPhone) {
       existingQuery = existingQuery.eq("phone", cleanPhone);
@@ -120,7 +230,6 @@ export async function syncCustomerAccountAction(params: {
 export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
   const supabase = await createClient();
 
-  // 1. Authenticate user session - ONLY use authenticated user's data
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -137,7 +246,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
   const userEmail = user.email || "";
   const userName = user?.user_metadata?.full_name || null;
 
-  // 2. Query real customer profile using ONLY authenticated user's identifiers
   let customer: any = null;
   if (userPhone) {
     const cleanPhone = userPhone.replace(/\D/g, "");
@@ -170,7 +278,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     if (c) customer = c;
   }
 
-  // 3. Fetch real merchants available on the platform
   const { data: allMerchants } = await supabase
     .from("merchants")
     .select("*")
@@ -179,7 +286,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
   const merchantsList = allMerchants || [];
   const todayIST = await getVisitDateIST();
 
-  // If customer is not authenticated or has no profile yet, return clean 0-visit passes
   if (!customer) {
     const emptyPasses: CustomerStorePass[] = merchantsList.map((m: any) => ({
       merchantId: m.id,
@@ -213,7 +319,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     };
   }
 
-  // 4. Fetch real customer visits from Supabase
   const { data: visits } = await supabase
     .from("visits")
     .select("id, merchant_id, visit_date_ist, bill_amount, status, created_at, merchants (*)")
@@ -222,7 +327,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
 
   const visitList = visits || [];
 
-  // Group real visits by merchant
   const merchantVisitsMap: Record<string, any[]> = {};
   visitList.forEach((v) => {
     if (!merchantVisitsMap[v.merchant_id]) {
@@ -231,14 +335,12 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     merchantVisitsMap[v.merchant_id].push(v);
   });
 
-  // Build real wallet passes with accurate visit counts
   const passes: CustomerStorePass[] = merchantsList.map((m: any) => {
     const merchantVisits = merchantVisitsMap[m.id] || [];
     const approvedVisits = merchantVisits.filter(
       (v) => v.status === "APPROVED" || v.status === "REDEEMED"
     );
 
-    // Exact count of verified visits from database
     const visitsCount = approvedVisits.length;
     const displayVisits = Math.min(visitsCount, m.visits_required);
     const hasScannedToday = merchantVisits.some(
@@ -252,7 +354,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
       status = "LOCKED UNTIL 12:00 AM IST";
     }
 
-    // Calculate days remaining based on store validity
     const daysRemaining = Number(m.validity_days) || 45;
 
     return {
@@ -274,7 +375,6 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     };
   });
 
-  // History list from real database visits
   const history: CustomerVisitRecord[] = visitList.map((v) => {
     const merchantObj: any = Array.isArray(v.merchants) ? v.merchants[0] : v.merchants;
     return {
@@ -298,4 +398,120 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     passes,
     history,
   };
+}
+
+/**
+ * DPDP Act 2023: Customer Data Portability (Export My Data).
+ * Returns customer profile, visit history, and redemption records in clean JSON.
+ */
+export async function exportCustomerDataAction() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "UNAUTHENTICATED" };
+
+    const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("id, phone, full_name, email, created_at")
+      .or(`auth_id.eq.${user.id},phone.eq.${userPhone}`)
+      .maybeSingle();
+
+    if (!customer) {
+      return { success: false, error: "CUSTOMER_NOT_FOUND" };
+    }
+
+    // Fetch visits
+    const { data: visits } = await supabase
+      .from("visits")
+      .select("id, merchant_id, visit_date_ist, bill_amount, status, created_at, merchants(name, category)")
+      .eq("customer_id", customer.id)
+      .order("created_at", { ascending: false });
+
+    // Fetch redemptions from redemptions_safe view
+    const { data: redemptions } = await supabase
+      .from("redemptions_safe")
+      .select("*")
+      .eq("customer_id", customer.id)
+      .order("created_at", { ascending: false });
+
+    // Security Audit Log
+    await auditLog({
+      userId: user.id,
+      action: "customer_data_export",
+      resourceType: "customer",
+      resourceId: customer.id,
+    });
+
+    const exportData = {
+      exportTimestamp: new Date().toISOString(),
+      complianceStandard: "India Digital Personal Data Protection (DPDP) Act 2023",
+      customerProfile: {
+        id: customer.id,
+        phone: customer.phone,
+        fullName: customer.full_name,
+        email: customer.email,
+        memberSince: customer.created_at,
+      },
+      visitsHistory: visits || [],
+      rewardRedemptions: redemptions || [],
+    };
+
+    return { success: true, data: exportData };
+  } catch (err: any) {
+    return { success: false, error: sanitizeError(err) };
+  }
+}
+
+/**
+ * DPDP Act 2023: Right to be Forgotten (Account Deletion & Safe Anonymization).
+ * Anonymizes PII while preserving audit/accounting ledger integrity (ON DELETE RESTRICT).
+ */
+export async function deleteCustomerAccountAction() {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: "UNAUTHENTICATED" };
+
+    const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("id")
+      .or(`auth_id.eq.${user.id},phone.eq.${userPhone}`)
+      .maybeSingle();
+
+    if (!customer) {
+      return { success: false, error: "CUSTOMER_NOT_FOUND" };
+    }
+
+    // Anonymize customer row without destroying financial audit trail in visits/redemptions
+    const anonymizedPhone = `DEL_${Math.random().toString(36).substring(2, 10)}`;
+    const { error: updateError } = await supabase
+      .from("customers")
+      .update({
+        phone: anonymizedPhone,
+        full_name: "Deleted Customer",
+        email: null,
+        auth_id: null,
+      })
+      .eq("id", customer.id);
+
+    if (updateError) {
+      return { success: false, error: sanitizeError(updateError) };
+    }
+
+    await auditLog({
+      userId: user.id,
+      action: "customer_account_delete",
+      resourceType: "customer",
+      resourceId: customer.id,
+    });
+
+    // Revoke session
+    await supabase.auth.signOut();
+
+    return { success: true, message: "Your account and personal data have been permanently anonymized." };
+  } catch (err: any) {
+    return { success: false, error: sanitizeError(err) };
+  }
 }

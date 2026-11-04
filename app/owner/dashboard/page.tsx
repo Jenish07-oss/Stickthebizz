@@ -44,7 +44,6 @@ interface LivePendingScan {
   id: string;
   customerName: string;
   customerMasked: string;
-  rawPhone: string;
   amount: number;
   formattedTime: string;
   status: string;
@@ -108,22 +107,14 @@ export default function OwnerDashboardPage() {
 
           // Fetch pending visits
           const { visits: pending } = await getPendingVisits(m.id);
-          const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => {
-            const rawPhone = v.customers?.phone || "";
-            const masked =
-              rawPhone.length >= 10
-                ? `+91 ${rawPhone.slice(0, 2)}*** **${rawPhone.slice(-2)}`
-                : "Customer Check-in";
-            return {
-              id: v.id,
-              customerName: v.customers?.full_name || "Diner / Shopper",
-              customerMasked: masked,
-              rawPhone,
-              amount: Number(v.bill_amount) || m.min_spend,
-              formattedTime: "Just now",
-              status: v.status,
-            };
-          });
+          const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => ({
+            id: v.id,
+            customerName: v.customers?.full_name || "Diner / Shopper",
+            customerMasked: v.customers?.phone || "Customer Check-in",
+            amount: Number(v.bill_amount) || m.min_spend,
+            formattedTime: "Just now",
+            status: v.status,
+          }));
           setPendingQueue(initialQueue);
 
           // Fetch ledger
@@ -172,41 +163,19 @@ export default function OwnerDashboardPage() {
         async (payload) => {
           const v = payload.new;
           if (v.status === "PENDING") {
-            // Play two-tone counter bell (523Hz + 659Hz)
             playApprovalBell();
-
-            // Resolve customer phone
-            let rawPhone = "";
-            let custName = "Customer Check-in";
-            if (v.customer_id) {
-              const { data: cust } = await supabase
-                .from("customers")
-                .select("phone, full_name")
-                .eq("id", v.customer_id)
-                .maybeSingle();
-
-              if (cust) {
-                rawPhone = cust.phone || "";
-                custName = cust.full_name || "Customer Check-in";
-              }
+            const { visits: freshPending } = await getPendingVisits(merchant.id);
+            if (freshPending) {
+              const updatedQueue: LivePendingScan[] = freshPending.map((item: any) => ({
+                id: item.id,
+                customerName: item.customers?.full_name || "Customer Check-in",
+                customerMasked: item.customers?.phone || "Customer Check-in",
+                amount: Number(item.bill_amount) || merchant.min_spend,
+                formattedTime: "Just now",
+                status: item.status,
+              }));
+              setPendingQueue(updatedQueue);
             }
-
-            const masked =
-              rawPhone.length >= 10
-                ? `+91 ${rawPhone.slice(0, 2)}*** **${rawPhone.slice(-2)}`
-                : "Customer Check-in";
-
-            const newScan: LivePendingScan = {
-              id: v.id,
-              customerName: custName,
-              customerMasked: masked,
-              rawPhone,
-              amount: Number(v.bill_amount) || merchant.min_spend,
-              formattedTime: "Just now",
-              status: "PENDING",
-            };
-
-            setPendingQueue((prev) => [newScan, ...prev.filter((q) => q.id !== newScan.id)]);
           }
         }
       )
