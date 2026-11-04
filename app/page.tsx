@@ -191,10 +191,10 @@ export default function HomePage() {
         {/* HERO SECTION - INTERACTIVE ANIMATED MESH GRADIENT & SPOTLIGHT */}
         <AnimatedHero className="px-4 pb-16 pt-10 sm:px-6 sm:pt-16 lg:px-8 lg:pb-24">
           <div className="mx-auto max-w-7xl">
-            <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-8">
-              {/* Left Column: Value Proposition & Category Selector */}
-              <div className="lg:col-span-7 flex flex-col items-start text-left">
-                <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
+            <div className="grid items-start gap-8 lg:grid-cols-12 lg:gap-8">
+              {/* 1. Value Proposition: Made for Bharat, Headline & Subtitle (Order 1 on mobile, Left col on desktop) */}
+              <div className="order-1 lg:col-span-7 flex flex-col items-start text-left">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   MADE FOR BHARAT&apos;S RETAIL COUNTERS
                 </div>
@@ -206,113 +206,34 @@ export default function HomePage() {
                   </span>
                 </h1>
 
-                <p className="mt-5 text-lg leading-relaxed text-ink/80 sm:text-xl">
+                <p className="mt-4 text-base leading-relaxed text-ink/80 sm:text-xl">
                   Zero app downloads. No costly POS machines. One counter QR stand that turns first-time footfall into habit-forming daily customer streaks.
                 </p>
-
-                {/* Category Preset Selector */}
-                <div className="mt-7 w-full">
-                  <p className="text-xs font-bold uppercase tracking-wider text-ink/60 mb-2.5">
-                    Select a retail preset to preview live:
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("chai")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "chai"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <ChaiCupIcon size={20} />
-                      Chai Stall (10 Visits → Free Chai)
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("kirana")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "kirana"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <BasketIcon size={20} />
-                      Patel Kirana (10 Visits → 1L Oil)
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("burger")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "burger"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <StreakIcon size={20} />
-                      Burger Joint (7 Visits → Free Burger)
-                    </button>
-                  </div>
-                </div>
-
-                {/* Key Bullet Highlights with Glassmorphism */}
-                <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
-                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
-                    <AntiFraudIcon size={20} />
-                    <span>Strict 1-Scan Per Day (12:00 AM Reset)</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
-                    <CustomersIcon size={20} />
-                    <span>DPDP Safe Customer Privacy</span>
-                  </div>
-                </div>
-
-                {/* Primary CTAs */}
-                <div className="mt-8 flex flex-wrap items-center gap-3.5">
-                  <Link
-                    href="/auth/owner/register"
-                    target="_self"
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    <span>Register My Shop Counter</span>
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-
-                  <Link
-                    href="/owner"
-                    target="_self"
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-white/70"
-                  >
-                    <Store className="h-4 w-4 text-primary" />
-                    <span>Open Merchant Desk</span>
-                  </Link>
-                </div>
-
-                {/* Glassmorphic ROI Lift Card inside Hero */}
-                <div className="mt-8 flex items-center justify-between gap-4 rounded-2xl bg-white/40 backdrop-blur-md border border-white/30 p-3.5 shadow-sm max-w-md w-full">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
-                      <AnalyticsIcon size={18} />
-                    </span>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/60">
-                        Live ROI Calculator Lift
-                      </p>
-                      <p className="font-display text-base font-extrabold text-secondary">
-                        +₹{monthlyExtraRevenue.toLocaleString("en-IN")} / mo
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/20 px-2.5 py-1 font-mono text-xs font-bold">
-                    +{monthlyExtraVisits} visits
-                  </span>
-                </div>
               </div>
 
-              {/* Right Column: Ultra-Realistic Apple Wallet Style Smartphone Pass with Glassmorphic Pedestal */}
-              <div className="lg:col-span-5 flex flex-col items-center justify-center">
+              {/* 2. Primary CTAs: Register My Shop Counter & Open Merchant Desk (Order 2 on mobile, Left col on desktop) */}
+              <div className="order-2 lg:col-span-7 flex flex-wrap items-center gap-3.5 pt-1">
+                <Link
+                  href="/auth/owner/register"
+                  target="_self"
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-card transition-all duration-200 hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                >
+                  <span>Register My Shop Counter</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+
+                <Link
+                  href="/owner"
+                  target="_self"
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-white/70"
+                >
+                  <Store className="h-4 w-4 text-primary" />
+                  <span>Open Merchant Desk</span>
+                </Link>
+              </div>
+
+              {/* 3. Interactive Smartphone Pass (Order 3 on mobile: comes right after CTAs; Col 8-12 on desktop) */}
+              <div className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 flex flex-col items-center justify-center pt-2 lg:pt-0">
                 <div className="relative w-full flex flex-col items-center rounded-[3.2rem] p-4 backdrop-blur-md bg-white/40 border border-white/20 shadow-xl">
                   <p className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
                     <Smartphone className="h-4 w-4 text-primary" />
@@ -453,6 +374,88 @@ export default function HomePage() {
                       </div>
                     </div>
                   </PhoneFrame>
+                </div>
+              </div>
+
+              {/* 4. Other Details (Order 4 on mobile: moved lower below phone animation; Col 1-7 on desktop) */}
+              <div className="order-4 lg:col-span-7 flex flex-col items-start text-left space-y-6 pt-2">
+                {/* Category Preset Selector */}
+                <div className="w-full">
+                  <p className="text-xs font-bold uppercase tracking-wider text-ink/60 mb-2.5">
+                    Select a retail preset to preview live:
+                  </p>
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleCategoryChange("chai")}
+                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
+                        activeCategory === "chai"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                      }`}
+                    >
+                      <ChaiCupIcon size={20} />
+                      Chai Stall (10 Visits → Free Chai)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCategoryChange("kirana")}
+                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
+                        activeCategory === "kirana"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                      }`}
+                    >
+                      <BasketIcon size={20} />
+                      Patel Kirana (10 Visits → 1L Oil)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCategoryChange("burger")}
+                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
+                        activeCategory === "burger"
+                          ? "bg-secondary text-white shadow-md"
+                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                      }`}
+                    >
+                      <StreakIcon size={20} />
+                      Burger Joint (7 Visits → Free Burger)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Key Bullet Highlights with Glassmorphism */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
+                    <AntiFraudIcon size={20} />
+                    <span>Strict 1-Scan Per Day (12:00 AM Reset)</span>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
+                    <CustomersIcon size={20} />
+                    <span>DPDP Safe Customer Privacy</span>
+                  </div>
+                </div>
+
+                {/* Glassmorphic ROI Lift Card inside Hero */}
+                <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/40 backdrop-blur-md border border-white/30 p-3.5 shadow-sm max-w-md w-full">
+                  <div className="flex items-center gap-2.5">
+                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
+                      <AnalyticsIcon size={18} />
+                    </span>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/60">
+                        Live ROI Calculator Lift
+                      </p>
+                      <p className="font-display text-base font-extrabold text-secondary">
+                        +₹{monthlyExtraRevenue.toLocaleString("en-IN")} / mo
+                      </p>
+                    </div>
+                  </div>
+                  <span className="rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/20 px-2.5 py-1 font-mono text-xs font-bold">
+                    +{monthlyExtraVisits} visits
+                  </span>
                 </div>
               </div>
             </div>
@@ -820,7 +823,7 @@ export default function HomePage() {
                 PREDICTABLE RETAIL PRICING
               </p>
               <h2 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-secondary sm:text-4xl">
-                Flat ₹499/Month. Zero Commission.
+                Flat ₹749/Month. Zero Commission.
               </h2>
             </div>
 
@@ -835,7 +838,7 @@ export default function HomePage() {
                     Unlimited Counter Plan
                   </h3>
                   <div className="mt-4 flex items-baseline gap-2">
-                    <span className="font-display text-5xl sm:text-6xl font-extrabold text-white">₹499</span>
+                    <span className="font-display text-5xl sm:text-6xl font-extrabold text-white">₹749</span>
                     <span className="text-sm font-semibold text-white/70">/ month (flat rate)</span>
                   </div>
                   <p className="mt-3 text-sm text-white/80">

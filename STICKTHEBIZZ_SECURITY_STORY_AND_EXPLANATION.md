@@ -237,7 +237,7 @@ We implemented the legal gold standard for data protection:
 ### 🔴 The Confusion
 A shopkeeper in Ahmedabad was considering StickTheBizz for his cafe, but hesitated:
 * *"What if the acrylic standee arrives broken in the mail?"*
-* *"What if I subscribe for ₹499 and it doesn't work for my shop? Do I get my money back?"*
+* *"What if I subscribe for ₹749 and it doesn't work for my shop? Do I get my money back?"*
 * *"Who is responsible if a customer claims they earned a reward?"*
 
 ### 🛡️ How We Fixed It (Transparent Legal Suite)
@@ -245,7 +245,7 @@ We created dedicated, plain-English legal pages directly linked in every page fo
 1. **[Refund & Cancellation Policy](/refund):**
    * **7-Day Unconditional Guarantee:** Try StickTheBizz for 7 days. If your footfall doesn't increase, message WhatsApp for a 100% refund — no questions asked.
    * **Standee Replacement Guarantee:** If postal delivery cracks your acrylic standee, send a photo within 14 days for a free express replacement.
-   * **Clear Division of Roles:** StickTheBizz charges ₹499/month for the digital tracking software. The individual shopkeeper honors their own delicious tea or snacks.
+   * **Clear Division of Roles:** StickTheBizz charges ₹749/month for the digital tracking software. The individual shopkeeper honors their own delicious tea or snacks.
 2. **[DPDP Grievance Redressal](/grievance):**
    * Clear statutory compliance under Section 13 of India's DPDP Act 2023.
    * Official Data Protection Officer contact (`grievance@stickthebizz.in`), physical office address, and guaranteed 48-hour response SLA.
@@ -279,3 +279,4 @@ StickTheBizz is no longer just a digital punch card tool.
 It is now an **enterprise-grade, zero-trust loyalty engine** built to withstand real-world human behavior, malicious attempts, and strict Indian regulatory standards (DPDP Act 2023). 
 
 Shopkeepers can confidently put our acrylic standee on their counter knowing that every stamp represents a real customer, every reward is legitimately earned, and customer data is treated with the same confidentiality as a bank account.
+

@@ -14,7 +14,7 @@ export default function Navbar() {
   const isContact = pathname === "/contact";
 
   return (
-    <header className="sticky top-0 z-50 h-16 w-full bg-white/80 backdrop-blur-md border-b border-[#E5D9C8]/60 transition-all">
+    <header className="sticky top-0 z-50 h-16 w-full bg-white/95 sm:backdrop-blur-md border-b border-[#E5D9C8]/80 transition-colors">
       <nav
         className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-12"
         aria-label="Main Navigation"
@@ -110,12 +110,12 @@ export default function Navbar() {
           </Link>
         </div>
 
-        {/* Mobile Hamburger Toggle */}
+        {/* Mobile Hamburger Toggle (Ultra-lightweight, zero touch delay) */}
         <div className="flex xl:hidden">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="grid h-10 w-10 place-items-center rounded-xl bg-sand/80 text-secondary border border-border"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-sand/80 text-secondary border border-border touch-manipulation select-none active:scale-95 transition-transform"
             aria-label="Toggle Menu"
           >
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -123,9 +123,9 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Mobile Drawer */}
+      {/* Mobile Drawer (Hardware-accelerated, zero-lag for older budget devices) */}
       {mobileMenuOpen && (
-        <div className="xl:hidden border-b border-border bg-white px-6 py-6 shadow-xl animate-stamp-pop">
+        <div className="xl:hidden border-b border-border bg-white px-6 py-6 shadow-xl transform-gpu transition-opacity duration-150">
           <div className="flex flex-col space-y-4 text-base font-bold text-ink/85">
             <Link
               href="/#how-it-works"

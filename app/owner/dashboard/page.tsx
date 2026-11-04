@@ -14,7 +14,7 @@ import {
   getPendingVisits,
   getMerchantLedger,
 } from "@/app/actions/scan";
-import { getOwnerMerchant, updateMerchantRuleAction, rotateMerchantQrAction } from "@/app/actions/merchant";
+import { getOwnerMerchant, updateMerchantRuleAction, rotateMerchantQrAction, registerMerchantAction } from "@/app/actions/merchant";
 import { playApprovalBell, playScanChime } from "@/lib/audio";
 import {
   Store,
@@ -87,6 +87,35 @@ export default function OwnerDashboardPage() {
   );
   const [showConfetti, setShowConfetti] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [isCreatingShop, setIsCreatingShop] = useState(false);
+  const [newShopName, setNewShopName] = useState("");
+  const [newShopCategory, setNewShopCategory] = useState("Cafe / Chai");
+
+  const handleCreateShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newShopName.trim()) return;
+    setIsCreatingShop(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const res = await registerMerchantAction({
+        name: newShopName.trim(),
+        category: newShopCategory,
+        ownerId: user?.id,
+      });
+      if (res.success && res.merchant) {
+        setMerchant(res.merchant);
+        setShopNameInput(res.merchant.name);
+        setMinSpendInput(Number(res.merchant.min_spend) || 100);
+        setVisitsInput(Number(res.merchant.visits_required) || 10);
+        setRewardInput(res.merchant.reward_name);
+        setValidityInput(Number(res.merchant.validity_days) || 45);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsCreatingShop(false);
+    }
+  };
 
   // 1. Initial Load of Merchant and Historical Ledger
   useEffect(() => {
@@ -286,6 +315,97 @@ export default function OwnerDashboardPage() {
   };
 
   const scanUrl = `https://stickthebizz.in/s/${merchant?.slug || "kesar-chai"}`;
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-sand">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-8">
+          <div className="text-center">
+            <RefreshCw className="h-8 w-8 animate-spin text-primary mx-auto mb-3" />
+            <p className="font-display text-lg font-extrabold text-secondary">
+              Connecting to Counter Terminal...
+            </p>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (!merchant) {
+    return (
+      <div className="flex min-h-screen flex-col bg-sand">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center p-4 sm:p-8">
+          <div className="w-full max-w-lg rounded-[2.5rem] border border-border bg-white p-8 sm:p-10 shadow-float text-center">
+            <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <Store className="h-7 w-7" />
+            </div>
+            <h1 className="font-display text-2xl font-extrabold text-secondary">
+              Set Up Your Shop Counter
+            </h1>
+            <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+              We couldn&apos;t find an active counter linked to your account yet. Enter your shop details below to generate your counter QR standee immediately.
+            </p>
+
+            <form onSubmit={handleCreateShop} className="mt-6 space-y-4 text-left">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Shop / Business Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newShopName}
+                  onChange={(e) => setNewShopName(e.target.value)}
+                  placeholder="e.g. Kesar Chai Corner, Gupta Kirana"
+                  className="mt-1.5 w-full rounded-xl border border-border bg-sand/30 px-3.5 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Retail Category
+                </label>
+                <select
+                  value={newShopCategory}
+                  onChange={(e) => setNewShopCategory(e.target.value)}
+                  className="mt-1.5 w-full rounded-xl border border-border bg-sand/30 px-3.5 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary"
+                >
+                  <option value="Cafe / Chai">Cafe / Chai</option>
+                  <option value="Bakery">Bakery</option>
+                  <option value="Kirana / Grocery">Kirana / Grocery</option>
+                  <option value="Quick Service Restaurant">Quick Service Restaurant</option>
+                  <option value="Salon / Spa">Salon / Spa</option>
+                  <option value="Other Retail">Other Retail</option>
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isCreatingShop}
+                className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-xs font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:opacity-50"
+              >
+                {isCreatingShop ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Activating Counter...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Activate Counter &amp; Standee QR</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">

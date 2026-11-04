@@ -154,6 +154,7 @@ export async function rotateMerchantQrAction(merchantId: string) {
 
 /**
  * Fetches merchant details for current logged-in owner.
+ * If user exists but has no merchant record, attempts to auto-provision one from user metadata.
  */
 export async function getOwnerMerchant() {
   try {
@@ -172,19 +173,39 @@ export async function getOwnerMerchant() {
       .eq("owner_id", user.id)
       .maybeSingle();
 
-    if (!merchant) {
-      const { data: existing } = await supabase
-        .from("merchants")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
+    // Auto-provision if user signed up with shop_name metadata but merchant insert was delayed
+    if (!merchant && user?.id) {
+      const metadataShopName = user.user_metadata?.shop_name;
+      if (metadataShopName) {
+        const baseSlug = metadataShopName
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+        const uniqueSlug = `${baseSlug || "counter"}-${Math.random().toString(36).substring(2, 6)}`;
+        const randomPin = crypto.randomInt(1000, 10000).toString();
 
-      if (existing && !existing.owner_id) {
-        await supabase.from("merchants").update({ owner_id: user.id }).eq("id", existing.id);
-        merchant = { ...existing, owner_id: user.id };
-      } else {
-        merchant = existing;
+        const { data: newShop, error: insertError } = await supabase
+          .from("merchants")
+          .insert({
+            name: sanitizeHtml(metadataShopName),
+            slug: uniqueSlug,
+            category: sanitizeHtml(user.user_metadata?.category || "Cafe / Chai"),
+            owner_id: user.id,
+            min_spend: 100,
+            visits_required: 10,
+            reward_name: "Free Special Item",
+            validity_days: 30,
+            redemption_pin: randomPin,
+          })
+          .select()
+          .maybeSingle();
+
+        if (newShop) {
+          merchant = newShop;
+        } else if (insertError) {
+          console.warn("Auto-provision merchant note:", insertError.message);
+        }
       }
     }
 
@@ -203,28 +224,41 @@ export async function registerMerchantAction(params: {
   category: string;
   ownerId?: string;
   phone?: string;
+  minSpend?: number;
+  visitsRequired?: number;
+  rewardName?: string;
 }) {
   try {
     const supabase = await createClient();
-    const baseSlug = params.name
+    const cleanName = sanitizeHtml(params.name || "My Shop Counter");
+    const baseSlug = cleanName
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
-    const uniqueSlug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
+    const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
     const randomPin = crypto.randomInt(1000, 10000).toString();
+
+    // Check if authenticated user is making the call if ownerId wasn't passed
+    let effectiveOwnerId = params.ownerId;
+    if (!effectiveOwnerId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        effectiveOwnerId = user.id;
+      }
+    }
 
     const { data: merchant, error } = await supabase
       .from("merchants")
       .insert({
-        name: sanitizeHtml(params.name),
+        name: cleanName,
         slug: uniqueSlug,
         category: sanitizeHtml(params.category || "Cafe / Chai"),
-        owner_id: params.ownerId || null,
-        min_spend: 100,
-        visits_required: 10,
-        reward_name: "Free Special Item",
+        owner_id: effectiveOwnerId || null,
+        min_spend: params.minSpend || 100,
+        visits_required: params.visitsRequired || 10,
+        reward_name: sanitizeHtml(params.rewardName || "Free Special Item"),
         validity_days: 30,
         redemption_pin: randomPin,
       })

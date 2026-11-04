@@ -69,27 +69,58 @@ export default function OwnerRegisterPage() {
       });
 
       if (authError) {
-        // If user already exists or signup needs signin
-        if (authError.message.includes("already registered")) {
+        if (
+          authError.message.includes("already registered") ||
+          authError.message.includes("User already registered")
+        ) {
           setErrorMessage("This email is already registered. Please login to your account.");
-          setIsSubmitting(false);
-          return;
+        } else {
+          setErrorMessage(authError.message || "Failed to create account. Please check your credentials.");
         }
-        console.warn("Auth signup error:", authError.message);
+        setIsSubmitting(false);
+        return;
       }
 
-      const ownerId = authData?.user?.id;
+      // 2. Establish active session immediately
+      const { data: signInData } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-      // 2. Provision row in merchants table via Server Action
+      const effectiveUserId = signInData?.user?.id || authData?.user?.id;
+
+      // 3. Provision row in merchants table via Server Action
       const regRes = await registerMerchantAction({
         name: shopName.trim(),
         category,
-        ownerId,
+        ownerId: effectiveUserId,
         phone: cleanPhone,
       });
 
-      if (!regRes.success) {
-        console.warn("Merchant provisioning note:", regRes.error);
+      // 4. Client fallback insert if server action experienced a cookie delay
+      if (!regRes.success && effectiveUserId) {
+        const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
+        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+        await supabase.from("merchants").insert({
+          name: shopName.trim(),
+          slug: uniqueSlug,
+          category,
+          owner_id: effectiveUserId,
+          min_spend: 100,
+          visits_required: 10,
+          reward_name: "Free Special Item",
+          validity_days: 30,
+          redemption_pin: randomPin,
+        });
+      }
+
+      // Check if Supabase project requires email confirmation
+      if (authData?.user && !authData.session && (!signInData || !signInData.session)) {
+        setErrorMessage("Account created! If email confirmation is enabled in your Supabase project, please check your inbox to confirm before logging in.");
+        setIsSubmitting(false);
+        return;
       }
 
       // Auto-redirect to Owner Dashboard with full session reload

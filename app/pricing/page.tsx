@@ -61,7 +61,7 @@ export default function PricingPage() {
 
                 <div className="mt-6 flex items-baseline gap-2 border-b border-white/15 pb-6">
                   <span className="font-display text-5xl sm:text-6xl font-extrabold text-white">
-                    ₹499
+                    ₹749
                   </span>
                   <span className="text-base font-semibold text-white/70">
                     / month (flat rate, no hidden cuts)
@@ -132,7 +132,7 @@ export default function PricingPage() {
                   Estimate Your Monthly Net Revenue Gain
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-ink/70">
-                  See how an estimated 18% lift in repeat footfall compares against the flat ₹499/mo fee.
+                  See how an estimated 18% lift in repeat footfall compares against the flat ₹749/mo fee.
                 </p>
               </div>
 
@@ -141,7 +141,7 @@ export default function PricingPage() {
                   Estimated Monthly Net Gain
                 </span>
                 <p className="font-display text-3xl sm:text-4xl font-extrabold text-success">
-                  +₹{(extraRevenue - 499).toLocaleString("en-IN")}
+                  +₹{(extraRevenue - 749).toLocaleString("en-IN")}
                 </p>
                 <span className="font-mono text-xs text-ink/60">
                   +{monthlyExtraVisits} extra customer visits

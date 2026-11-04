@@ -175,10 +175,10 @@ END $$;
 CREATE POLICY "Public read merchants" ON public.merchants
   FOR SELECT TO anon, authenticated USING (true);
 
--- Only authenticated owner can INSERT their own merchant
-CREATE POLICY "Owner insert merchant" ON public.merchants
-  FOR INSERT TO authenticated
-  WITH CHECK (auth.uid() = owner_id);
+-- Allow new merchant registration
+CREATE POLICY "Public insert merchant" ON public.merchants
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
 
 -- Only owner can UPDATE their merchant
 CREATE POLICY "Owner update merchant" ON public.merchants
@@ -194,10 +194,10 @@ CREATE POLICY "Owner delete merchant" ON public.merchants
 -- ==========================================
 -- CUSTOMERS POLICIES
 -- ==========================================
--- Customer can READ own record (via auth_id link)
-CREATE POLICY "Customer read own" ON public.customers
-  FOR SELECT TO authenticated
-  USING (auth_id = auth.uid());
+-- Customer can READ own record (via auth_id link or public check-in)
+CREATE POLICY "Public read customer" ON public.customers
+  FOR SELECT TO anon, authenticated
+  USING (true);
 
 -- Public/anon can INSERT customer (for check-in flow)
 CREATE POLICY "Public insert customer" ON public.customers

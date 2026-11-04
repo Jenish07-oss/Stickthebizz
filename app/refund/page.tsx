@@ -40,14 +40,14 @@ export default function RefundPage() {
               </h2>
               <p className="mt-2 text-xs font-medium text-ink/75 leading-relaxed">
                 We want every chai stall, kirana shop, bakery, and cafe owner in Bharat to feel 100% confident.
-                If you subscribe to the StickTheBizz <strong>₹499/month</strong> merchant plan and decide within your first 7 days that digital loyalty passes are not increasing your daily footfall, message our WhatsApp support for a <strong>100% full refund</strong> — no questions asked.
+                If you subscribe to the StickTheBizz <strong>₹749/month</strong> merchant plan and decide within your first 7 days that digital loyalty passes are not increasing your daily footfall, message our WhatsApp support for a <strong>100% full refund</strong> — no questions asked.
               </p>
             </div>
 
             {/* Section 1: Merchant SaaS Subscription */}
             <div>
               <h2 className="font-display text-xl font-extrabold text-secondary">
-                1. Monthly Merchant SaaS Subscription (₹499/mo)
+                1. Monthly Merchant SaaS Subscription (₹749/mo)
               </h2>
               <ul className="mt-3 space-y-2 text-xs">
                 <li className="flex items-start gap-2">

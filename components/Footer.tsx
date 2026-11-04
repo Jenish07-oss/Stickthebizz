@@ -67,7 +67,7 @@ export default function Footer() {
                   replace={false}
                   className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
-                  Pricing Plan (₹499/mo)
+                  Pricing Plan (₹749/mo)
                 </Link>
               </li>
             </ul>
