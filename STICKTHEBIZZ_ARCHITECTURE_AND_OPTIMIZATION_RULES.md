@@ -111,3 +111,4 @@
    - Never use "8492" or static fallback PINs.
    - Merchant sets a private 4-digit PIN in their owner settings.
    - Customers present a dynamic single-use voucher code (`STB-XXXX`) for counter redemption.
+

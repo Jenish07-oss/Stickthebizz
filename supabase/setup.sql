@@ -304,3 +304,58 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   BEFORE INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_user();
+
+
+-- ==========================================
+-- 10. SUBSCRIPTIONS, 1-DAY GRACE PERIOD & PROMO CODES
+-- ==========================================
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS subscription_status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS subscription_plan TEXT DEFAULT 'MONTHLY';
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS subscription_started_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now());
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS subscription_expires_at TIMESTAMPTZ DEFAULT (timezone('utc'::text, now()) + INTERVAL '30 days');
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS grace_period_ends_at TIMESTAMPTZ DEFAULT (timezone('utc'::text, now()) + INTERVAL '31 days');
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS razorpay_payment_id TEXT;
+ALTER TABLE public.merchants ADD COLUMN IF NOT EXISTS razorpay_order_id TEXT;
+
+CREATE TABLE IF NOT EXISTS public.promo_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('PERCENT', 'FLAT')),
+  discount_value NUMERIC NOT NULL,
+  applicable_plan TEXT DEFAULT 'ALL' CHECK (applicable_plan IN ('ALL', 'MONTHLY', 'YEARLY')),
+  max_uses INT DEFAULT 1000,
+  times_used INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  expires_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+INSERT INTO public.promo_codes (code, discount_type, discount_value, applicable_plan, max_uses)
+VALUES 
+  ('BETA100', 'PERCENT', 100, 'ALL', 1000),
+  ('FOUNDERPASS', 'PERCENT', 100, 'ALL', 500),
+  ('LAUNCH20', 'PERCENT', 20, 'ALL', 1000),
+  ('SAVE200', 'FLAT', 200, 'ALL', 1000)
+ON CONFLICT (code) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS public.merchant_subscriptions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  merchant_id UUID REFERENCES public.merchants(id) ON DELETE CASCADE,
+  owner_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  plan TEXT NOT NULL CHECK (plan IN ('MONTHLY', 'YEARLY')),
+  amount NUMERIC NOT NULL,
+  currency TEXT DEFAULT 'INR',
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'FAILED')),
+  razorpay_order_id TEXT,
+  razorpay_payment_id TEXT,
+  razorpay_signature TEXT,
+  promo_code_applied TEXT,
+  discount_amount NUMERIC DEFAULT 0,
+  starts_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
+  expires_at TIMESTAMPTZ NOT NULL,
+  grace_ends_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE public.promo_codes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.merchant_subscriptions ENABLE ROW LEVEL SECURITY;

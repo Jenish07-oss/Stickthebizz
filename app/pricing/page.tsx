@@ -13,15 +13,19 @@ import {
   Zap,
   Calculator,
   ChevronDown,
+  Clock,
+  Tag,
 } from "lucide-react";
 
 export default function PricingPage() {
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [dailyFootfall, setDailyFootfall] = useState(150);
   const [avgBill, setAvgBill] = useState(120);
 
   // Return visits uplift calculation (18% return lift)
   const monthlyExtraVisits = Math.round(dailyFootfall * 0.18 * 30);
   const extraRevenue = Math.round(monthlyExtraVisits * avgBill);
+  const planFee = billingCycle === "yearly" ? 599 : 749;
 
   return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">
@@ -39,85 +43,199 @@ export default function PricingPage() {
               One Flat Price. Unlimited Daily Customer Loyalty.
             </h1>
             <p className="mt-4 text-lg leading-relaxed text-ink/75">
-              Zero commission on your sales. No hardware rental. One low monthly fee turns walk-ins into guaranteed repeat regulars.
+              Zero commission on your sales. No hardware rental. One flat fee turns walk-ins into guaranteed repeat regulars.
             </p>
+
+            {/* Billing Interval Switcher */}
+            <div className="mt-8 inline-flex items-center rounded-full bg-white p-1.5 border border-border shadow-sm">
+              <button
+                type="button"
+                onClick={() => setBillingCycle("monthly")}
+                className={`rounded-full px-5 py-2 text-xs font-bold transition-all ${
+                  billingCycle === "monthly"
+                    ? "bg-secondary text-white shadow-sm"
+                    : "text-ink/70 hover:text-secondary"
+                }`}
+              >
+                Monthly Plan (₹749/mo)
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle("yearly")}
+                className={`flex items-center gap-1.5 rounded-full px-5 py-2 text-xs font-bold transition-all ${
+                  billingCycle === "yearly"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-ink/70 hover:text-secondary"
+                }`}
+              >
+                <span>Annual Plan (20% OFF)</span>
+                <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white">
+                  Save ₹1,798
+                </span>
+              </button>
+            </div>
           </div>
 
-          {/* Definitive Single Plan Card */}
-          <div className="mt-14 max-w-2xl mx-auto">
-            <div className="relative rounded-[2.5rem] border-2 border-primary bg-secondary p-8 sm:p-12 text-white shadow-float flex flex-col justify-between overflow-hidden">
-              {/* Highlight ribbon */}
-              <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-5 py-1.5 font-mono text-xs font-extrabold uppercase tracking-wider text-white">
-                ALL-INCLUSIVE PRO COUNTER
-              </div>
-
+          {/* Pricing Cards Comparison Grid */}
+          <div className="mt-12 grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto">
+            {/* 1. Monthly Plan */}
+            <div className={`relative rounded-[2.5rem] p-8 sm:p-10 flex flex-col justify-between transition-all border-2 ${
+              billingCycle === "monthly"
+                ? "border-primary bg-white shadow-float ring-2 ring-primary/20"
+                : "border-border bg-white/70"
+            }`}>
               <div>
-                <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 font-mono text-xs font-bold text-coral">
-                  SINGLE DEFINITIVE TIER
+                <span className="inline-flex items-center rounded-full bg-sand px-3 py-1 font-mono text-xs font-bold text-secondary">
+                  FLEXIBLE MONTHLY
                 </span>
-                <h2 className="mt-4 font-display text-3xl sm:text-4xl font-extrabold text-white">
-                  Unlimited Retail Counter Plan
+                <h2 className="mt-4 font-display text-2xl sm:text-3xl font-extrabold text-secondary">
+                  Monthly Counter Pro
                 </h2>
-
-                <div className="mt-6 flex items-baseline gap-2 border-b border-white/15 pb-6">
-                  <span className="font-display text-5xl sm:text-6xl font-extrabold text-white">
+                <div className="mt-4 flex items-baseline gap-2 border-b border-border pb-6">
+                  <span className="font-display text-4xl sm:text-5xl font-extrabold text-secondary">
                     ₹749
                   </span>
-                  <span className="text-base font-semibold text-white/70">
-                    / month (flat rate, no hidden cuts)
+                  <span className="text-xs font-semibold text-ink/65">
+                    / month (flat rate)
                   </span>
                 </div>
 
-                <p className="mt-4 text-sm leading-relaxed text-white/80">
-                  Everything you need to turn walk-in diners and shoppers into habit-forming daily regulars.
+                <p className="mt-4 text-xs sm:text-sm text-ink/75 leading-relaxed">
+                  Ideal for new shops testing digital streak loyalty with month-to-month flexibility.
                 </p>
 
-                <ul className="mt-8 space-y-4 text-sm font-semibold text-white/95">
+                <ul className="mt-6 space-y-3.5 text-xs font-semibold text-secondary">
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                     <span>Unlimited customer passes &amp; digital punch cards</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>Unlimited counter QR scans &amp; automated daily midnight resets</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span>Custom acrylic QR standee artwork (5x7 inch)</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>Multi-category custom streak rules (e.g., 10 Chais → 1 Free; ₹3,000 Spend → 1L Oil)</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span>Real-time cashier terminal with audio feedback</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>High-resolution, printable custom acrylic QR Standee artwork (5x7 inch)</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span>Automated daily 12:00 AM IST visit resets</span>
                   </li>
                   <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>Real-time cashier terminal with WebSockets audio feedback</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>Full customer analytics, visit timestamps, and retention logs</span>
-                  </li>
-                  <li className="flex items-start gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-coral shrink-0 mt-0.5" />
-                    <span>WhatsApp &amp; Web Push customer re-engagement capabilities</span>
+                    <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span><strong>1-Day Grace Period</strong> on renewal date</span>
                   </li>
                 </ul>
               </div>
 
-              <div className="mt-10 pt-6 border-t border-white/15">
+              <div className="mt-8 pt-6 border-t border-border">
                 <Link
-                  href="/auth/owner/register"
-                  replace={false}
-                  className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-full bg-primary text-base font-bold text-white shadow-card transition hover:bg-primary/90 hover:scale-[1.01] active:scale-95"
+                  href="/auth/owner/register?plan=monthly"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-secondary text-sm font-bold text-white shadow-sm transition hover:bg-secondary/90"
                 >
-                  <span>Register My Shop Counter Now</span>
-                  <ArrowRight className="h-5 w-5" />
+                  <span>Choose Monthly Plan (₹749)</span>
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
-                <p className="mt-2.5 text-center font-mono text-xs text-white/60">
-                  Instant activation • Zero POS hardware required • Cancel anytime
+                <p className="mt-2 text-center text-[11px] text-ink/50">
+                  Includes 1-day grace period • Cancel anytime
                 </p>
               </div>
             </div>
+
+            {/* 2. Yearly Plan (20% OFF) */}
+            <div className={`relative rounded-[2.5rem] p-8 sm:p-10 flex flex-col justify-between text-white transition-all border-2 ${
+              billingCycle === "yearly"
+                ? "border-primary bg-secondary shadow-float ring-2 ring-primary/30"
+                : "border-secondary bg-secondary/90"
+            }`}>
+              {/* Highlight ribbon */}
+              <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-4 py-1.5 font-mono text-xs font-extrabold uppercase tracking-wider text-white">
+                BEST VALUE • SAVE 20%
+              </div>
+
+              <div>
+                <span className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 font-mono text-xs font-bold text-coral">
+                  ANNUAL PREPAID PASS
+                </span>
+                <h2 className="mt-4 font-display text-2xl sm:text-3xl font-extrabold text-white">
+                  Annual Counter Pro
+                </h2>
+                <div className="mt-4 flex items-baseline gap-2 border-b border-white/15 pb-6">
+                  <span className="font-display text-4xl sm:text-5xl font-extrabold text-white">
+                    ₹7,190
+                  </span>
+                  <span className="text-xs line-through text-white/50">
+                    ₹8,988
+                  </span>
+                  <span className="text-xs font-semibold text-white/80">
+                    / year (~₹599/mo)
+                  </span>
+                </div>
+
+                <p className="mt-4 text-xs sm:text-sm text-white/80 leading-relaxed">
+                  Best value for established cafes and retail stores. Lock in 365 days of repeat regulars with 20% savings.
+                </p>
+
+                <ul className="mt-6 space-y-3.5 text-xs font-semibold text-white/95">
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
+                    <span><strong>Everything in Monthly Plan</strong></span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
+                    <span><strong>Flat 20% Discount</strong> (Save ₹1,798 every year)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
+                    <span>High-resolution vector standee artwork (PDF + SVG)</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
+                    <span>Priority WhatsApp &amp; phone onboarding support</span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
+                    <span><strong>1-Day Grace Period</strong> upon expiry date</span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-white/15">
+                <Link
+                  href="/auth/owner/register?plan=yearly"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-card transition hover:bg-primary/90 hover:scale-[1.01]"
+                >
+                  <span>Choose Annual Plan (₹7,190 • Save 20%)</span>
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+                <p className="mt-2 text-center text-[11px] text-white/60">
+                  Instant activation • 365 days + 1 day grace period
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Redeem Code Guarantee Banner */}
+          <div className="mt-12 max-w-3xl mx-auto rounded-3xl bg-white p-6 border border-border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+                <Tag className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="font-display text-sm font-extrabold text-secondary">
+                  Have a Partner Redeem Code or Beta Pass?
+                </h4>
+                <p className="text-xs text-ink/70">
+                  You can enter your redeem code on the registration page for instant discounts or ₹0 free activation.
+                </p>
+              </div>
+            </div>
+            <Link
+              href="/auth/owner/register"
+              className="shrink-0 rounded-xl bg-sand px-4 py-2 text-xs font-bold text-secondary border border-border hover:bg-white"
+            >
+              Enter Redeem Code →
+            </Link>
           </div>
 
           {/* ROI Calculator Section */}
@@ -132,7 +250,7 @@ export default function PricingPage() {
                   Estimate Your Monthly Net Revenue Gain
                 </h3>
                 <p className="mt-1 text-xs sm:text-sm text-ink/70">
-                  See how an estimated 18% lift in repeat footfall compares against the flat ₹749/mo fee.
+                  See how an estimated 18% lift in repeat footfall compares against the {billingCycle === "yearly" ? "₹599/mo (annual)" : "₹749/mo"} subscription.
                 </p>
               </div>
 
@@ -141,7 +259,7 @@ export default function PricingPage() {
                   Estimated Monthly Net Gain
                 </span>
                 <p className="font-display text-3xl sm:text-4xl font-extrabold text-success">
-                  +₹{(extraRevenue - 749).toLocaleString("en-IN")}
+                  +₹{(extraRevenue - planFee).toLocaleString("en-IN")}
                 </p>
                 <span className="font-mono text-xs text-ink/60">
                   +{monthlyExtraVisits} extra customer visits
@@ -149,101 +267,37 @@ export default function PricingPage() {
               </div>
             </div>
 
-            <div className="mt-8 grid gap-8 md:grid-cols-2">
+            <div className="mt-8 grid gap-8 sm:grid-cols-2">
               <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="footfall" className="text-sm font-bold text-secondary">
-                    Average Daily Footfall
-                  </label>
-                  <span className="font-mono text-base font-extrabold text-primary">
-                    {dailyFootfall} customers / day
-                  </span>
+                <div className="flex justify-between text-xs font-bold text-secondary">
+                  <span>Current Daily Footfall:</span>
+                  <span className="font-mono text-primary">{dailyFootfall} walk-ins/day</span>
                 </div>
                 <input
-                  id="footfall"
                   type="range"
                   min="30"
-                  max="600"
+                  max="800"
                   step="10"
                   value={dailyFootfall}
                   onChange={(e) => setDailyFootfall(Number(e.target.value))}
                   className="mt-3 w-full accent-primary cursor-pointer"
                 />
-                <div className="flex justify-between text-[11px] font-mono text-ink/50 mt-1">
-                  <span>30</span>
-                  <span>300</span>
-                  <span>600+</span>
-                </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between">
-                  <label htmlFor="avgBill" className="text-sm font-bold text-secondary">
-                    Average Order Value (₹)
-                  </label>
-                  <span className="font-mono text-base font-extrabold text-primary">
-                    ₹{avgBill}
-                  </span>
+                <div className="flex justify-between text-xs font-bold text-secondary">
+                  <span>Average Bill Amount:</span>
+                  <span className="font-mono text-primary">₹{avgBill} / customer</span>
                 </div>
                 <input
-                  id="avgBill"
                   type="range"
-                  min="20"
-                  max="1000"
-                  step="10"
+                  min="40"
+                  max="1200"
+                  step="20"
                   value={avgBill}
                   onChange={(e) => setAvgBill(Number(e.target.value))}
                   className="mt-3 w-full accent-primary cursor-pointer"
                 />
-                <div className="flex justify-between text-[11px] font-mono text-ink/50 mt-1">
-                  <span>₹20</span>
-                  <span>₹500</span>
-                  <span>₹1,000+</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Transparent FAQ */}
-          <div className="mt-20 mx-auto max-w-3xl">
-            <h3 className="text-center font-display text-3xl font-extrabold text-secondary">
-              Frequently Asked Questions
-            </h3>
-            <div className="mt-8 space-y-4">
-              <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-                <h4 className="font-display text-base font-bold text-secondary">
-                  Do my customers need to download an app from Play Store or App Store?
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  No! Customers simply scan the QR standee with their standard smartphone camera. The pass opens instantly in their browser with zero app installation, zero downloads, and zero passwords.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-                <h4 className="font-display text-base font-bold text-secondary">
-                  How does the strict 1-scan per day frequency restriction work?
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  Our system enforces a database-level unique constraint per (customer, store, calendar date IST). Once verified, the pass automatically locks and displays a live countdown unlocking strictly at 12:00:00 AM IST. Customers cannot spam repeat scans.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-                <h4 className="font-display text-base font-bold text-secondary">
-                  Do I need to buy a POS machine or barcode scanner?
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  No expensive hardware is needed. You open your merchant terminal on any smartphone, tablet, or cashier computer to receive instant audio dings and approve scans with 1 tap.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-border bg-white p-6 shadow-sm">
-                <h4 className="font-display text-base font-bold text-secondary">
-                  Can I change my reward rule later (e.g. 7 visits vs 10 visits)?
-                </h4>
-                <p className="mt-2 text-sm leading-relaxed text-ink/75">
-                  Yes, you have full control in your merchant dashboard to update your minimum bill spend, required visits count, and reward description anytime.
-                </p>
               </div>
             </div>
           </div>

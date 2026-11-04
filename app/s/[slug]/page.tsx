@@ -1,7 +1,7 @@
 import { createClient as createPublicClient } from "@supabase/supabase-js";
 import CustomerView from "@/components/CustomerView";
 import Link from "next/link";
-import { Store, ArrowLeft } from "lucide-react";
+import { Store, ArrowLeft, Clock } from "lucide-react";
 
 export const revalidate = 300; // 5 min cache for known shops
 
@@ -34,7 +34,7 @@ export default async function ShopSlugPage({ params }: Props) {
   // 1. Resolve merchant dynamically from DB (zero hardcoded seeds)
   const { data: merchant } = await supabase
     .from("merchants")
-    .select("id, name, slug, min_spend, visits_required, reward_name, validity_days")
+    .select("id, name, slug, min_spend, visits_required, reward_name, validity_days, subscription_status")
     .eq("slug", params.slug)
     .maybeSingle();
 
@@ -50,6 +50,40 @@ export default async function ShopSlugPage({ params }: Props) {
           </h1>
           <p className="mt-2 text-xs text-ink/70 leading-relaxed">
             The counter pass for <span className="font-mono font-bold text-secondary">/s/{params.slug}</span> is either inactive or has not been configured yet.
+          </p>
+          <div className="mt-6 flex flex-col gap-3">
+            <Link
+              href="/"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-secondary px-5 text-xs font-bold text-white transition hover:bg-primary"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Return to StickTheBizz Home</span>
+            </Link>
+            <Link
+              href="/customer/dashboard"
+              className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-border bg-sand/40 px-5 text-xs font-bold text-secondary transition hover:bg-sand"
+            >
+              <span>Go to My Digital Passes</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Gating: Check if merchant subscription is inactive
+  if (merchant.subscription_status === "INACTIVE" || merchant.subscription_status === "EXPIRED") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-sand px-4 py-12">
+        <div className="w-full max-w-md rounded-3xl border border-border bg-white p-8 text-center shadow-card">
+          <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-amber-100 text-amber-800">
+            <Clock className="h-7 w-7" />
+          </div>
+          <h1 className="font-display text-2xl font-extrabold text-secondary">
+            Counter Paused
+          </h1>
+          <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+            The loyalty counter pass for <strong className="text-secondary">{merchant.name}</strong> is currently paused. Please ask the shop manager at the counter to renew their pass.
           </p>
           <div className="mt-6 flex flex-col gap-3">
             <Link

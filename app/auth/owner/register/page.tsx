@@ -2,11 +2,37 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Store, User, Phone, Mail, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Store,
+  User,
+  Phone,
+  Mail,
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+  Tag,
+  Zap,
+  Sparkles,
+  HelpCircle,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
-import { registerMerchantAction } from "@/app/actions/merchant";
+import {
+  SubscriptionPlanId,
+  SUBSCRIPTION_PLANS,
+  calculatePlanPricing,
+} from "@/lib/razorpay";
+import {
+  validatePromoCodeAction,
+  createSubscriptionOrderAction,
+  verifyAndActivateSubscriptionAction,
+} from "@/app/actions/subscription";
 
 const CATEGORIES = [
   "Cafe / Chai",
@@ -17,10 +43,16 @@ const CATEGORIES = [
   "Other Retail",
 ];
 
-export default function OwnerRegisterPage() {
+function OwnerRegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
+  // Plan selection
+  const initialPlan = (searchParams.get("plan")?.toUpperCase() === "YEARLY" ? "YEARLY" : "MONTHLY") as SubscriptionPlanId;
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlanId>(initialPlan);
+
+  // Form Inputs
   const [shopName, setShopName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [category, setCategory] = useState("Cafe / Chai");
@@ -28,46 +60,92 @@ export default function OwnerRegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Redeem Code State
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<string | null>(null);
+  const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
+  const [isValidatingPromo, setIsValidatingPromo] = useState(false);
+
+  // Submission & Payment State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Calculated Pricing
+  const pricing = calculatePlanPricing(selectedPlan, appliedPromo || undefined);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        window.location.href = "/owner/dashboard";
+        // User already has account, verify if active
+        // window.location.href = "/owner/dashboard";
       }
     });
   }, [supabase]);
 
-  const handleResendActivation = async () => {
-    if (!email) return;
-    setResendStatus("Sending activation link...");
+  // Load Razorpay Checkout Script
+  const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      if (typeof window === "undefined") return resolve(false);
+      if ((window as any).Razorpay) return resolve(true);
+
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
+  // Handle Apply Promo Code
+  const handleApplyPromo = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!promoInput.trim()) return;
+
+    setIsValidatingPromo(true);
+    setPromoMessage(null);
     try {
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: email.trim().toLowerCase(),
-        options: {
-          emailRedirectTo: `${window.location.origin}/owner/dashboard`,
-        },
+      const res = await validatePromoCodeAction({
+        code: promoInput.trim(),
+        planId: selectedPlan,
       });
-      if (error) {
-        setResendStatus(error.message);
+
+      if (res.success && res.code) {
+        setAppliedPromo(res.code);
+        setPromoMessage({
+          success: true,
+          text: `✓ Code "${res.code}" applied: ${res.description}`,
+        });
       } else {
-        setResendStatus("Activation link resent! Please check your email inbox and spam folder.");
+        setAppliedPromo(null);
+        setPromoMessage({
+          success: false,
+          text: res.message || "Invalid redeem code.",
+        });
       }
     } catch {
-      setResendStatus("Could not resend email. Please try again.");
+      setPromoMessage({ success: false, text: "Error verifying redeem code." });
+    } finally {
+      setIsValidatingPromo(false);
     }
   };
 
+  const handleRemovePromo = () => {
+    setAppliedPromo(null);
+    setPromoInput("");
+    setPromoMessage(null);
+  };
+
+  // Main Submit & Payment Flow
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
 
     const cleanPhone = mobile.replace(/\D/g, "");
     if (cleanPhone.length < 10) {
-      setErrorMessage("Please enter a valid 10-digit mobile number.");
+      setErrorMessage("Please enter a valid 10-digit mobile number (+91).");
       return;
     }
 
@@ -77,323 +155,551 @@ export default function OwnerRegisterPage() {
     }
 
     setIsSubmitting(true);
+
     try {
-      // 1. Sign up merchant in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create Subscription Order (Razorpay or Free Promo)
+      const orderRes = await createSubscriptionOrderAction({
+        planId: selectedPlan,
+        promoCode: appliedPromo || undefined,
+        shopName: shopName.trim(),
         email: email.trim().toLowerCase(),
-        password,
-        options: {
-          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/owner/dashboard` : undefined,
-          data: {
-            full_name: ownerName.trim(),
-            phone: cleanPhone,
-            shop_name: shopName.trim(),
-            role: "merchant",
+        mobile: cleanPhone,
+      });
+
+      if (!orderRes.success) {
+        setErrorMessage(orderRes.message || "Failed to initialize order.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // CASE A: 100% Free Activation (Promo Code like BETA100 / FOUNDERPASS)
+      if (orderRes.isFree) {
+        setSuccessMessage("Activating counter subscription...");
+        const activationRes = await verifyAndActivateSubscriptionAction({
+          orderId: orderRes.orderId,
+          planId: selectedPlan,
+          promoCode: appliedPromo || undefined,
+          shopName: shopName.trim(),
+          ownerName: ownerName.trim(),
+          category,
+          mobile: cleanPhone,
+          email: email.trim().toLowerCase(),
+          password,
+        });
+
+        if (activationRes.success) {
+          setSuccessMessage("✓ Subscription activated! Redirecting to your Counter Terminal...");
+          setTimeout(() => {
+            window.location.href = "/owner/dashboard";
+          }, 1200);
+        } else {
+          setErrorMessage(activationRes.message || "Activation failed. Please try again.");
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
+      // CASE B: Paid Activation via Razorpay
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        setErrorMessage("Failed to load Razorpay payment gateway. Please check your internet connection.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const options = {
+        key: orderRes.keyId,
+        amount: orderRes.amountPaise,
+        currency: orderRes.currency || "INR",
+        name: "StickTheBizz",
+        description: `${SUBSCRIPTION_PLANS[selectedPlan].name} Activation (${shopName.trim()})`,
+        image: "/icon.png",
+        order_id: orderRes.orderId,
+        prefill: {
+          name: ownerName.trim(),
+          email: email.trim().toLowerCase(),
+          contact: `+91${cleanPhone}`,
+        },
+        theme: {
+          color: "#E05A47", // StickTheBizz Primary Coral
+        },
+        modal: {
+          ondismiss: () => {
+            setIsSubmitting(false);
+            setErrorMessage("Payment was cancelled. Complete checkout to activate your counter account.");
           },
         },
-      });
-
-      if (authError) {
-        if (
-          authError.message.includes("already registered") ||
-          authError.message.includes("User already registered")
-        ) {
-          setErrorMessage("This email is already registered. Please login to your account.");
-        } else {
-          setErrorMessage(authError.message || "Failed to create account. Please check your credentials.");
-        }
-        setIsSubmitting(false);
-        return;
-      }
-
-      // 2. Establish active session immediately
-      const { data: signInData } = await supabase.auth.signInWithPassword({
-        email: email.trim().toLowerCase(),
-        password,
-      });
-
-      const effectiveUserId = signInData?.user?.id || authData?.user?.id;
-
-      // 3. Provision row in merchants table (Direct client insert + Server Action fallback)
-      let merchantCreated = false;
-
-      if (effectiveUserId) {
-        try {
-          const { data: existingList } = await supabase
-            .from("merchants")
-            .select("id")
-            .eq("owner_id", effectiveUserId)
-            .limit(1);
-
-          if (existingList && existingList.length > 0) {
-            merchantCreated = true;
-          } else {
-            const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-            const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
-            const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
-
-            const { data: directMerchant, error: directErr } = await supabase.from("merchants").insert({
-              name: shopName.trim(),
-              slug: uniqueSlug,
+        handler: async (response: any) => {
+          setSuccessMessage("Payment verified! Finalizing your counter account...");
+          try {
+            const activationRes = await verifyAndActivateSubscriptionAction({
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+              planId: selectedPlan,
+              promoCode: appliedPromo || undefined,
+              shopName: shopName.trim(),
+              ownerName: ownerName.trim(),
               category,
-              owner_id: effectiveUserId,
-              min_spend: 100,
-              visits_required: 10,
-              reward_name: "Free Special Item",
-              validity_days: 30,
-              redemption_pin: randomPin,
-            }).select().maybeSingle();
+              mobile: cleanPhone,
+              email: email.trim().toLowerCase(),
+              password,
+            });
 
-            if (directMerchant) {
-              merchantCreated = true;
-            } else if (directErr) {
-              console.warn("Direct insert note:", directErr.message);
+            if (activationRes.success) {
+              setSuccessMessage("✓ Account & Subscription Active! Redirecting to terminal...");
+              setTimeout(() => {
+                window.location.href = "/owner/dashboard";
+              }, 1200);
+            } else {
+              setErrorMessage(activationRes.message || "Verification failed. Contact support@stickthebizz.in with payment ID: " + response.razorpay_payment_id);
+              setIsSubmitting(false);
             }
+          } catch (verifyErr: any) {
+            setErrorMessage("Account provisioning error: " + verifyErr.message);
+            setIsSubmitting(false);
           }
-        } catch (clientInsertErr) {
-          console.warn("Direct client insert error:", clientInsertErr);
-        }
-      }
+        },
+      };
 
-      // 4. Server Action provisioning fallback if client insert wasn't confirmed
-      if (!merchantCreated) {
-        try {
-          await registerMerchantAction({
-            name: shopName.trim(),
-            category,
-            ownerId: effectiveUserId,
-            phone: cleanPhone,
-          });
-        } catch (serverActionErr) {
-          console.warn("Server action provisioning note:", serverActionErr);
-        }
-      }
-
-      // 5. Account created verification
-      if (authData?.user && !authData.session && (!signInData || !signInData.session)) {
-        setErrorMessage("Account created! An activation link has been sent to your email. Please check your inbox (and spam) to verify, or log in below.");
+      const rzp = new (window as any).Razorpay(options);
+      rzp.on("payment.failed", (resp: any) => {
+        setErrorMessage(`Payment Failed: ${resp.error?.description || "Transaction declined by bank."}`);
         setIsSubmitting(false);
-        return;
-      }
-
-      // 6. Registration complete - redirect to Owner Dashboard
-      window.location.href = "/owner/dashboard";
+      });
+      rzp.open();
     } catch (err: any) {
-      const rawMsg = err?.message || "";
-      if (rawMsg.includes("Server Components render") || rawMsg.includes("digest")) {
-        // User account was created in Auth; redirect to dashboard setup directly
-        window.location.href = "/owner/dashboard";
-      } else {
-        setErrorMessage(rawMsg || "Failed to complete registration. Please try again.");
-      }
-    } finally {
+      setErrorMessage(err.message || "An unexpected error occurred during subscription setup.");
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-sand px-4 py-12 sm:px-6">
-      {/* Brand Header */}
-      <div className="mb-8 text-center">
-        <Logo href="/" size="lg" />
-        <p className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary/70">
-          Merchant Counter Registration
-        </p>
-      </div>
-
-      {/* Floating White Card */}
-      <div className="w-full max-w-lg rounded-[2.5rem] border border-border bg-white p-8 sm:p-10 shadow-float">
+    <div className="flex min-h-screen flex-col bg-sand py-10 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-4xl">
+        {/* Brand Header */}
         <div className="text-center">
-          <h1 className="font-display text-2xl font-extrabold text-secondary">
-            Set Up Your Shop Counter
+          <Link href="/" className="inline-block transition-transform hover:scale-105">
+            <Logo size="md" />
+          </Link>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-white/80 px-4 py-1.5 font-mono text-xs font-bold text-secondary shadow-sm">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            OFFICIAL SHOP COUNTER ONBOARDING
+          </div>
+          <h1 className="mt-3 font-display text-3xl sm:text-4xl font-extrabold text-secondary">
+            Activate Your Shop Counter Subscription
           </h1>
-          <p className="mt-2 text-xs text-ink/70 leading-relaxed">
-            Instant activation. Generate your counter standee QR and turn walk-in footfall into daily regulars.
+          <p className="mt-2 text-sm text-ink/70 max-w-xl mx-auto">
+            Choose your subscription plan to generate your physical acrylic standee QR, activate your live counter terminal, and start turning walk-in diners &amp; shoppers into daily regulars.
           </p>
         </div>
 
-        {errorMessage && (
-          <div className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-4 text-xs font-bold text-primary text-center space-y-2">
-            <p>{errorMessage}</p>
-            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-              <Link
-                href="/auth/owner/login"
-                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90"
-              >
-                <span>Go to Merchant Login</span>
-                <ArrowRight className="h-3.5 w-3.5" />
-              </Link>
-              {email && (
-                <button
-                  type="button"
-                  onClick={handleResendActivation}
-                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-white px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-sand"
-                >
-                  Resend Activation Email
-                </button>
+        {/* STEP 1: PLAN SELECTOR (Monthly vs Yearly) */}
+        <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          {/* Monthly Plan Option */}
+          <button
+            type="button"
+            onClick={() => setSelectedPlan("MONTHLY")}
+            className={`relative rounded-3xl p-6 text-left transition-all border-2 ${
+              selectedPlan === "MONTHLY"
+                ? "border-primary bg-white shadow-float ring-2 ring-primary/20"
+                : "border-border bg-white/60 hover:bg-white hover:border-ink/20"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-ink/60">
+                Monthly Counter Plan
+              </span>
+              <div className={`grid h-5 w-5 place-items-center rounded-full border ${
+                selectedPlan === "MONTHLY" ? "border-primary bg-primary text-white" : "border-border bg-white"
+              }`}>
+                {selectedPlan === "MONTHLY" && <CheckCircle2 className="h-3.5 w-3.5" />}
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-baseline gap-1.5">
+              <span className="font-display text-4xl font-extrabold text-secondary">
+                ₹749
+              </span>
+              <span className="text-xs font-semibold text-ink/60">/ month</span>
+            </div>
+            <p className="mt-2 text-xs text-ink/75 leading-relaxed">
+              Full unlimited counter features. 30-day billing cycle with automated 1-day grace period.
+            </p>
+          </button>
+
+          {/* Yearly Plan Option (20% OFF) */}
+          <button
+            type="button"
+            onClick={() => setSelectedPlan("YEARLY")}
+            className={`relative rounded-3xl p-6 text-left transition-all border-2 ${
+              selectedPlan === "YEARLY"
+                ? "border-primary bg-secondary text-white shadow-float ring-2 ring-primary/30"
+                : "border-border bg-white/60 hover:bg-white hover:border-ink/20"
+            }`}
+          >
+            {/* Highlight Ribbon */}
+            <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-3.5 py-1 font-mono text-[11px] font-extrabold uppercase tracking-wider text-white">
+              SAVE 20% (₹1,798 OFF)
+            </div>
+
+            <div className="flex items-center justify-between">
+              <span className={`font-mono text-xs font-bold uppercase tracking-wider ${
+                selectedPlan === "YEARLY" ? "text-coral" : "text-primary"
+              }`}>
+                Annual Pro Counter Plan
+              </span>
+              <div className={`grid h-5 w-5 place-items-center rounded-full border ${
+                selectedPlan === "YEARLY" ? "border-primary bg-primary text-white" : "border-border bg-white"
+              }`}>
+                {selectedPlan === "YEARLY" && <CheckCircle2 className="h-3.5 w-3.5" />}
+              </div>
+            </div>
+
+            <div className="mt-4 flex items-baseline gap-2">
+              <span className={`font-display text-4xl font-extrabold ${selectedPlan === "YEARLY" ? "text-white" : "text-secondary"}`}>
+                ₹7,190
+              </span>
+              <span className={`text-xs line-through ${selectedPlan === "YEARLY" ? "text-white/50" : "text-ink/40"}`}>
+                ₹8,988
+              </span>
+              <span className={`text-xs font-semibold ${selectedPlan === "YEARLY" ? "text-white/80" : "text-ink/60"}`}>
+                / year (₹599/mo)
+              </span>
+            </div>
+            <p className={`mt-2 text-xs leading-relaxed ${selectedPlan === "YEARLY" ? "text-white/80" : "text-ink/75"}`}>
+              Full 365 days of guaranteed regular retention. Flat 20% discount + priority VIP onboarding support.
+            </p>
+          </button>
+        </div>
+
+        {/* STEP 2: REGISTRATION FORM + ORDER SUMMARY */}
+        <div className="mt-8 grid gap-8 lg:grid-cols-12">
+          {/* Main Form (8 Cols) */}
+          <div className="lg:col-span-7 rounded-[2rem] border border-border bg-white p-6 sm:p-8 shadow-card">
+            <h2 className="font-display text-xl font-extrabold text-secondary flex items-center gap-2">
+              <Store className="h-5 w-5 text-primary" />
+              <span>Counter &amp; Owner Credentials</span>
+            </h2>
+            <p className="mt-1 text-xs text-ink/60">
+              Your store details for counter acrylic standee generation and daily cashier access.
+            </p>
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {errorMessage && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-3.5 text-xs font-semibold text-red-800 flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-600 mt-0.5" />
+                  <span>{errorMessage}</span>
+                </div>
               )}
-            </div>
-            {resendStatus && (
-              <p className="mt-2 text-[11px] font-semibold text-secondary">{resendStatus}</p>
-            )}
-          </div>
-        )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-          {/* Shop Name */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Shop Name
-            </label>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
-                <Store className="h-4 w-4" />
-              </span>
-              <input
-                type="text"
-                required
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                placeholder="e.g. Sharma Sweets & Dairy"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
+              {successMessage && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5 text-xs font-semibold text-emerald-800 flex items-start gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 mt-0.5" />
+                  <span>{successMessage}</span>
+                </div>
+              )}
 
-          {/* Owner Full Name */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Owner Full Name
-            </label>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
-                <User className="h-4 w-4" />
-              </span>
-              <input
-                type="text"
-                required
-                value={ownerName}
-                onChange={(e) => setOwnerName(e.target.value)}
-                placeholder="e.g. Vikram Sharma"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
+              {/* Shop Name */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Shop / Business Name
+                </label>
+                <div className="relative mt-1.5">
+                  <input
+                    type="text"
+                    required
+                    value={shopName}
+                    onChange={(e) => setShopName(e.target.value)}
+                    placeholder="e.g. Kesar Chai Corner, Gupta Kirana"
+                    className="w-full rounded-xl border border-border bg-sand/30 pl-10 pr-4 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                  />
+                  <Store className="absolute left-3 top-3 h-4 w-4 text-ink/40" />
+                </div>
+              </div>
 
-          {/* Business Category */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Business Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="mt-1.5 w-full rounded-xl border border-border bg-white py-3 px-3.5 text-sm font-semibold text-secondary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            >
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          </div>
+              {/* Owner Name & Category Grid */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                    Owner Full Name
+                  </label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="text"
+                      required
+                      value={ownerName}
+                      onChange={(e) => setOwnerName(e.target.value)}
+                      placeholder="e.g. Rajesh Patel"
+                      className="w-full rounded-xl border border-border bg-sand/30 pl-10 pr-4 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                    />
+                    <User className="absolute left-3 top-3 h-4 w-4 text-ink/40" />
+                  </div>
+                </div>
 
-          {/* Mobile (+91) */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              10-Digit Mobile Number
-            </label>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 font-mono text-xs font-bold text-ink/60">
-                +91
-              </span>
-              <input
-                type="tel"
-                required
-                maxLength={10}
-                value={mobile}
-                onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
-                placeholder="9820012345"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-12 pr-4 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                    Retail Category
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="mt-1.5 w-full rounded-xl border border-border bg-sand/30 px-3 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                  >
+                    {CATEGORIES.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-          {/* Email */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Email Address (for Login)
-            </label>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
-                <Mail className="h-4 w-4" />
-              </span>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="sharma.dairy@example.com"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-          </div>
+              {/* Mobile & Email Grid */}
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                    Mobile Number (+91)
+                  </label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="tel"
+                      required
+                      maxLength={10}
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, ""))}
+                      placeholder="9876543210"
+                      className="w-full rounded-xl border border-border bg-sand/30 pl-10 pr-4 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                    />
+                    <Phone className="absolute left-3 top-3 h-4 w-4 text-ink/40" />
+                  </div>
+                </div>
 
-          {/* Password (min 8 characters) with See Password toggle */}
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Password (Min. 8 Characters)
-            </label>
-            <div className="relative mt-1.5">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
-                <Lock className="h-4 w-4" />
-              </span>
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                minLength={8}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-11 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                    Email Address
+                  </label>
+                  <div className="relative mt-1.5">
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="shop@example.com"
+                      className="w-full rounded-xl border border-border bg-sand/30 pl-10 pr-4 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                    />
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-ink/40" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Terminal Password (Min. 8 characters)
+                </label>
+                <div className="relative mt-1.5">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a strong password"
+                    className="w-full rounded-xl border border-border bg-sand/30 pl-10 pr-10 py-2.5 text-xs font-bold text-secondary outline-none focus:border-primary focus:bg-white"
+                  />
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-ink/40" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-ink/40 hover:text-ink"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Submit CTA for mobile */}
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-ink/40 hover:text-secondary focus:outline-none select-none"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-6 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-primary/90 disabled:opacity-60"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                <span>
+                  {isSubmitting
+                    ? "Processing Subscription..."
+                    : pricing.isFreeActivation
+                    ? "✓ Activate Free Counter Subscription (₹0)"
+                    : `Proceed to Pay ₹${pricing.finalAmount.toLocaleString("en-IN")} via Razorpay`}
+                </span>
+                <ArrowRight className="h-4 w-4" />
               </button>
+            </form>
+          </div>
+
+          {/* Sidebar: Redeem Code & Checkout Summary (5 Cols) */}
+          <div className="lg:col-span-5 space-y-6">
+            {/* REDEEM CODE / PARTNER COUPON CARD */}
+            <div className="rounded-[2rem] border border-border bg-white p-6 shadow-card">
+              <div className="flex items-center gap-2">
+                <Tag className="h-4 w-4 text-primary" />
+                <h3 className="font-display text-sm font-extrabold text-secondary uppercase tracking-wider">
+                  Redeem Code / Partner Coupon
+                </h3>
+              </div>
+              <p className="mt-1 text-[11px] text-ink/65">
+                Have a partner pass or beta invite? Enter your code below to claim your discount or ₹0 activation.
+              </p>
+
+              {appliedPromo ? (
+                <div className="mt-4 flex items-center justify-between rounded-xl bg-emerald-50 border border-emerald-200 p-3">
+                  <div>
+                    <span className="font-mono text-xs font-bold text-emerald-800">
+                      {appliedPromo}
+                    </span>
+                    <p className="text-[10px] text-emerald-700">
+                      {pricing.appliedPromo?.description || "Discount Applied"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemovePromo}
+                    className="text-xs font-bold text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="mt-4 flex gap-2">
+                  <input
+                    type="text"
+                    value={promoInput}
+                    onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
+                    placeholder="e.g. BETA100"
+                    className="flex-1 rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs font-mono font-bold text-secondary uppercase outline-none focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleApplyPromo()}
+                    disabled={isValidatingPromo || !promoInput.trim()}
+                    className="rounded-xl bg-secondary px-4 py-2 text-xs font-bold text-white transition hover:bg-primary disabled:opacity-50"
+                  >
+                    {isValidatingPromo ? "..." : "Apply"}
+                  </button>
+                </div>
+              )}
+
+              {promoMessage && (
+                <p className={`mt-2 text-[11px] font-semibold ${promoMessage.success ? "text-emerald-700" : "text-red-600"}`}>
+                  {promoMessage.text}
+                </p>
+              )}
+
+              <div className="mt-3 pt-3 border-t border-border/60">
+                <p className="text-[10px] text-ink/50">
+                  💡 <strong>Demo Test Code:</strong> Use <code className="font-mono font-bold text-primary">BETA100</code> for ₹0 free test activation.
+                </p>
+              </div>
             </div>
-          </div>
 
-          {/* Submit CTA */}
-          <div className="pt-2">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-card transition hover:bg-primary/90 disabled:opacity-50 active:scale-95"
-            >
-              <span>{isSubmitting ? "Provisioning Terminal..." : "Create My Shop Counter"}</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </form>
+            {/* BILLING BREAKDOWN CARD */}
+            <div className="rounded-[2rem] border border-border bg-white p-6 shadow-card">
+              <h3 className="font-display text-sm font-extrabold text-secondary uppercase tracking-wider border-b border-border pb-3">
+                Subscription Summary
+              </h3>
 
-        <div className="mt-6 border-t border-border pt-4 text-center">
-          <p className="text-xs text-ink/70">
-            Already registered?{" "}
-            <Link
-              href="/auth/owner/login"
-              replace={false}
-              className="font-bold text-primary hover:underline"
-            >
-              Login to Cashier Terminal
-            </Link>
-          </p>
+              <div className="mt-4 space-y-2.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-ink/70">Plan Selected</span>
+                  <span className="font-bold text-secondary">
+                    {SUBSCRIPTION_PLANS[selectedPlan].name}
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-ink/70">Billing Duration</span>
+                  <span className="font-mono font-semibold text-secondary">
+                    {SUBSCRIPTION_PLANS[selectedPlan].durationDays} Days (+ 1 Day Grace)
+                  </span>
+                </div>
+
+                <div className="flex justify-between">
+                  <span className="text-ink/70">Base Price</span>
+                  <span className="font-mono font-semibold text-secondary">
+                    ₹{pricing.baseAmount.toLocaleString("en-IN")}
+                  </span>
+                </div>
+
+                {pricing.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-bold">
+                    <span>Redeem Code Discount</span>
+                    <span>-₹{pricing.discountAmount.toLocaleString("en-IN")}</span>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-border flex justify-between items-baseline">
+                  <span className="font-bold text-secondary">Total Payable</span>
+                  <div className="text-right">
+                    <span className="font-display text-2xl font-extrabold text-primary">
+                      ₹{pricing.finalAmount.toLocaleString("en-IN")}
+                    </span>
+                    {pricing.isFreeActivation && (
+                      <span className="block font-mono text-[10px] font-bold text-emerald-700">
+                        100% OFF APPLIED
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 1-Day Grace Policy Notice */}
+              <div className="mt-5 rounded-2xl bg-amber-50 border border-amber-200 p-3.5 text-[11px] text-amber-900 flex items-start gap-2">
+                <Clock className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
+                <div>
+                  <p className="font-bold">1-Day Grace Period Guarantee</p>
+                  <p className="mt-0.5 text-amber-800 leading-relaxed">
+                    If your subscription finishes after {SUBSCRIPTION_PLANS[selectedPlan].durationDays} days, you receive a full 24-hour grace window to renew before your counter QR is deactivated.
+                  </p>
+                </div>
+              </div>
+
+              {/* Guarantee badges */}
+              <div className="mt-5 space-y-2 border-t border-border pt-4 text-[11px] font-semibold text-ink/70">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-emerald-600" />
+                  <span>Verified 256-Bit SSL Razorpay Payment</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-primary" />
+                  <span>UPI, Google Pay, PhonePe, Cards &amp; NetBanking</span>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-center text-xs text-ink/60">
+              Already have an active merchant account?{" "}
+              <Link href="/auth/owner/login" className="font-bold text-primary hover:underline">
+                Sign In to Terminal
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+
+export default function OwnerRegisterPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex min-h-screen flex-col items-center justify-center bg-sand">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
+      }
+    >
+      <OwnerRegisterForm />
+    </React.Suspense>
   );
 }

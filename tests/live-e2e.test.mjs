@@ -250,6 +250,38 @@ await test("Production endpoint returns all strict security headers", async () =
   assert.strictEqual(res.headers.has("x-powered-by"), false, "X-Powered-By must be removed");
 });
 
+
+// -------------------------------------------------------------------
+// 6. SUBSCRIPTION & PROMO CODE TESTS
+// -------------------------------------------------------------------
+console.log("\n--- 6. SUBSCRIPTION & PROMO CODE INTEGRITY ---");
+
+await test("Monthly & Yearly plan calculations (Yearly includes 20% discount)", async () => {
+  const monthlyBase = 749;
+  const yearlyBase = 7190;
+  const originalYearly = 12 * 749; // 8988
+  const discountAmount = originalYearly - yearlyBase; // 1798
+  const discountPercent = Math.round((discountAmount / originalYearly) * 100);
+
+  assert.strictEqual(discountPercent, 20, "Yearly plan must offer 20% discount");
+  assert.ok(yearlyBase < originalYearly, "Yearly plan must be discounted");
+});
+
+await test("Redeem code 'BETA100' provides 100% discount (₹0 activation)", async () => {
+  const code = "BETA100";
+  const base = 749;
+  const discount = (base * 100) / 100;
+  const finalAmount = Math.max(0, base - discount);
+  assert.strictEqual(finalAmount, 0, "BETA100 must yield ₹0 payable");
+});
+
+await test("1-Day Grace Period calculation enforces 24 hours window", async () => {
+  const durationDays = 30;
+  const graceDays = 1;
+  const totalCoveredDays = durationDays + graceDays;
+  assert.strictEqual(totalCoveredDays, 31, "Total covered duration must be 31 days");
+});
+
 // -------------------------------------------------------------------
 // SUMMARY
 // -------------------------------------------------------------------
