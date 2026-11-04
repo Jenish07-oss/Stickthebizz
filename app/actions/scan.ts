@@ -168,7 +168,9 @@ export async function submitScan(
     const visitDateIst = await getVisitDateIST();
 
     // 7. Attempt insert into 'visits' with status 'PENDING'
-    const { data: visit, error: visitError } = await supabase
+    // Note: Do NOT use .select() here because PostgREST adds RETURNING * which triggers
+    // a SELECT RLS check on anon check-ins, resulting in error 42501.
+    const { error: visitError } = await supabase
       .from("visits")
       .insert({
         customer_id: customer.id,
@@ -176,9 +178,7 @@ export async function submitScan(
         visit_date_ist: visitDateIst,
         bill_amount: validData.billAmount || 100,
         status: "PENDING",
-      })
-      .select()
-      .single();
+      });
 
     if (visitError) {
       // Postgres error code 23505 = unique_violation (unique_daily_scan)
@@ -210,7 +210,13 @@ export async function submitScan(
     const successResponse: SubmitScanResult = {
       success: true,
       locked: false,
-      visit,
+      visit: {
+        customer_id: customer.id,
+        merchant_id: validData.merchantId,
+        visit_date_ist: visitDateIst,
+        bill_amount: validData.billAmount || 100,
+        status: "PENDING",
+      },
       message: "QR Scanned! Sent to counter terminal for 1-tap verification.",
     };
 

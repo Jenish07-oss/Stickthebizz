@@ -235,6 +235,11 @@ CREATE POLICY "Public insert visit" ON public.visits
   FOR INSERT TO anon, authenticated
   WITH CHECK (true);
 
+-- Public/anon can READ visits (for streak counts, daily lock checks, and realtime stream)
+CREATE POLICY "Public read visits" ON public.visits
+  FOR SELECT TO anon, authenticated
+  USING (true);
+
 -- ONLY merchant owner can UPDATE visits (approve/reject/redeem)
 CREATE POLICY "Merchant owner update visits" ON public.visits
   FOR UPDATE TO authenticated

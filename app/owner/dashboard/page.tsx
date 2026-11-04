@@ -317,8 +317,41 @@ export default function OwnerDashboardPage() {
       )
       .subscribe();
 
+    // 3. Resilient Polling Fallback (Polls pending queue every 3.5 seconds)
+    // Guarantees real-time check-in stream updates even if WebSocket drops or publication is delayed
+    const pollTimer = setInterval(async () => {
+      try {
+        const { visits: freshPending } = await getPendingVisits(merchant.id);
+        if (freshPending) {
+          const updatedQueue: LivePendingScan[] = freshPending.map((item: any) => ({
+            id: item.id,
+            customerName: item.customers?.full_name || "Customer Check-in",
+            customerMasked: item.customers?.phone || "Customer Check-in",
+            amount: Number(item.bill_amount) || merchant.min_spend,
+            formattedTime: "Just now",
+            status: item.status,
+          }));
+
+          setPendingQueue((prev) => {
+            const prevIds = prev.map((p) => p.id).join(",");
+            const newIds = updatedQueue.map((p) => p.id).join(",");
+            if (prevIds !== newIds) {
+              if (updatedQueue.length > prev.length) {
+                playApprovalBell();
+              }
+              return updatedQueue;
+            }
+            return prev;
+          });
+        }
+      } catch (pollErr) {
+        // silent polling catch
+      }
+    }, 3500);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(pollTimer);
     };
   }, [merchant?.id, merchant?.min_spend, supabase]);
 
@@ -350,6 +383,24 @@ export default function OwnerDashboardPage() {
   const handleReject = async (scanId: string) => {
     setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
     await rejectVisit(scanId);
+
+    // Refresh ledger after reject
+    if (merchant?.id) {
+      const { visits: leg } = await getMerchantLedger(merchant.id);
+      if (leg) {
+        setLedger(
+          leg.map((v: any) => ({
+            id: v.id,
+            customerName: v.customers?.full_name || "Customer",
+            contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
+            visitDate: v.visit_date_ist,
+            billAmount: Number(v.bill_amount) || merchant.min_spend,
+            status: v.status,
+            createdAt: v.created_at,
+          }))
+        );
+      }
+    }
   };
 
   const handleRotateQr = async () => {
