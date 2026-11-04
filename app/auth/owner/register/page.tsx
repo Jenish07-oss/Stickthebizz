@@ -29,6 +29,7 @@ export default function OwnerRegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -37,6 +38,27 @@ export default function OwnerRegisterPage() {
       }
     });
   }, [supabase]);
+
+  const handleResendActivation = async () => {
+    if (!email) return;
+    setResendStatus("Sending activation link...");
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/owner/dashboard`,
+        },
+      });
+      if (error) {
+        setResendStatus(error.message);
+      } else {
+        setResendStatus("Activation link resent! Please check your email inbox and spam folder.");
+      }
+    } catch {
+      setResendStatus("Could not resend email. Please try again.");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,6 +82,7 @@ export default function OwnerRegisterPage() {
         email: email.trim().toLowerCase(),
         password,
         options: {
+          emailRedirectTo: typeof window !== "undefined" ? `${window.location.origin}/owner/dashboard` : undefined,
           data: {
             full_name: ownerName.trim(),
             phone: cleanPhone,
@@ -95,26 +118,36 @@ export default function OwnerRegisterPage() {
 
       if (effectiveUserId) {
         try {
-          const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-          const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
-          const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+          const { data: existingList } = await supabase
+            .from("merchants")
+            .select("id")
+            .eq("owner_id", effectiveUserId)
+            .limit(1);
 
-          const { data: directMerchant, error: directErr } = await supabase.from("merchants").insert({
-            name: shopName.trim(),
-            slug: uniqueSlug,
-            category,
-            owner_id: effectiveUserId,
-            min_spend: 100,
-            visits_required: 10,
-            reward_name: "Free Special Item",
-            validity_days: 30,
-            redemption_pin: randomPin,
-          }).select().maybeSingle();
-
-          if (directMerchant) {
+          if (existingList && existingList.length > 0) {
             merchantCreated = true;
-          } else if (directErr) {
-            console.warn("Direct insert note:", directErr.message);
+          } else {
+            const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
+            const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+
+            const { data: directMerchant, error: directErr } = await supabase.from("merchants").insert({
+              name: shopName.trim(),
+              slug: uniqueSlug,
+              category,
+              owner_id: effectiveUserId,
+              min_spend: 100,
+              visits_required: 10,
+              reward_name: "Free Special Item",
+              validity_days: 30,
+              redemption_pin: randomPin,
+            }).select().maybeSingle();
+
+            if (directMerchant) {
+              merchantCreated = true;
+            } else if (directErr) {
+              console.warn("Direct insert note:", directErr.message);
+            }
           }
         } catch (clientInsertErr) {
           console.warn("Direct client insert error:", clientInsertErr);
@@ -137,7 +170,7 @@ export default function OwnerRegisterPage() {
 
       // 5. Account created verification
       if (authData?.user && !authData.session && (!signInData || !signInData.session)) {
-        setErrorMessage("Account created successfully! Please click below to log in to your counter.");
+        setErrorMessage("Account created! An activation link has been sent to your email. Please check your inbox (and spam) to verify, or log in below.");
         setIsSubmitting(false);
         return;
       }
@@ -188,16 +221,28 @@ export default function OwnerRegisterPage() {
         </div>
 
         {errorMessage && (
-          <div className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs font-bold text-primary text-center">
+          <div className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-4 text-xs font-bold text-primary text-center space-y-2">
             <p>{errorMessage}</p>
-            {errorMessage.includes("successfully") && (
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
               <Link
                 href="/auth/owner/login"
-                className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90"
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90"
               >
-                <span>Login to Counter</span>
+                <span>Go to Merchant Login</span>
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
+              {email && (
+                <button
+                  type="button"
+                  onClick={handleResendActivation}
+                  className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-white px-3.5 py-1.5 text-xs font-bold text-primary hover:bg-sand"
+                >
+                  Resend Activation Email
+                </button>
+              )}
+            </div>
+            {resendStatus && (
+              <p className="mt-2 text-[11px] font-semibold text-secondary">{resendStatus}</p>
             )}
           </div>
         )}

@@ -128,14 +128,17 @@ export default function OwnerDashboardPage() {
         let m: any = null;
 
         if (activeUser) {
-          // Direct client query to merchants table
+          // Direct client query to merchants table (fetch latest shop to prevent multi-row errors)
           const { data: merchantData } = await supabase
             .from("merchants")
             .select("*")
             .eq("owner_id", activeUser.id)
-            .maybeSingle();
+            .order("created_at", { ascending: false })
+            .limit(1);
 
-          m = merchantData;
+          if (merchantData && merchantData.length > 0) {
+            m = merchantData[0];
+          }
         }
 
         // Server action fallback

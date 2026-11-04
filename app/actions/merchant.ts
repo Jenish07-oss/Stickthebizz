@@ -167,11 +167,14 @@ export async function getOwnerMerchant() {
       return { user: null, merchant: null };
     }
 
-    let { data: merchant } = await supabase
+    const { data: merchantList } = await supabase
       .from("merchants")
       .select("*")
       .eq("owner_id", user.id)
-      .maybeSingle();
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    let merchant = (merchantList && merchantList.length > 0) ? merchantList[0] : null;
 
     // Auto-provision if user signed up with shop_name metadata but merchant insert was delayed
     if (!merchant && user?.id) {
