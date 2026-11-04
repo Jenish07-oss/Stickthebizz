@@ -1,6 +1,9 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthenticatedMerchant } from "@/lib/utils/auth";
+import { sanitizeHtml, sanitizeError, maskPhone } from "@/lib/utils/sanitize";
+import { auditLog } from "@/lib/utils/audit";
 
 export interface SubmitScanResult {
   success: boolean;
@@ -33,10 +36,11 @@ export async function submitScan(
   customerPhone: string,
   merchantId: string,
   billAmount: number = 100,
-  customerName?: string
+  customerName?: string,
+  scannedQrToken?: string
 ): Promise<SubmitScanResult> {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const cleanPhone = customerPhone.replace(/\D/g, "").trim();
 
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -53,6 +57,23 @@ export async function submitScan(
         locked: false,
         message: "Merchant ID is required.",
       };
+    }
+
+    // ✅ Validate QR token matches merchant's current token (anti-replay)
+    if (scannedQrToken) {
+      const { data: merchant } = await supabase
+        .from("merchants")
+        .select("qr_token, validity_days")
+        .eq("id", merchantId)
+        .single();
+
+      if (!merchant) {
+        return { success: false, locked: false, message: "Merchant not found" };
+      }
+
+      if (scannedQrToken !== merchant.qr_token) {
+        return { success: false, locked: false, message: "QR code expired. Please scan the latest code." };
+      }
     }
 
     // 1. Query or insert customer in 'customers' table
@@ -155,7 +176,20 @@ export async function submitScan(
  */
 export async function approveVisit(visitId: string) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'UNAUTHENTICATED' };
+    
+    // ✅ Verify visit belongs to user's merchant
+    const { data: visit, error: visitError } = await supabase
+      .from("visits")
+      .select("id, merchant_id, merchants!inner(owner_id)")
+      .eq("id", visitId)
+      .single();
+    
+    if (visitError || !visit) return { success: false, error: 'VISIT_NOT_FOUND' };
+    if ((visit as any).merchants.owner_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+    
     const { data, error } = await supabase
       .from("visits")
       .update({ status: "APPROVED" })
@@ -164,11 +198,20 @@ export async function approveVisit(visitId: string) {
       .single();
 
     if (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: sanitizeError(error) };
     }
+    
+    // ✅ AUDIT LOG
+    await auditLog({
+      userId: user.id,
+      action: 'visit_approve',
+      resourceType: 'visit',
+      resourceId: visitId,
+    });
+    
     return { success: true, visit: data };
   } catch (err: any) {
-    return { success: false, error: err.message || String(err) };
+    return { success: false, error: sanitizeError(err) };
   }
 }
 
@@ -177,7 +220,20 @@ export async function approveVisit(visitId: string) {
  */
 export async function rejectVisit(visitId: string) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { success: false, error: 'UNAUTHENTICATED' };
+    
+    // ✅ Verify visit belongs to user's merchant
+    const { data: visit, error: visitError } = await supabase
+      .from("visits")
+      .select("id, merchant_id, merchants!inner(owner_id)")
+      .eq("id", visitId)
+      .single();
+    
+    if (visitError || !visit) return { success: false, error: 'VISIT_NOT_FOUND' };
+    if ((visit as any).merchants.owner_id !== user.id) return { success: false, error: 'FORBIDDEN' };
+    
     const { data, error } = await supabase
       .from("visits")
       .update({ status: "REJECTED" })
@@ -186,11 +242,20 @@ export async function rejectVisit(visitId: string) {
       .single();
 
     if (error) {
-      return { success: false, error: error.message };
+      return { success: false, error: sanitizeError(error) };
     }
+    
+    // ✅ AUDIT LOG
+    await auditLog({
+      userId: user.id,
+      action: 'visit_reject',
+      resourceType: 'visit',
+      resourceId: visitId,
+    });
+    
     return { success: true, visit: data };
   } catch (err: any) {
-    return { success: false, error: err.message || String(err) };
+    return { success: false, error: sanitizeError(err) };
   }
 }
 
@@ -199,7 +264,11 @@ export async function rejectVisit(visitId: string) {
  */
 export async function verifyRedemptionPin(merchantId: string, pin: string, customerPhone?: string) {
   try {
-    const supabase = createClient();
+    // ✅ VERIFY OWNERSHIP
+    await getAuthenticatedMerchant(merchantId);
+    
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
     const cleanPin = pin.trim();
 
     // Verify against merchant redemption_pin
@@ -236,13 +305,24 @@ export async function verifyRedemptionPin(merchantId: string, pin: string, custo
           .eq("status", "APPROVED");
       }
     }
+    
+    // ✅ AUDIT LOG
+    if (user) {
+      await auditLog({
+        userId: user.id,
+        action: 'reward_redeem',
+        resourceType: 'merchant',
+        resourceId: merchantId,
+        metadata: { rewardName: merchant.reward_name },
+      });
+    }
 
     return {
       success: true,
       message: `✓ Voucher Verified! Please give customer: ${merchant.reward_name}.`,
     };
   } catch (err: any) {
-    return { success: false, message: err.message || String(err) };
+    return { success: false, message: sanitizeError(err) };
   }
 }
 
@@ -251,7 +331,10 @@ export async function verifyRedemptionPin(merchantId: string, pin: string, custo
  */
 export async function getPendingVisits(merchantId: string) {
   try {
-    const supabase = createClient();
+    // ✅ VERIFY OWNERSHIP
+    await getAuthenticatedMerchant(merchantId);
+    
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("visits")
       .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
@@ -260,11 +343,21 @@ export async function getPendingVisits(merchantId: string) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return { visits: [], error: error.message };
+      return { visits: [], error: sanitizeError(error) };
     }
-    return { visits: data || [], error: null };
+    
+    // ✅ MASK PHONE NUMBERS
+    const maskedVisits = (data || []).map(v => {
+      const cust = Array.isArray(v.customers) ? v.customers[0] : v.customers;
+      return {
+        ...v,
+        customers: cust ? { ...cust, phone: maskPhone(cust.phone) } : null,
+      };
+    });
+    
+    return { visits: maskedVisits, error: null };
   } catch (err: any) {
-    return { visits: [], error: err.message || String(err) };
+    return { visits: [], error: sanitizeError(err) };
   }
 }
 
@@ -273,7 +366,10 @@ export async function getPendingVisits(merchantId: string) {
  */
 export async function getMerchantLedger(merchantId: string) {
   try {
-    const supabase = createClient();
+    // ✅ VERIFY OWNERSHIP
+    await getAuthenticatedMerchant(merchantId);
+    
+    const supabase = await createClient();
     const { data, error } = await supabase
       .from("visits")
       .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
@@ -282,11 +378,21 @@ export async function getMerchantLedger(merchantId: string) {
       .limit(50);
 
     if (error) {
-      return { visits: [], error: error.message };
+      return { visits: [], error: sanitizeError(error) };
     }
-    return { visits: data || [], error: null };
+    
+    // ✅ MASK PHONE NUMBERS
+    const maskedVisits = (data || []).map(v => {
+      const cust = Array.isArray(v.customers) ? v.customers[0] : v.customers;
+      return {
+        ...v,
+        customers: cust ? { ...cust, phone: maskPhone(cust.phone) } : null,
+      };
+    });
+    
+    return { visits: maskedVisits, error: null };
   } catch (err: any) {
-    return { visits: [], error: err.message || String(err) };
+    return { visits: [], error: sanitizeError(err) };
   }
 }
 
@@ -296,7 +402,7 @@ export async function getMerchantLedger(merchantId: string) {
  */
 export async function getCustomerMerchantStatus(merchantId: string, customerPhone?: string) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const cleanPhone = (customerPhone || "").replace(/\D/g, "");
 
     let customer: any = null;
@@ -363,6 +469,6 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
       todayVisitStatus: todayVisit?.status || null,
     };
   } catch (err: any) {
-    return { customer: null, visitsCount: 0, isLockedToday: false, error: err.message };
+    return { customer: null, visitsCount: 0, isLockedToday: false, error: sanitizeError(err) };
   }
 }

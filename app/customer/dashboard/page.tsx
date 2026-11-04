@@ -44,19 +44,18 @@ export default function CustomerDashboardPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
-    async function loadWallet() {
-      try {
-        const localPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
-        const data = await getCustomerWalletAction(localPhone || undefined);
-        setWalletData(data);
-      } catch (err) {
-        console.error("Failed to load customer wallet:", err);
-      } finally {
-        setLoading(false);
+      async function loadWallet() {
+        try {
+          const data = await getCustomerWalletAction();
+          setWalletData(data);
+        } catch (err) {
+          console.error("Failed to load customer wallet:", err);
+        } finally {
+          setLoading(false);
+        }
       }
-    }
-    loadWallet();
-  }, []);
+      loadWallet();
+    }, []);
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {

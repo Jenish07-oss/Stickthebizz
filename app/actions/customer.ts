@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getVisitDateIST } from "./scan";
+import { sanitizeError } from "@/lib/utils/sanitize";
 
 export interface CustomerStorePass {
   merchantId: string;
@@ -51,7 +52,7 @@ export async function syncCustomerAccountAction(params: {
   email?: string;
 }) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -87,7 +88,7 @@ export async function syncCustomerAccountAction(params: {
         .select()
         .single();
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: sanitizeError(error) };
       return { success: true, customer: updated };
     } else {
       if (!cleanPhone) {
@@ -104,11 +105,11 @@ export async function syncCustomerAccountAction(params: {
         .select()
         .single();
 
-      if (error) return { success: false, error: error.message };
+      if (error) return { success: false, error: sanitizeError(error) };
       return { success: true, customer: inserted };
     }
   } catch (err: any) {
-    return { success: false, error: err.message || String(err) };
+    return { success: false, error: sanitizeError(err) };
   }
 }
 
@@ -116,19 +117,27 @@ export async function syncCustomerAccountAction(params: {
  * Fetches the aggregated multi-store digital wallet for an authenticated customer.
  * 100% real Supabase data — zero mock visits or fake counters.
  */
-export async function getCustomerWalletAction(phoneParam?: string): Promise<CustomerWalletData> {
-  const supabase = createClient();
+export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
+  const supabase = await createClient();
 
-  // 1. Authenticate user session
+  // 1. Authenticate user session - ONLY use authenticated user's data
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const userPhone = (phoneParam || user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
-  const userEmail = user?.email;
+  if (!user) {
+    return {
+      customer: null,
+      passes: [],
+      history: [],
+    };
+  }
+
+  const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+  const userEmail = user.email || "";
   const userName = user?.user_metadata?.full_name || null;
 
-  // 2. Query real customer profile
+  // 2. Query real customer profile using ONLY authenticated user's identifiers
   let customer: any = null;
   if (userPhone) {
     const cleanPhone = userPhone.replace(/\D/g, "");

@@ -233,3 +233,4 @@ export default function CameraQRScanner({ isOpen, onClose }: CameraQRScannerProp
     </div>
   );
 }
+

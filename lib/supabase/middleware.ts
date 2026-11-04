@@ -35,6 +35,10 @@ export async function updateSession(request: NextRequest) {
           name,
           value,
           ...options,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          httpOnly: true,
+          path: '/',
         });
       },
       remove(name: string, options: CookieOptions) {
@@ -52,6 +56,10 @@ export async function updateSession(request: NextRequest) {
           name,
           value: "",
           ...options,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax',
+          httpOnly: true,
+          path: '/',
         });
       },
     },
@@ -61,4 +69,3 @@ export async function updateSession(request: NextRequest) {
 
   return response;
 }
-

@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default async function ShopSlugPage({ params }: Props) {
-  const supabase = createClient();
+  const supabase = await createClient();
   const { data: merchant } = await supabase
     .from("merchants")
     .select("id, name, slug, min_spend, visits_required, reward_name, validity_days")

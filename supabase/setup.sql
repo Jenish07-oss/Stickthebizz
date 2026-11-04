@@ -55,7 +55,24 @@ CREATE TABLE IF NOT EXISTS public.visits (
 -- Ensure newly added columns exist if table was already created
 ALTER TABLE public.visits ADD COLUMN IF NOT EXISTS bill_amount NUMERIC DEFAULT 100;
 
--- 4. REALTIME REPLICATION (Safely ignore if already added)
+-- 4. AUDIT LOGS TABLE
+CREATE TABLE IF NOT EXISTS public.audit_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  action TEXT NOT NULL,
+  resource_type TEXT,
+  resource_id UUID,
+  ip_address INET,
+  user_agent TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_user ON public.audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_action ON public.audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_created ON public.audit_logs(created_at);
+
+-- 5. REALTIME REPLICATION (Safely ignore if already added)
 DO $$
 BEGIN
   ALTER PUBLICATION supabase_realtime ADD TABLE public.visits;
@@ -63,74 +80,117 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
--- 5. ROW LEVEL SECURITY (RLS)
+-- 6. ROW LEVEL SECURITY (RLS)
 ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.visits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
--- 6. HARDENED RLS POLICIES
+-- 7. HARDENED RLS POLICIES
 
+-- Drop ALL existing policies first
+DO $$
+DECLARE
+  pol RECORD;
+BEGIN
+  FOR pol IN SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public' AND tablename IN ('merchants','customers','visits','audit_logs')
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON public.%I', pol.policyname, pol.tablename);
+  END LOOP;
+END $$;
+
+-- ==========================================
 -- MERCHANTS POLICIES
-DROP POLICY IF EXISTS "Allow public read on merchants" ON public.merchants;
-CREATE POLICY "Allow public read on merchants"
-ON public.merchants FOR SELECT
-TO anon, authenticated
-USING (true);
+-- ==========================================
+-- Public can READ merchants (for customer-facing /s/[slug] pages)
+CREATE POLICY "Public read merchants" ON public.merchants
+  FOR SELECT TO anon, authenticated USING (true);
 
-DROP POLICY IF EXISTS "Allow authenticated owner insert on merchants" ON public.merchants;
-CREATE POLICY "Allow authenticated owner insert on merchants"
-ON public.merchants FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
+-- Only authenticated owner can INSERT their own merchant
+CREATE POLICY "Owner insert merchant" ON public.merchants
+  FOR INSERT TO authenticated
+  WITH CHECK (auth.uid() = owner_id);
 
-DROP POLICY IF EXISTS "Allow owner update on merchants" ON public.merchants;
-CREATE POLICY "Allow owner update on merchants"
-ON public.merchants FOR UPDATE
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
+-- Only owner can UPDATE their merchant
+CREATE POLICY "Owner update merchant" ON public.merchants
+  FOR UPDATE TO authenticated
+  USING (auth.uid() = owner_id)
+  WITH CHECK (auth.uid() = owner_id);
 
+-- Only owner can DELETE their merchant
+CREATE POLICY "Owner delete merchant" ON public.merchants
+  FOR DELETE TO authenticated
+  USING (auth.uid() = owner_id);
+
+-- ==========================================
 -- CUSTOMERS POLICIES
-DROP POLICY IF EXISTS "Allow public select on customers" ON public.customers;
-CREATE POLICY "Allow public select on customers"
-ON public.customers FOR SELECT
-TO anon, authenticated
-USING (true);
+-- ==========================================
+-- Customer can READ own record (via auth_id link)
+CREATE POLICY "Customer read own" ON public.customers
+  FOR SELECT TO authenticated
+  USING (auth_id = auth.uid());
 
-DROP POLICY IF EXISTS "Allow public insert on customers" ON public.customers;
-CREATE POLICY "Allow public insert on customers"
-ON public.customers FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
+-- Public/anon can INSERT customer (for check-in flow)
+CREATE POLICY "Public insert customer" ON public.customers
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow customer update" ON public.customers;
-CREATE POLICY "Allow customer update"
-ON public.customers FOR UPDATE
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
+-- Customer can UPDATE own record
+CREATE POLICY "Customer update own" ON public.customers
+  FOR UPDATE TO authenticated
+  USING (auth_id = auth.uid())
+  WITH CHECK (auth_id = auth.uid());
 
+-- Merchant owner can READ their customers (for dashboard)
+CREATE POLICY "Merchant read own customers" ON public.customers
+  FOR SELECT TO authenticated
+  USING (
+    id IN (
+      SELECT customer_id FROM public.visits
+      WHERE merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
+    )
+  );
+
+-- ==========================================
 -- VISITS POLICIES
-DROP POLICY IF EXISTS "Allow public select on visits" ON public.visits;
-CREATE POLICY "Allow public select on visits"
-ON public.visits FOR SELECT
-TO anon, authenticated
-USING (true);
+-- ==========================================
+-- Customer can READ own visits
+CREATE POLICY "Customer read own visits" ON public.visits
+  FOR SELECT TO authenticated
+  USING (
+    customer_id IN (SELECT id FROM public.customers WHERE auth_id = auth.uid())
+  );
 
-DROP POLICY IF EXISTS "Allow public insert on visits" ON public.visits;
-CREATE POLICY "Allow public insert on visits"
-ON public.visits FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
+-- Public/anon can INSERT visit (check-in flow)
+CREATE POLICY "Public insert visit" ON public.visits
+  FOR INSERT TO anon, authenticated
+  WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public update on visits" ON public.visits;
-CREATE POLICY "Allow public update on visits"
-ON public.visits FOR UPDATE
-TO anon, authenticated
-USING (true)
-WITH CHECK (true);
+-- ONLY merchant owner can UPDATE visits (approve/reject/redeem)
+CREATE POLICY "Merchant owner update visits" ON public.visits
+  FOR UPDATE TO authenticated
+  USING (
+    merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
+  )
+  WITH CHECK (
+    merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
+  );
 
--- 7. SEED INITIAL VERIFIED MERCHANTS
+-- Merchant owner can READ all visits for their merchant(s)
+CREATE POLICY "Merchant owner read visits" ON public.visits
+  FOR SELECT TO authenticated
+  USING (
+    merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
+  );
+
+-- ==========================================
+-- AUDIT LOGS POLICIES
+-- ==========================================
+-- Only service role can access audit logs
+CREATE POLICY "Service role audit access" ON public.audit_logs
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- 8. SEED INITIAL VERIFIED MERCHANTS
 INSERT INTO public.merchants (id, name, slug, category, min_spend, visits_required, reward_name, validity_days, redemption_pin)
 VALUES
   ('5cc30c25-3711-4b65-891b-13af808a556f', 'Kesar Chai Corner', 'kesar-chai', 'Cafe / Chai', 100, 10, 'Free Masala Chai', 45, '8492'),
