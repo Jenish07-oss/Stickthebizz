@@ -608,24 +608,24 @@ export default function OwnerDashboardPage() {
                 <form onSubmit={handleVerifyPin} className="mt-6 space-y-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                      Enter Customer 4-Digit Voucher PIN
+                      Enter Store Cashier PIN (4-Digits)
                     </label>
                     <input
-                      type="text"
+                      type="password"
                       maxLength={4}
                       value={pinInput}
                       onChange={(e) => setPinInput(e.target.value.replace(/\D/g, ""))}
-                      placeholder="e.g. 8492"
+                      placeholder="••••"
                       className="mt-2 w-full text-center font-mono text-3xl font-extrabold tracking-widest rounded-xl border border-border p-3 text-secondary focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary shadow-xs"
                     />
                     <p className="mt-1 text-center font-mono text-[11px] text-ink/50">
-                      Store Verification PIN: {merchant?.redemption_pin || "8492"}
+                      Authorizes voucher burn on merchant ledger
                     </p>
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                      Customer Phone (Optional for ledger clearance)
+                      Customer Phone Number (+91)
                     </label>
                     <input
                       type="tel"

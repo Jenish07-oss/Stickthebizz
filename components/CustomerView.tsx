@@ -37,10 +37,26 @@ export interface InitialMerchantData {
   validityDays?: number;
 }
 
+export interface InitialCustomerData {
+  id?: string;
+  phone: string;
+  fullName?: string | null;
+  email?: string | null;
+}
+
+export interface InitialStatusData {
+  visitsCount: number;
+  isLockedToday: boolean;
+}
+
 export default function CustomerView({
   initialMerchant,
+  initialCustomer,
+  initialStatus,
 }: {
   initialMerchant?: InitialMerchantData;
+  initialCustomer?: InitialCustomerData | null;
+  initialStatus?: InitialStatusData | null;
 }) {
   const merchant = initialMerchant || {
     id: "default-store",
@@ -56,10 +72,12 @@ export default function CustomerView({
   const validityDays = Number(merchant.validityDays) || 30;
 
   // Real Database State
-  const [customer, setCustomer] = useState<{ id?: string; phone: string; fullName?: string | null } | null>(null);
-  const [visitsCount, setVisitsCount] = useState<number>(0);
-  const [isLockedToday, setIsLockedToday] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState(true);
+  const [customer, setCustomer] = useState<{ id?: string; phone: string; fullName?: string | null } | null>(
+    initialCustomer ? { id: initialCustomer.id, phone: initialCustomer.phone, fullName: initialCustomer.fullName } : null
+  );
+  const [visitsCount, setVisitsCount] = useState<number>(initialStatus?.visitsCount || 0);
+  const [isLockedToday, setIsLockedToday] = useState(initialStatus?.isLockedToday || false);
+  const [loadingStatus, setLoadingStatus] = useState(!initialCustomer);
 
   // Form Inputs for New / Unauthenticated Customer
   const [mobileInput, setMobileInput] = useState("");
@@ -107,10 +125,21 @@ export default function CustomerView({
     return () => clearInterval(interval);
   }, []);
 
-  // 2. Load Real Customer Session from LocalStorage or Supabase
+  // 2. Load Real Customer Session from Server Prop, LocalStorage or Supabase
   useEffect(() => {
     async function loadCustomerState() {
       try {
+        if (initialCustomer?.phone) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("stb_customer_phone", initialCustomer.phone);
+            if (initialCustomer.fullName) {
+              localStorage.setItem("stb_customer_name", initialCustomer.fullName);
+            }
+          }
+          setLoadingStatus(false);
+          return;
+        }
+
         let savedPhone = "";
         if (typeof window !== "undefined") {
           savedPhone = localStorage.getItem("stb_customer_phone") || "";
@@ -142,7 +171,7 @@ export default function CustomerView({
     }
 
     loadCustomerState();
-  }, [merchant.id]);
+  }, [merchant.id, initialCustomer]);
 
   const safeVisits = Math.min(visitsCount, visitsRequired);
   const isGoalCompleted = visitsCount >= visitsRequired;
@@ -331,13 +360,13 @@ export default function CustomerView({
                   <RewardTicket
                     ticket={{
                       code: `STB-${targetMerchantCode(merchant.slug)}`,
-                      pin: "8492",
+                      
                       rewardName: merchant.rewardName,
                       expiryDate: `Valid for 14 days`,
                       isRedeemed: false,
                     }}
                     onRedeem={() => {
-                      setFeedbackMessage("Show your 4-digit PIN above to the cashier to claim your treat!");
+                      setFeedbackMessage("Present your unique Voucher Code above to the cashier at the counter!");
                     }}
                   />
                 </div>

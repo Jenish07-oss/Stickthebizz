@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const admin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
-);
+function getAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 export async function auditLog(params: {
   userId?: string;
@@ -16,6 +17,9 @@ export async function auditLog(params: {
   metadata?: Record<string, unknown>;
 }) {
   try {
+    const admin = getAdminClient();
+    if (!admin) return;
+
     await admin.from('audit_logs').insert({
       user_id: params.userId,
       action: params.action,

@@ -64,8 +64,30 @@ export default function CounterQR({
 
   return (
     <div className="flex flex-col items-center">
+      <style>{`
+        @media print {
+          nav, header, footer, .no-print, [role="navigation"] {
+            display: none !important;
+          }
+          body {
+            background: #ffffff !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          .printable-standee-wrapper {
+            position: fixed !important;
+            left: 50% !important;
+            top: 50% !important;
+            transform: translate(-50%, -50%) !important;
+            width: 100% !important;
+            max-width: 360px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+        }
+      `}</style>
       {/* 3D Acrylic Table Standee Container */}
-      <div className="relative pt-4 pb-8 flex flex-col items-center">
+      <div className="printable-standee-wrapper relative pt-4 pb-8 flex flex-col items-center">
         {/* Glossy Acrylic Standee Body */}
         <div
           ref={qrRef}

@@ -423,7 +423,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     if (isTargetUnlocked && !code) {
       code = `STB-7Q4K-${Math.floor(1000 + Math.random() * 9000)}`;
-      pin = "8492"; // Verified redemption pin
+      pin = customer.redemptionPin || "";
     }
 
     // Update customer
@@ -498,7 +498,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   // Verify PIN Redemption at Merchant Counter
   const verifyPin = (pin: string) => {
     const cleanPin = pin.trim();
-    if (cleanPin === (customer.redemptionPin || "8492")) {
+    if (cleanPin && cleanPin === customer.redemptionPin) {
       playApprovalBell();
       setCustomer((prev) => ({
         ...prev,

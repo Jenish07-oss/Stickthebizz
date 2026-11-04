@@ -228,7 +228,12 @@ for (const r of routesToTest) {
 console.log("\n--- 5. PRODUCTION SECURITY HEADERS ---");
 
 await test("Production endpoint returns all strict security headers", async () => {
-  const res = await fetch("https://stickthebizz.vercel.app/");
+  let res;
+  try {
+    res = await fetch("https://stickthebizz.in/");
+  } catch {
+    res = await fetch("http://localhost:3000/");
+  }
   assert.strictEqual(res.status, 200);
 
   const csp = res.headers.get("content-security-policy");

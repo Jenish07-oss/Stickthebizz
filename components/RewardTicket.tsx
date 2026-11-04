@@ -1,11 +1,11 @@
 "use client";
 
 import React from "react";
-import { Sparkles, CheckCircle2, Clock } from "lucide-react";
+import { Sparkles, CheckCircle2, Clock, Ticket } from "lucide-react";
 
 export interface RewardTicketData {
   code: string;
-  pin: string;
+  pin?: string;
   rewardName: string;
   expiryDate?: string;
   isRedeemed: boolean;
@@ -64,19 +64,19 @@ export default function RewardTicket({
       <div className="my-5 grid grid-cols-2 gap-4 rounded-2xl bg-sand/40 p-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-ink/50">
-            Redemption Code
+            Voucher Code
           </p>
-          <p className="mt-1 font-mono text-base font-extrabold tracking-wider text-secondary">
+          <p className="mt-1 font-mono text-base sm:text-lg font-extrabold tracking-wider text-secondary select-all">
             {ticket.code}
           </p>
         </div>
 
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-ink/50">
-            Counter 4-Digit PIN
+            {isOwnerView && ticket.pin ? "Store PIN" : "Verification"}
           </p>
-          <p className="mt-1 font-mono text-xl font-extrabold tracking-widest text-primary">
-            {ticket.pin}
+          <p className="mt-1 font-mono text-xs sm:text-sm font-extrabold tracking-wider text-primary">
+            {isOwnerView && ticket.pin ? ticket.pin : "Cashier Terminal"}
           </p>
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function RewardTicket({
           <span>{expiry}</span>
         </div>
         <p className="text-[11px] italic text-ink/55">
-          Show this 4-digit PIN to the shop counter attendant to claim.
+          Show this Voucher Code to the cashier at the counter to claim.
         </p>
       </div>
 
@@ -100,7 +100,7 @@ export default function RewardTicket({
             onClick={onRedeem}
             className="flex min-h-[48px] w-full items-center justify-center rounded-xl bg-secondary px-4 text-sm font-bold text-white transition hover:bg-primary shadow-sm"
           >
-            {isOwnerView ? "Confirm & Mark Reward Given" : "Mark as Redeemed at Counter"}
+            {isOwnerView ? "Confirm & Mark Reward Given" : "Show Voucher to Cashier"}
           </button>
         </div>
       )}

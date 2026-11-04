@@ -49,18 +49,23 @@ export default function CustomerDashboardPage() {
   const [scannerOpen, setScannerOpen] = useState(false);
 
   useEffect(() => {
-      async function loadWallet() {
-        try {
-          const data = await getCustomerWalletAction();
-          setWalletData(data);
-        } catch (err) {
-          console.error("Failed to load customer wallet:", err);
-        } finally {
-          setLoading(false);
+    async function loadWallet() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.replace("/auth/customer/login");
+          return;
         }
+        const data = await getCustomerWalletAction();
+        setWalletData(data);
+      } catch (err) {
+        console.error("Failed to load customer wallet:", err);
+      } finally {
+        setLoading(false);
       }
-      loadWallet();
-    }, []);
+    }
+    loadWallet();
+  }, [router, supabase]);
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {
@@ -191,6 +196,34 @@ export default function CustomerDashboardPage() {
                 {[1, 2, 3].map((n) => (
                   <div key={n} className="h-56 rounded-3xl bg-white/60 animate-pulse border border-border" />
                 ))}
+              </div>
+            ) : !walletData?.passes || walletData.passes.length === 0 ? (
+              <div className="mt-6 rounded-3xl border border-dashed border-border bg-white p-8 sm:p-12 text-center shadow-sm">
+                <div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary/10 text-primary">
+                  <Sparkles className="h-7 w-7" />
+                </div>
+                <h3 className="font-display text-xl font-extrabold text-secondary">
+                  No Store Passes Yet
+                </h3>
+                <p className="mx-auto mt-2 max-w-md text-xs sm:text-sm text-ink/70 leading-relaxed">
+                  You haven&apos;t collected stamps at any shop yet. When you visit any StickTheBizz merchant (cafe, chai shop, kirana store, restaurant), scan their counter QR standee to earn stamps and free rewards!
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setScannerOpen(true)}
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-primary px-5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
+                  >
+                    <QrCode className="h-4 w-4" />
+                    <span>Scan Counter QR Standee</span>
+                  </button>
+                  <Link
+                    href="/s/kesar-chai"
+                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-border bg-sand/40 px-5 text-xs sm:text-sm font-bold text-secondary transition hover:bg-sand"
+                  >
+                    <span>Test Demo Pass (/s/kesar-chai)</span>
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
