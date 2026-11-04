@@ -6,7 +6,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
 import ConfettiEffect from "@/components/ConfettiEffect";
-import PhoneFrame from "@/components/PhoneFrame";
 import AnimatedHero from "@/components/AnimatedHero";
 import { CategoryPreset } from "@/context/StoreContext";
 import {
@@ -194,7 +193,7 @@ export default function HomePage() {
             <div className="grid items-start gap-8 lg:grid-cols-12 lg:gap-8">
               {/* 1. Value Proposition: Made for Bharat, Headline & Subtitle (Order 1 on mobile, Left col on desktop) */}
               <div className="order-1 lg:col-span-7 flex flex-col items-start text-left">
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/80 px-4 py-1.5 font-mono text-xs font-bold uppercase tracking-wider text-secondary shadow-sm">
                   <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
                   MADE FOR BHARAT&apos;S RETAIL COUNTERS
                 </div>
@@ -225,155 +224,158 @@ export default function HomePage() {
                 <Link
                   href="/owner"
                   target="_self"
-                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-white/40 backdrop-blur-md px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-white/70"
+                  className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-full border border-white/40 bg-white/80 px-6 text-sm font-bold text-secondary shadow-sm transition hover:bg-white/70"
                 >
                   <Store className="h-4 w-4 text-primary" />
                   <span>Open Merchant Desk</span>
                 </Link>
               </div>
 
-              {/* 3. Interactive Smartphone Pass (Order 3 on mobile: comes right after CTAs; Col 8-12 on desktop) */}
+              {/* 3. Interactive Customer Loyalty Pass Preview (Order 3 on mobile; Col 8-12 on desktop) */}
               <div className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 flex flex-col items-center justify-center pt-2 lg:pt-0">
-                <div className="relative w-full flex flex-col items-center rounded-[3.2rem] p-4 backdrop-blur-md bg-white/40 border border-white/20 shadow-xl">
-                  <p className="mb-3 text-xs font-bold uppercase tracking-wider text-secondary flex items-center gap-1.5">
-                    <Smartphone className="h-4 w-4 text-primary" />
-                    Interactive Customer Pass (Tap Below To Test)
+                <div className="w-full max-w-[340px] flex flex-col items-center">
+                  <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-secondary flex items-center justify-center gap-1.5 text-center">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                    <span>Interactive Customer Pass (Tap Below To Test)</span>
                   </p>
 
-                  <PhoneFrame className="max-w-[340px]">
-                    {/* Apple Wallet Style Digital Pass Card */}
-                    <div className="relative flex flex-col">
-                      {/* Laser sweep animation bar */}
-                      {isScanning && (
-                        <div className="absolute inset-x-0 z-30 pointer-events-none animate-laser-sweep">
-                          <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#F2765E] to-transparent shadow-[0_0_12px_#F2765E]" />
-                        </div>
-                      )}
-
-                      {/* Apple Wallet Header with Navy Surface */}
-                      <div className="rounded-t-3xl bg-secondary p-4 text-white shadow-sm">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white">
-                              {activeCategory === "chai" && <ChaiCupIcon size={20} />}
-                              {activeCategory === "kirana" && <BasketIcon size={20} />}
-                              {activeCategory === "burger" && <StreakIcon size={20} />}
-                            </span>
-                            <div>
-                              <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                Digital Loyalty Pass
-                              </p>
-                              <h3 className="font-display text-sm font-extrabold text-white">
-                                {currentRule.name}
-                              </h3>
-                            </div>
+                  {/* Sleek Pass Display Frame (Lightweight, hardware-accelerated, zero mobile lag) */}
+                  <div className="relative w-full rounded-[2.2rem] border-[3px] border-[#102B4C] bg-[#102B4C] p-1.5 shadow-[0_12px_32px_rgba(16,43,76,0.18)]">
+                    <div className="rounded-[1.8rem] overflow-hidden bg-white border border-border/80">
+                      {/* Apple Wallet Style Digital Pass Card */}
+                      <div className="relative flex flex-col">
+                        {/* Laser sweep animation bar */}
+                        {isScanning && (
+                          <div className="absolute inset-x-0 z-30 pointer-events-none animate-laser-sweep">
+                            <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#F2765E] to-transparent shadow-[0_0_12px_#F2765E]" />
                           </div>
-                          <span className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
-                            Min ₹{currentRule.minSpend}
-                          </span>
-                        </div>
+                        )}
 
-                        <p className="mt-2.5 text-[11px] font-medium text-white/80">
-                          {currentRule.tagline}
-                        </p>
-                      </div>
-
-                      {/* Notched White Ticket Body with Glassmorphism */}
-                      <div className="relative rounded-b-3xl bg-white/85 backdrop-blur-md p-4 shadow-card border border-t-0 border-white/40">
-                        {/* Perforated ticket circles */}
-                        <div className="absolute -left-2 -top-2 h-4 w-4 rounded-full bg-sand" />
-                        <div className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-sand" />
-
-                        {/* Visit Status Bar */}
-                        <div className="flex items-center justify-between pb-2 border-b border-border/60">
-                          <div>
-                            <span className="font-display text-base font-extrabold text-secondary">
-                              {visits} of {currentRule.visitsRequired} visits
-                            </span>
-                            <p className="text-[10px] text-ink/65">
-                              Reward: <strong className="text-primary">{currentRule.rewardName}</strong>
-                            </p>
-                          </div>
-                          <span
-                            className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
-                              visits >= currentRule.visitsRequired
-                                ? "bg-emerald-100 text-emerald-800"
-                                : "bg-coral/15 text-primary"
-                            }`}
-                          >
-                            {visits >= currentRule.visitsRequired ? "REWARD READY" : `${progressPercent}% DONE`}
-                          </span>
-                        </div>
-
-                        {/* Progress Bar */}
-                        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-sand">
-                          <div
-                            className="h-full bg-primary transition-all duration-500 rounded-full"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-
-                        {/* Stamp Grid with StarStampIcon & GiftBoxIcon */}
-                        <div className="mt-4">
-                          <StampGrid
-                            totalVisits={currentRule.visitsRequired}
-                            completedVisits={visits}
-                            rewardName={currentRule.rewardName}
-                            recentlyStampedIndex={recentlyStamped}
-                          />
-                        </div>
-
-                        {/* Action Area */}
-                        <div className="mt-5">
-                          {visits >= currentRule.visitsRequired ? (
-                            <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/70 p-3 text-center shadow-inner">
-                              <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
-                                <GiftBoxIcon size={18} />
-                                <span>REWARD UNLOCKED!</span>
+                        {/* Pass Header with Navy Surface */}
+                        <div className="bg-secondary p-4 text-white">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white">
+                                {activeCategory === "chai" && <ChaiCupIcon size={20} />}
+                                {activeCategory === "kirana" && <BasketIcon size={20} />}
+                                {activeCategory === "burger" && <StreakIcon size={20} />}
+                              </span>
+                              <div>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
+                                  Digital Loyalty Pass
+                                </p>
+                                <h3 className="font-display text-sm font-extrabold text-white">
+                                  {currentRule.name}
+                                </h3>
                               </div>
-                              <p className="mt-1 font-mono text-sm font-extrabold text-secondary tracking-widest">
-                                STB-7Q4K-29
-                              </p>
-                              <p className="text-[10px] text-ink/70">
-                                Show this voucher code to the cashier to claim your {currentRule.rewardName}.
-                              </p>
-                              <button
-                                type="button"
-                                onClick={handleResetDemo}
-                                className="mt-2.5 inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-xl border border-secondary/30 bg-white px-3 text-xs font-bold text-secondary shadow-sm transition hover:bg-sand"
-                              >
-                                <RotateCcw className="h-3.5 w-3.5" />
-                                Reset Demo &amp; Scan Again
-                              </button>
                             </div>
-                          ) : (
-                            <div>
-                              <button
-                                type="button"
-                                disabled={isScanning}
-                                onClick={handleSimulateScan}
-                                className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold text-white shadow-sm transition-all duration-200 hover:bg-secondary active:scale-95 ${
-                                  isScanning ? "opacity-75 cursor-wait" : "hover:shadow-md"
-                                }`}
-                              >
-                                <Sparkles className="h-4 w-4 animate-spin" />
-                                <span>{isScanning ? "Scanning Standee..." : "✨ Scan Counter QR"}</span>
-                              </button>
-                              <p className="mt-1.5 text-center text-[10px] text-ink/50">
-                                Tap to test laser sweep scan &amp; sound chime
-                              </p>
-                            </div>
-                          )}
+                            <span className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
+                              Min ₹{currentRule.minSpend}
+                            </span>
+                          </div>
 
-                          {feedbackToast && (
-                            <p className="mt-2 text-center text-xs font-bold text-primary animate-pulse">
-                              {feedbackToast}
-                            </p>
-                          )}
+                          <p className="mt-2.5 text-[11px] font-medium text-white/80">
+                            {currentRule.tagline}
+                          </p>
+                        </div>
+
+                        {/* White Ticket Body */}
+                        <div className="relative bg-white p-4">
+                          {/* Perforated ticket circles */}
+                          <div className="absolute -left-2 -top-2 h-4 w-4 rounded-full bg-[#102B4C]" />
+                          <div className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-[#102B4C]" />
+
+                          {/* Visit Status Bar */}
+                          <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                            <div>
+                              <span className="font-display text-base font-extrabold text-secondary">
+                                {visits} of {currentRule.visitsRequired} visits
+                              </span>
+                              <p className="text-[10px] text-ink/65">
+                                Reward: <strong className="text-primary">{currentRule.rewardName}</strong>
+                              </p>
+                            </div>
+                            <span
+                              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
+                                visits >= currentRule.visitsRequired
+                                  ? "bg-emerald-100 text-emerald-800"
+                                  : "bg-coral/15 text-primary"
+                              }`}
+                            >
+                              {visits >= currentRule.visitsRequired ? "REWARD READY" : `${progressPercent}% DONE`}
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-sand">
+                            <div
+                              className="h-full bg-primary transition-all duration-500 rounded-full"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+
+                          {/* Stamp Grid with StarStampIcon & GiftBoxIcon */}
+                          <div className="mt-4">
+                            <StampGrid
+                              totalVisits={currentRule.visitsRequired}
+                              completedVisits={visits}
+                              rewardName={currentRule.rewardName}
+                              recentlyStampedIndex={recentlyStamped}
+                            />
+                          </div>
+
+                          {/* Action Area */}
+                          <div className="mt-5">
+                            {visits >= currentRule.visitsRequired ? (
+                              <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/70 p-3 text-center shadow-inner">
+                                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
+                                  <GiftBoxIcon size={18} />
+                                  <span>REWARD UNLOCKED!</span>
+                                </div>
+                                <p className="mt-1 font-mono text-sm font-extrabold text-secondary tracking-widest">
+                                  STB-7Q4K-29
+                                </p>
+                                <p className="text-[10px] text-ink/70">
+                                  Show this voucher code to the cashier to claim your {currentRule.rewardName}.
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={handleResetDemo}
+                                  className="mt-2.5 inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-xl border border-secondary/30 bg-white px-3 text-xs font-bold text-secondary shadow-sm transition hover:bg-sand"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  Reset Demo &amp; Scan Again
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                <button
+                                  type="button"
+                                  disabled={isScanning}
+                                  onClick={handleSimulateScan}
+                                  className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold text-white shadow-sm transition-all duration-200 hover:bg-secondary active:scale-95 ${
+                                    isScanning ? "opacity-75 cursor-wait" : "hover:shadow-md"
+                                  }`}
+                                >
+                                  <Sparkles className="h-4 w-4 animate-spin" />
+                                  <span>{isScanning ? "Scanning Standee..." : "✨ Scan Counter QR"}</span>
+                                </button>
+                                <p className="mt-1.5 text-center text-[10px] text-ink/50">
+                                  Tap to test laser sweep scan &amp; sound chime
+                                </p>
+                              </div>
+                            )}
+
+                            {feedbackToast && (
+                              <p className="mt-2 text-center text-xs font-bold text-primary animate-pulse">
+                                {feedbackToast}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </PhoneFrame>
+                  </div>
                 </div>
               </div>
 
@@ -391,7 +393,7 @@ export default function HomePage() {
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "chai"
                           ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <ChaiCupIcon size={20} />
@@ -404,7 +406,7 @@ export default function HomePage() {
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "kirana"
                           ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <BasketIcon size={20} />
@@ -417,7 +419,7 @@ export default function HomePage() {
                       className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
                         activeCategory === "burger"
                           ? "bg-secondary text-white shadow-md"
-                          : "bg-white/40 backdrop-blur-md text-ink/75 hover:bg-white/70 border border-white/30"
+                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
                       }`}
                     >
                       <StreakIcon size={20} />
@@ -428,18 +430,18 @@ export default function HomePage() {
 
                 {/* Key Bullet Highlights with Glassmorphism */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
-                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/80 p-3 border border-white/30 shadow-sm">
                     <AntiFraudIcon size={20} />
                     <span>Strict 1-Scan Per Day (12:00 AM Reset)</span>
                   </div>
-                  <div className="flex items-center gap-2 rounded-xl bg-white/40 backdrop-blur-md p-3 border border-white/30 shadow-sm">
+                  <div className="flex items-center gap-2 rounded-xl bg-white/80 p-3 border border-white/30 shadow-sm">
                     <CustomersIcon size={20} />
                     <span>DPDP Safe Customer Privacy</span>
                   </div>
                 </div>
 
                 {/* Glassmorphic ROI Lift Card inside Hero */}
-                <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/40 backdrop-blur-md border border-white/30 p-3.5 shadow-sm max-w-md w-full">
+                <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/80 border border-white/30 p-3.5 shadow-sm max-w-md w-full">
                   <div className="flex items-center gap-2.5">
                     <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
                       <AnalyticsIcon size={18} />
@@ -748,7 +750,7 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-white/40 backdrop-blur-md p-4 border border-white/30 text-right">
+              <div className="rounded-2xl bg-white/80 p-4 border border-white/30 text-right">
                 <span className="text-xs font-bold text-ink/60 uppercase">Estimated Monthly Lift</span>
                 <p className="font-display text-3xl font-extrabold text-success">
                   +₹{monthlyExtraRevenue.toLocaleString("en-IN")}

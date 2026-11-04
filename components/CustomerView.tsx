@@ -8,7 +8,6 @@ import StampGrid from "@/components/StampGrid";
 import RewardTicket from "@/components/RewardTicket";
 import ReviewModal from "@/components/ReviewModal";
 import ConfettiEffect from "@/components/ConfettiEffect";
-import PhoneFrame from "@/components/PhoneFrame";
 import { submitScan as submitScanAction, getCustomerMerchantStatus } from "@/app/actions/scan";
 import { playScanChime } from "@/lib/audio";
 import {
@@ -238,8 +237,8 @@ export default function CustomerView({
             </span>
           </div>
 
-          {/* REALISTIC SMARTPHONE BEZEL */}
-          <PhoneFrame>
+          {/* CUSTOMER PASS CONTAINER (Optimized for all mobile devices) */}
+          <div className="w-full max-w-[380px] mx-auto">
             {/* Header Strip inside phone */}
             <div className="mb-3 flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50">
@@ -497,7 +496,7 @@ export default function CustomerView({
               <ShieldCheck className="h-3 w-3 text-success" />
               <span>DPDP Act 2023 Compliant • Anti-Fraud Protection</span>
             </div>
-          </PhoneFrame>
+          </div>
 
           {/* Quick Links at Bottom */}
           <div className="mt-4 text-center space-y-2">
