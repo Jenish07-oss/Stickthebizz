@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X, Sparkles, Store, User } from "lucide-react";
+import { Menu, X, Store, User } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -19,20 +20,8 @@ export default function Navbar() {
         className="mx-auto flex h-full max-w-7xl items-center justify-between px-6 lg:px-12"
         aria-label="Main Navigation"
       >
-        {/* Left: Brand Identity */}
-        <Link
-          href="/"
-          replace={false}
-          className="flex items-center gap-2.5 font-display text-xl font-extrabold tracking-tight text-secondary transition hover:opacity-90 shrink-0"
-          aria-label="StickTheBizz Home"
-        >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white shadow-sm shrink-0">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <span className="text-secondary font-display font-extrabold text-xl tracking-tight">
-            StickTheBizz
-          </span>
-        </Link>
+        {/* Left: Official Brand Logo */}
+        <Logo href="/" size="md" />
 
         {/* Center: Desktop Navigation Links */}
         <div className="hidden items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-ink/80 xl:flex">

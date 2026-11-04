@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Mail, Lock, ArrowRight, Store, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, ArrowRight, Store, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 
 export default function OwnerLoginPage() {
@@ -52,16 +53,7 @@ export default function OwnerLoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-sand px-4 py-12 sm:px-6">
       {/* Brand Header */}
       <div className="mb-8 text-center">
-        <Link
-          href="/"
-          replace={false}
-          className="inline-flex items-center gap-2 font-display text-2xl font-extrabold tracking-tight text-secondary"
-        >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-white shadow-sm">
-            <Sparkles className="h-5 w-5" />
-          </span>
-          <span>StickTheBizz</span>
-        </Link>
+        <Logo href="/" size="lg" />
         <p className="mt-2 text-xs font-bold uppercase tracking-wider text-secondary/70">
           Shop Owner Cashier Login
         </p>

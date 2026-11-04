@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
 import { Printer, Sparkles, Store, ShieldCheck, QrCode, Copy, Check, ExternalLink } from "lucide-react";
+import { LogoIcon, LogoWordmark } from "@/components/Logo";
 
 interface CounterQRProps {
   shopName?: string;
@@ -74,9 +75,12 @@ export default function CounterQR({
           <div className="pointer-events-none absolute -left-12 -top-12 h-36 w-72 -rotate-45 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
           {/* Standee Top Badge */}
-          <div className="mx-auto inline-flex items-center gap-1.5 rounded-full bg-sand px-3 py-1 text-[11px] font-bold text-secondary shadow-sm">
-            <Store className="h-3.5 w-3.5 text-primary" />
-            Official Counter QR Stand
+          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-sand px-3.5 py-1 text-[11px] font-bold text-secondary shadow-sm">
+            <LogoIcon size={18} />
+            <div className="flex items-center gap-1">
+              <span className="text-[#102B4C]">stickthe</span><span className="text-[#EE634A]">bizz</span>
+              <span className="text-ink/40 font-normal">| Counter Stand</span>
+            </div>
           </div>
 
           {/* Shop Title */}

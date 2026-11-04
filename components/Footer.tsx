@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
-import { Sparkles, ShieldCheck, Heart } from "lucide-react";
+import { ShieldCheck, Heart } from "lucide-react";
+import Logo from "@/components/Logo";
 
 export default function Footer() {
   return (
@@ -9,16 +10,7 @@ export default function Footer() {
         <div className="grid gap-10 md:grid-cols-4">
           {/* Brand Info */}
           <div className="md:col-span-1">
-            <Link
-              href="/"
-              replace={false}
-              className="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tight text-secondary"
-            >
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-white">
-                <Sparkles className="h-4 w-4" />
-              </span>
-              <span>StickTheBizz</span>
-            </Link>
+            <Logo href="/" size="md" />
             <p className="mt-4 text-sm leading-relaxed text-ink/75">
               Empowering India&apos;s chai stalls, bakeries, cafes, and local stores with simple digital punch cards. No customer app downloads required.
             </p>
