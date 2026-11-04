@@ -8,4 +8,9 @@
 5. GPU Lag Prevention: Avoid `backdrop-blur-*` on mobile overlays; use solid translucent backgrounds (`bg-black/75`).
 6. Anti-Fraud: Enforce 1-stamp-per-day IST midnight reset (`UTC + 5:30`). No hardcoded PINs ("8492").
 7. PWA / Service Worker: Static assets cached via `next-pwa` for instant repeat visits.
+8. Localhost-First & Zero Unauthorized Production Deploys:
+   - NEVER push to `origin main` or trigger production deployments without explicit user command ("post live" or "push live").
+   - Develop, preview, and test strictly on localhost (`dev` branch).
+   - Keep all live customer & merchant views clean: zero "demo", "testing", or placeholder text visible to real users.
+
 

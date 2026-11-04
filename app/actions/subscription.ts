@@ -151,7 +151,7 @@ export async function createSubscriptionOrderAction(params: CreateOrderParams) {
         success: false,
         needsKeys: true,
         message:
-          "Razorpay API Keys are not configured yet. You can use redeem code 'BETA100' for ₹0 instant activation while setting up your Razorpay account!",
+          "Payment gateway is temporarily unavailable. Please try again or contact support@stickthebizz.in.",
       };
     }
 

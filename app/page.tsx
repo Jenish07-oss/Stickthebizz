@@ -241,10 +241,10 @@ export default function HomePage() {
                   <div className="mb-2.5 flex flex-col items-center text-center">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-primary/25 px-3 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wider text-secondary shadow-xs">
                       <Sparkles className="h-3 w-3 text-primary" />
-                      <span>DEMO SIMULATION • NOT A REAL SCANNER</span>
+                      <span>INTERACTIVE PREVIEW • SAMPLE STAMP PASS</span>
                     </span>
                     <p className="mt-1 text-[11px] text-ink/75 font-medium leading-tight">
-                      Interactive sample pass showing how customer stamps punch
+                      Interactive sample pass showing how customer stamps punch in real time
                     </p>
                   </div>
 
@@ -353,7 +353,7 @@ export default function HomePage() {
                                   className="mt-2.5 inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-xl border border-secondary/30 bg-white px-3 text-xs font-bold text-secondary shadow-sm transition hover:bg-sand"
                                 >
                                   <RotateCcw className="h-3.5 w-3.5" />
-                                  Reset Demo &amp; Scan Again
+                                  Reset Sample &amp; Punch Again
                                 </button>
                               </div>
                             ) : (
@@ -367,11 +367,11 @@ export default function HomePage() {
                                   }`}
                                 >
                                   <Sparkles className="h-4 w-4 animate-spin" />
-                                  <span>{isScanning ? "Simulating Punch..." : "✨ Test Stamp Punch (Demo Animation)"}</span>
+                                  <span>{isScanning ? "Simulating Punch..." : "✨ Tap to Punch Stamp (Interactive Preview)"}</span>
                                 </button>
                                 <div className="mt-2 rounded-xl bg-sand/60 p-2 text-center border border-border/60">
                                   <p className="text-[10px] text-ink/70 leading-relaxed font-medium">
-                                    💡 <strong>Notice for shop owners &amp; customers:</strong> This is a simulation card to demonstrate the sound chime &amp; stamp animation. At your actual shop, customers scan your physical counter acrylic stand using their real phone camera!
+                                    💡 <strong>Notice for shop owners &amp; customers:</strong> This is an interactive preview demonstrating the real-time sound chime &amp; stamp punch animation. At your actual physical shop counter, customers scan your branded acrylic standee with their phone camera.
                                   </p>
                                 </div>
                               </div>

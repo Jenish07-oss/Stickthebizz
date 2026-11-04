@@ -105,7 +105,7 @@ export default function AboutPage() {
             <div className="mt-8 rounded-2xl bg-secondary p-6 text-white sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
               <div>
                 <h3 className="font-display text-xl font-extrabold">
-                  Ready to test it at your counter?
+                  Ready to launch it at your counter?
                 </h3>
                 <p className="mt-1 text-xs text-white/80">
                   Launch in under 3 minutes with our free trial.

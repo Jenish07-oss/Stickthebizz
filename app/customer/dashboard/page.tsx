@@ -247,12 +247,7 @@ export default function CustomerDashboardPage() {
                     <QrCode className="h-4 w-4" />
                     <span>Scan Counter QR Standee</span>
                   </button>
-                  <Link
-                    href="/s/kesar-chai"
-                    className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-border bg-sand/40 px-5 text-xs sm:text-sm font-bold text-secondary transition hover:bg-sand"
-                  >
-                    <span>Test Demo Pass (/s/kesar-chai)</span>
-                  </Link>
+
                 </div>
               </div>
             ) : (

@@ -275,21 +275,21 @@ function OwnerRegisterForm() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-sand py-10 px-4 sm:px-6 lg:px-8">
+    <div className="flex min-h-screen flex-col bg-sand py-8 sm:py-12 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
       <div className="mx-auto w-full max-w-4xl">
         {/* Brand Header */}
-        <div className="text-center">
-          <Link href="/" className="inline-block transition-transform hover:scale-105">
+        <div className="flex flex-col items-center justify-center text-center">
+          <Link href="/" className="inline-flex items-center transition-transform hover:scale-105">
             <Logo size="md" />
           </Link>
-          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-white/80 px-4 py-1.5 font-mono text-xs font-bold text-secondary shadow-sm">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
-            OFFICIAL SHOP COUNTER ONBOARDING
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-secondary/20 bg-white px-3.5 py-1 font-mono text-[11px] font-bold text-secondary shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span>OFFICIAL SHOP COUNTER ONBOARDING</span>
           </div>
-          <h1 className="mt-3 font-display text-3xl sm:text-4xl font-extrabold text-secondary">
+          <h1 className="mt-4 font-display text-2xl sm:text-3xl md:text-4xl font-extrabold text-secondary tracking-tight max-w-2xl">
             Activate Your Shop Counter Subscription
           </h1>
-          <p className="mt-2 text-sm text-ink/70 max-w-xl mx-auto">
+          <p className="mt-2 text-xs sm:text-sm text-ink/70 max-w-xl leading-relaxed">
             Choose your subscription plan to generate your physical acrylic standee QR, activate your live counter terminal, and start turning walk-in diners &amp; shoppers into daily regulars.
           </p>
         </div>
@@ -332,24 +332,24 @@ function OwnerRegisterForm() {
           <button
             type="button"
             onClick={() => setSelectedPlan("YEARLY")}
-            className={`relative rounded-3xl p-6 text-left transition-all border-2 ${
+            className={`relative rounded-3xl p-6 text-left transition-all border-2 overflow-hidden ${
               selectedPlan === "YEARLY"
                 ? "border-primary bg-secondary text-white shadow-float ring-2 ring-primary/30"
                 : "border-border bg-white/60 hover:bg-white hover:border-ink/20"
             }`}
           >
             {/* Highlight Ribbon */}
-            <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-3.5 py-1 font-mono text-[11px] font-extrabold uppercase tracking-wider text-white">
+            <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-3.5 py-1 font-mono text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-white shadow-xs">
               SAVE 20% (₹1,798 OFF)
             </div>
 
             <div className="flex items-center justify-between">
-              <span className={`font-mono text-xs font-bold uppercase tracking-wider ${
+              <span className={`font-mono text-xs font-bold uppercase tracking-wider pr-24 sm:pr-0 ${
                 selectedPlan === "YEARLY" ? "text-coral" : "text-primary"
               }`}>
                 Annual Pro Counter Plan
               </span>
-              <div className={`grid h-5 w-5 place-items-center rounded-full border ${
+              <div className={`grid h-5 w-5 place-items-center rounded-full border shrink-0 ${
                 selectedPlan === "YEARLY" ? "border-primary bg-primary text-white" : "border-border bg-white"
               }`}>
                 {selectedPlan === "YEARLY" && <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -547,8 +547,8 @@ function OwnerRegisterForm() {
                   Redeem Code / Partner Coupon
                 </h3>
               </div>
-              <p className="mt-1 text-[11px] text-ink/65">
-                Have a partner pass or beta invite? Enter your code below to claim your discount or ₹0 activation.
+              <p className="mt-1 text-[11px] text-ink/65 leading-relaxed">
+                Have a partner pass or promotional coupon? Enter your code below to claim your discount.
               </p>
 
               {appliedPromo ? (
@@ -575,7 +575,7 @@ function OwnerRegisterForm() {
                     type="text"
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
-                    placeholder="e.g. BETA100"
+                    placeholder="Enter partner / promo code"
                     className="flex-1 rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs font-mono font-bold text-secondary uppercase outline-none focus:border-primary"
                   />
                   <button
@@ -595,11 +595,7 @@ function OwnerRegisterForm() {
                 </p>
               )}
 
-              <div className="mt-3 pt-3 border-t border-border/60">
-                <p className="text-[10px] text-ink/50">
-                  💡 <strong>Demo Test Code:</strong> Use <code className="font-mono font-bold text-primary">BETA100</code> for ₹0 free test activation.
-                </p>
-              </div>
+
             </div>
 
             {/* BILLING BREAKDOWN CARD */}

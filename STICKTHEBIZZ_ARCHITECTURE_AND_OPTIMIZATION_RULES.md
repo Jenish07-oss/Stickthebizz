@@ -112,3 +112,16 @@
    - Merchant sets a private 4-digit PIN in their owner settings.
    - Customers present a dynamic single-use voucher code (`STB-XXXX`) for counter redemption.
 
+
+
+---
+
+## 🚀 RULE 8: Localhost-First & Zero Direct Production Deploys
+
+1. **Strict Production Deployment Gate:**
+   - NEVER execute `git push origin main` or trigger production deployments to `stickthebizz.in` without explicit user command (`"post live"` or `"push live"`).
+   - All feature development, UI refactoring, performance profiling, and tests MUST run locally on the `dev` branch at `http://localhost:3000`.
+2. **Clean Production Polish (Zero Testing / Demo Artifacts):**
+   - Real brand appearance: Never display debug helpers, test coupons (`BETA100 for ₹0`), test route links, or internal test notices to public users.
+   - All copy must read professional, trustworthy, and enterprise-grade.
+   - Any interactive preview must be clearly labeled as an interactive sample (e.g. "Interactive Preview", not broken/testing text).

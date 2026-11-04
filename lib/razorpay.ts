@@ -71,7 +71,7 @@ export const BUILTIN_PROMO_CODES: Record<string, PromoCodeDefinition> = {
     code: "BETA100",
     discountType: "PERCENT",
     discountValue: 100,
-    description: "100% OFF Beta Partner Pass (₹0 Instant Activation)",
+    description: "100% OFF Partner Pass (₹0 Instant Activation)",
     is100PercentOff: true,
   },
   FOUNDERPASS: {

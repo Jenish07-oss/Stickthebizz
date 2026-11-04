@@ -628,7 +628,7 @@ export default function OwnerDashboardPage() {
                 type="text"
                 value={renewPromo}
                 onChange={(e) => setRenewPromo(e.target.value.toUpperCase())}
-                placeholder="Partner Code (e.g. BETA100)"
+                placeholder="Partner / Promo Code"
                 className="flex-1 rounded-xl border border-border bg-sand/30 px-3 py-2 text-xs font-mono font-bold uppercase outline-none focus:border-primary"
               />
               <button

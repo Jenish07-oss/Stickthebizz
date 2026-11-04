@@ -101,7 +101,7 @@ export default function PricingPage() {
                 </div>
 
                 <p className="mt-4 text-xs sm:text-sm text-ink/75 leading-relaxed">
-                  Ideal for new shops testing digital streak loyalty with month-to-month flexibility.
+                  Ideal for new shops starting digital streak loyalty with month-to-month flexibility.
                 </p>
 
                 <ul className="mt-6 space-y-3.5 text-xs font-semibold text-secondary">
