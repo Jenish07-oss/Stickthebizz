@@ -8,17 +8,24 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() { return cookieStore.getAll(); },
+        getAll() {
+          return cookieStore.getAll();
+        },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, {
-              ...options,
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'lax',
-              httpOnly: true,
-              path: '/',
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, {
+                ...options,
+                secure: process.env.NODE_ENV === "production",
+                sameSite: "lax",
+                httpOnly: true,
+                path: "/",
+              });
             });
-          });
+          } catch {
+            // The `setAll` method was called from a Server Component.
+            // This can be safely ignored in Next.js if middleware is refreshing sessions.
+          }
         },
       },
     }

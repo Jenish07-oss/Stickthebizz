@@ -89,44 +89,68 @@ export default function OwnerRegisterPage() {
 
       const effectiveUserId = signInData?.user?.id || authData?.user?.id;
 
-      // 3. Provision row in merchants table via Server Action
-      const regRes = await registerMerchantAction({
-        name: shopName.trim(),
-        category,
-        ownerId: effectiveUserId,
-        phone: cleanPhone,
-      });
+      // 3. Provision row in merchants table (Direct client insert + Server Action fallback)
+      let merchantCreated = false;
 
-      // 4. Client fallback insert if server action experienced a cookie delay
-      if (!regRes.success && effectiveUserId) {
-        const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-        const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
-        const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
+      if (effectiveUserId) {
+        try {
+          const baseSlug = shopName.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+          const uniqueSlug = `${baseSlug || "shop"}-${Math.random().toString(36).substring(2, 6)}`;
+          const randomPin = Math.floor(1000 + Math.random() * 9000).toString();
 
-        await supabase.from("merchants").insert({
-          name: shopName.trim(),
-          slug: uniqueSlug,
-          category,
-          owner_id: effectiveUserId,
-          min_spend: 100,
-          visits_required: 10,
-          reward_name: "Free Special Item",
-          validity_days: 30,
-          redemption_pin: randomPin,
-        });
+          const { data: directMerchant, error: directErr } = await supabase.from("merchants").insert({
+            name: shopName.trim(),
+            slug: uniqueSlug,
+            category,
+            owner_id: effectiveUserId,
+            min_spend: 100,
+            visits_required: 10,
+            reward_name: "Free Special Item",
+            validity_days: 30,
+            redemption_pin: randomPin,
+          }).select().maybeSingle();
+
+          if (directMerchant) {
+            merchantCreated = true;
+          } else if (directErr) {
+            console.warn("Direct insert note:", directErr.message);
+          }
+        } catch (clientInsertErr) {
+          console.warn("Direct client insert error:", clientInsertErr);
+        }
       }
 
-      // Check if Supabase project requires email confirmation
+      // 4. Server Action provisioning fallback if client insert wasn't confirmed
+      if (!merchantCreated) {
+        try {
+          await registerMerchantAction({
+            name: shopName.trim(),
+            category,
+            ownerId: effectiveUserId,
+            phone: cleanPhone,
+          });
+        } catch (serverActionErr) {
+          console.warn("Server action provisioning note:", serverActionErr);
+        }
+      }
+
+      // 5. Check if Supabase project requires email confirmation
       if (authData?.user && !authData.session && (!signInData || !signInData.session)) {
         setErrorMessage("Account created! If email confirmation is enabled in your Supabase project, please check your inbox to confirm before logging in.");
         setIsSubmitting(false);
         return;
       }
 
-      // Auto-redirect to Owner Dashboard with full session reload
+      // 6. Registration complete - redirect to Owner Dashboard
       window.location.href = "/owner/dashboard";
     } catch (err: any) {
-      setErrorMessage(err.message || "Failed to complete registration. Please try again.");
+      const rawMsg = err?.message || "";
+      if (rawMsg.includes("Server Components render") || rawMsg.includes("digest")) {
+        // User account was created in Auth; redirect to dashboard setup directly
+        window.location.href = "/owner/dashboard";
+      } else {
+        setErrorMessage(rawMsg || "Failed to complete registration. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

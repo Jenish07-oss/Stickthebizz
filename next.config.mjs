@@ -5,7 +5,7 @@ const nextConfig = {
 
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'stickthebizz.in', 'stickthebizz.vercel.app'],
+      allowedOrigins: ['localhost:3000', 'stickthebizz.in', 'stickthebizz.vercel.app', '*.vercel.app'],
     },
   },
 
