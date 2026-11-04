@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StickTheBizz - Instagram Reel</title>
+  <script>p5.disableFriendlyErrors = true;</script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.3/p5.min.js"></script>
+  <style>
+    html, body { margin: 0; padding: 0; overflow: hidden; background: #0a0a0f; }
+    canvas { display: block; }
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 0 20px;
+    }
+    .controls button {
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #e8d5b7;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: all 0.2s ease;
+    }
+    .controls button:hover {
+      background: rgba(238,99,74,0.3);
+      border-color: #EE634A;
+      color: #fff;
+    }
+    .controls button.recording {
+      background: #EE634A;
+      border-color: #EE634A;
+      color: #fff;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
+    .progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: linear-gradient(90deg, #EE634A, #102B4C);
+      z-index: 100;
+      transform-origin: left;
+      transform: scaleX(0);
+    }
+    .timecode {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 12px;
+      color: rgba(232,213,183,0.6);
+      z-index: 100;
+    }
+  </style>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="timecode" id="timecode">00:00.00 / 00:30.00</div>
+  <div class="controls">
+    <button id="btnPlay" onclick="togglePlay()">▶ Play</button>
+    <button id="btnRecord" onclick="toggleRecord()">⏺ Record Frames</button>
+    <button id="btnReset" onclick="resetSketch()">↺ Reset</button>
+    <button id="btnSave" onclick="saveCurrentFrame()">💾 Save PNG</button>
+  </div>
+<script>
+// ============================================================
+// STICKTHEBIZZ INSTAGRAM REEL — 1080x1920, 30s, 30fps
+// Viral kinetic typography + stamp/reward motion graphics
+// ============================================================
+
+// === CONFIGURATION ===
+const CONFIG = {
+  seed: 42,
+  width: 1080,
+  height: 1920,
+  fps: 30,
+  duration: 30, // seconds
+  totalFrames: 900, // 30 * 30
+  recording: false,
+  playing: false,
+  currentFrame: 0,
+};
+
+// === BRAND PALETTE (from StickTheBizz CSS) ===
+const PALETTE = {
+  // Core brand
+  navy:       '#102B4C',  // --navy
+  coral:      '#EE634A',  // --coral
+  sand:       '#F5F0E8',  // --sand
+  ink:        '#1a1a2e',  // --ink
+  gold:       '#D4A843',  // --gold
+  cream:      '#FFF8F0',  // --cream
+  
+  // Semantic
+  bg:         '#0a0a0f',  // Deep dark for reel
+  text:       '#F5F0E8',  // Primary text
+  textDim:    '#a89070',  // Dimmed text
+  accent:     '#EE634A',  // Coral accent
+  accent2:    '#D4A843',  // Gold accent
+  success:    '#4ade80',  // Green for success
+  card:       '#16161f',  // Card background
+  border:     '#2a2a3e',  // Subtle border
+  
+  // Gradients
+  gradStart:  '#102B4C',
+  gradMid:    '#1a1a2e',
+  gradEnd:    '#0a0a0f',
+};
+
+// === GLOBAL STATE ===
+let timeline;
+let particles = [];
+let stampParticles = [];
+let confetti = [];
+let noiseOffset = 0;
+let fontBold, fontMono, fontRegular;
+let frameCount = 0;
+let playStartFrame = 0;
+
+// === EASING FUNCTIONS ===
+const Ease = {
+  outCubic: t => 1 - Math.pow(1 - t, 3),
+  outQuart: t => 1 - Math.pow(1 - t, 4),
+  outExpo: t => t === 1 ? 1 : 1 - Math.pow(2, -10 * t),
+  outElastic: t => {
+    if (t === 0 || t === 1) return t;
+    return Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * (2 * Math.PI / 3)) + 1;
+  },
+  outBack: t => {
+    const c1 = 1.70158, c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  },
+  inOutCubic: t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  smoothstep: t => t * t * (3 - 2 * t),
+  smootherstep: t => t * t * t * (t * (t * 6 - 15) + 10),
+};
+
+// === SPRING PHYSICS ===
+class Spring {
+  constructor(value, target, stiffness = 0.12, damping = 0.82) {
+    this.value = value;
+    this.target = target;
+    this.velocity = 0;
+    this.stiffness = stiffness;
+    this.damping = damping;
+  }
+  update() {
+    const force = (this.target - this.value) * this.stiffness;
+    this.velocity += force;
+    this.velocity *= this.damping;
+    this.value += this.velocity;
+    return this.value;
+  }
+  setTarget(t) { this.target = t; }
+  isSettled(threshold = 0.01) {
+    return Math.abs(this.velocity) < threshold && Math.abs(this.value - this.target) < threshold;
+  }
+}
+
+class Spring2D {
+  constructor(x, y, stiffness = 0.1, damping = 0.85) {
+    this.pos = createVector(x, y);
+    this.target = createVector(x, y);
+    this.vel = createVector(0, 0);
+    this.stiffness = stiffness;
+    this.damping = damping;
+  }
+  update() {
+    const force = p5.Vector.sub(this.target, this.pos).mult(this.stiffness);
+    this.vel.add(force).mult(this.damping);
+    this.pos.add(this.vel);
+    return this.pos;
+  }
+  setTarget(x, y) { this.target.set(x, y); }
+}
+
+// === TIMELINE SYSTEM ===
+class Timeline {
+  constructor() { this.events = []; }
+  at(startMs, durationMs, fn) {
+    this.events.push({ start: startMs, end: startMs + durationMs, fn });
+    return this;
+  }
+  update(currentMs) {
+    for (let e of this.events) {
+      if (currentMs >= e.start && currentMs < e.end) {
+        const t = (currentMs - e.start) / (e.end - e.start);
+        e.fn(t);
+      }
+    }
+  }
+}
+
+// === PARTICLE SYSTEMS ===
+class AmbientParticle {
+  constructor() { this.reset(); }
+  reset() {
+    this.pos = createVector(random(width), random(height));
+    this.vel = createVector(random(-0.15, 0.15), random(-0.2, 0.05));
+    this.size = random(1, 3);
+    this.alpha = random(15, 60);
+    this.hue = random([210, 45, 35]); // navy, gold, coral hues
+    this.life = 0;
+    this.maxLife = random(400, 800);
+  }
+  update() {
+    this.pos.add(this.vel);
+    this.vel.y += 0.001; // gentle gravity
+    this.vel.x += noise(this.pos.x * 0.002, this.pos.y * 0.002, noiseOffset) * 0.02 - 0.01;
+    this.life++;
+    if (this.life > this.maxLife || this.pos.y > height + 50 || this.pos.x < -50 || this.pos.x > width + 50) {
+      this.reset();
+      this.pos.y = height + 10;
+    }
+  }
+  draw() {
+    const lifeRatio = this.life / this.maxLife;
+    const alpha = this.alpha * (1 - lifeRatio) * 0.5;
+    noStroke();
+    fill(this.hue, 60, 80, alpha);
+    ellipse(this.pos.x, this.pos.y, this.size);
+  }
+}
+
+class StampParticle {
+  constructor(x, y, isGold) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(random(-4, 4), random(-8, -2));
+    this.size = random(6, 14);
+    this.rotation = random(-PI, PI);
+    this.rotVel = random(-0.15, 0.15);
+    this.isGold = isGold;
+    this.alpha = 255;
+    this.life = 0;
+    this.maxLife = random(40, 70);
+    this.shape = floor(random(3)); // 0=circle, 1=square, 2=star
+  }
+  update() {
+    this.vel.y += 0.18; // gravity
+    this.vel.mult(0.985); // drag
+    this.pos.add(this.vel);
+    this.rotation += this.rotVel;
+    this.alpha = 255 * (1 - this.life / this.maxLife);
+    this.life++;
+  }
+  draw() {
+    if (this.alpha <= 0) return;
+    push();
+    translate(this.pos.x, this.pos.y);
+    rotate(this.rotation);
+    if (this.isGold) {
+      fill(45, 85, 95, this.alpha / 2.55); // gold
+      stroke(45, 90, 100, this.alpha / 2.55);
+    } else {
+      fill(15, 85, 90, this.alpha / 2.55); // coral
+      stroke(15, 90, 100, this.alpha / 2.55);
+    }
+    strokeWeight(1.5);
+    const s = this.size;
+    if (this.shape === 0) {
+      ellipse(0, 0, s);
+    } else if (this.shape === 1) {
+      rectMode(CENTER);
+      rect(0, 0, s, s, 2);
+    } else {
+      // star
+      beginShape();
+      for (let i = 0; i < 5; i++) {
+        const angle = (i * TWO_PI / 5) - HALF_PI;
+        const r = i % 2 === 0 ? s/2 : s/4;
+        vertex(cos(angle) * r, sin(angle) * r);
+      }
+      endShape(CLOSE);
+    }
+    pop();
+  }
+  isDead() { return this.life >= this.maxLife; }
+}
+
+class ConfettiPiece {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(random(-6, 6), random(-12, -4));
+    this.size = random(8, 16);
+    this.rotation = random(-PI, PI);
+    this.rotVel = random(-0.3, 0.3);
+    this.hue = random([15, 45, 210, 300]); // coral, gold, navy, magenta
+    this.alpha = 255;
+    this.life = 0;
+    this.maxLife = random(80, 140);
+    this.shapeType = floor(random(4));
+  }
+  update() {
+    this.vel.y += 0.12;
+    this.vel.mult(0.99);
+    this.pos.add(this.vel);
+    this.rotation += this.rotVel;
+    this.alpha = 255 * Math.pow(1 - this.life / this.maxLife, 2);
+    this.life++;
+  }
+  draw() {
+    if (this.alpha <= 0) return;
+    push();
+    translate(this.pos.x, this.pos.y);
+    rotate(this.rotation);
+    fill(this.hue, 80, 90, this.alpha / 2.55);
+    noStroke();
+    const s = this.size;
+    if (this.shapeType === 0) { // rectangle
+      rectMode(CENTER);
+      rect(0, 0, s, s * 0.6, 2);
+    } else if (this.shapeType === 1) { // circle
+      ellipse(0, 0, s * 0.7);
+    } else if (this.shapeType === 2) { // triangle
+      triangle(0, -s/2, -s/2, s/2, s/2, s/2);
+    } else { // long strip
+      rectMode(CENTER);
+      rect(0, 0, s * 1.5, s * 0.3, 1);
+    }
+    pop();
+  }
+  isDead() { return this.life >= this.maxLife; }
+}
+
+// === TEXT ANIMATION HELPERS ===
+function drawKineticText(str, x, y, t, options = {}) {
+  const {
+    fontSize = 64,
+    fontWeight = 'bold',
+    color = PALETTE.text,
+    tracking = 0,
+    lineHeight = 1.2,
+    stagger = 80,
+    easeFn = Ease.outCubic,
+    delay = 0,
+    spring = null,
+    wave = false,
+    waveAmp = 15,
+    waveFreq = 0.5,
+  } = options;
+  
+  const chars = str.split('');
+  const totalDelay = chars.length * stagger;
+  const charW = fontSize * 0.6;
+  
+  push();
+  translate(x, y);
+  textAlign(LEFT, TOP);
+  textFont(fontBold);
+  textSize(fontSize);
+  
+  let xPos = - (chars.length - 1) * (charW + tracking) / 2;
+  
+  for (let i = 0; i < chars.length; i++) {
+    const charT = constrain((t - delay * 1000 - i * stagger) / 600, 0, 1);
+    const eased = easeFn(charT);
+    
+    let charY = 0;
+    let charAlpha = 255;
+    let charScale = 1;
+    let charRot = 0;
+    
+    if (spring) {
+      // Spring handles its own animation
+      charY = spring.value * (1 - eased);
+    } else if (wave) {
+      charY = Math.sin(eased * PI * waveFreq + i * 0.5) * waveAmp * (1 - eased);
+    } else {
+      charY = (1 - eased) * 60;
+    }
+    
+    charScale = 0.3 + 0.7 * eased;
+    charAlpha = eased * 255;
+    
+    push();
+    translate(xPos, charY);
+    scale(charScale);
+    rotate(charRot);
+    fill(red(color), green(color), blue(color), charAlpha / 2.55);
+    text(chars[i], 0, 0);
+    pop();
+    
+    xPos += charW + tracking;
+  }
+  pop();
+}
+
+function drawTypewriterText(str, x, y, t, options = {}) {
+  const { fontSize = 32, color = PALETTE.text, speed = 30, cursor = true } = options;
+  const charsToShow = floor(t * speed);
+  const displayStr = str.substring(0, min(charsToShow, str.length));
+  
+  push();
+  translate(x, y);
+  textAlign(LEFT, TOP);
+  textFont(fontMono);
+  textSize(fontSize);
+  fill(red(color), green(color), blue(color));
+  text(displayStr, 0, 0);
+  
+  if (cursor && charsToShow < str.length && floor(t * 1000 / 500) % 2 === 0) {
+    const cursorX = textWidth(displayStr);
+    text('|', cursorX, 0);
+  }
+  pop();
+  
+  return charsToShow >= str.length;
+}
+
+// === SCENE RENDERERS ===
+function renderScene0(t) { // 0-3s: Hook - "What if your chai earned you free chai?"
+  const progress = t;
+  
+  // Background gradient with subtle animation
+  drawBackground(progress);
+  
+  // Floating stamp particles in background
+  for (let p of stampParticles) {
+    if (p.life < p.maxLife * 0.3) p.draw();
+  }
+  
+  // Main headline
+  const headlineY = height * 0.28;
+  drawKineticText('What if your', width/2, headlineY - 60, progress * 3000, {
+    fontSize: 52, color: PALETTE.textDim, stagger: 60, delay: 0.1,
+    easeFn: Ease.outExpo
+  });
+  
+  drawKineticText('daily chai', width/2, headlineY + 10, progress * 3000, {
+    fontSize: 72, color: PALETTE.coral, stagger: 70, delay: 0.3,
+    easeFn: Ease.outElastic, wave: true, waveAmp: 8
+  });
+  
+  drawKineticText('earned you', width/2, headlineY + 90, progress * 3000, {
+    fontSize: 52, color: PALETTE.textDim, stagger: 60, delay: 0.5,
+    easeFn: Ease.outExpo
+  });
+  
+  drawKineticText('FREE chai?', width/2, headlineY + 160, progress * 3000, {
+    fontSize: 68, color: PALETTE.gold, stagger: 65, delay: 0.7,
+    easeFn: Ease.outBack
+  });
+  
+  // Subtext
+  if (progress > 0.7) {
+    const subT = constrain((progress - 0.7) / 0.3, 0, 1);
+    const alpha = Ease.outCubic(subT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(28);
+    fill(red(PALETTE.text), green(PALETTE.text), blue(PALETTE.text), alpha / 2.55);
+    text('StickTheBizz makes it real', width/2, height * 0.62);
+    pop();
+  }
+  
+  // CTA hint at bottom
+  if (progress > 0.85) {
+    const hintT = constrain((progress - 0.85) / 0.15, 0, 1);
+    const alpha = Ease.outCubic(hintT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontMono);
+    textSize(20);
+    fill(red(PALETTE.accent2), green(PALETTE.accent2), blue(PALETTE.accent2), alpha / 2.55);
+    text('▼ Scan the QR at any counter', width/2, height * 0.88);
+    pop();
+  }
+}
+
+function renderScene1(t) { // 3-7s: How it works - "1. Scan  2. Stamp  3. Reward"
+  const progress = t;
+  drawBackground(progress);
+  
+  // Section title
+  drawKineticText('How it works', width/2, height * 0.12, progress * 4000, {
+    fontSize: 56, color: PALETTE.text, stagger: 50, delay: 0,
+    easeFn: Ease.outExpo
+  });
+  
+  // Three step cards
+  const steps = [
+    { num: '01', icon: '📱', title: 'Scan QR', desc: 'Point camera at\ncounter stand', color: PALETTE.coral, delay: 0.1 },
+    { num: '02', icon: '✦', title: 'Get Stamp', desc: 'One tap =\n+1 visit saved', color: PALETTE.gold, delay: 0.35 },
+    { num: '03', icon: '🎁', title: 'Claim Reward', desc: 'Free item\nunlocks auto', color: PALETTE.success, delay: 0.6 },
+  ];
+  
+  const cardW = width * 0.78;
+  const cardH = 180;
+  const startY = height * 0.24;
+  const gap = 40;
+  
+  steps.forEach((step, i) => {
+    const cardY = startY + i * (cardH + gap);
+    const cardT = constrain((progress - step.delay) / 0.25, 0, 1);
+    const eased = Ease.outBack(cardT);
+    
+    if (cardT <= 0) return;
+    
+    const alpha = eased * 255;
+    const yOffset = (1 - eased) * 80;
+    
+    push();
+    translate(width/2 - cardW/2, cardY + yOffset);
+    
+    // Card background
+    fill(red(PALETTE.card), green(PALETTE.card), blue(PALETTE.card), alpha / 2.55);
+    stroke(red(PALETTE.border), green(PALETTE.border), blue(PALETTE.border), alpha / 2.55);
+    strokeWeight(1);
+    rect(0, 0, cardW, cardH, 24);
+    
+    // Accent bar left
+    noStroke();
+    fill(red(step.color), green(step.color), blue(step.color), alpha / 2.55);
+    rect(0, 0, 6, cardH, 24, 0, 0, 24);
+    
+    // Step number
+    textAlign(LEFT);
+    textFont(fontMono);
+    textSize(20);
+    fill(red(step.color), green(step.color), blue(step.color), alpha / 2.55);
+    text(step.num, 32, 28);
+    
+    // Icon
+    textFont(fontRegular);
+    textSize(48);
+    textAlign(CENTER);
+    fill(255, alpha / 2.55);
+    text(step.icon, cardW/2, 30);
+    
+    // Title
+    textFont(fontBold);
+    textSize(32);
+    fill(255, alpha / 2.55);
+    text(step.title, cardW/2, 95);
+    
+    // Description
+    textFont(fontRegular);
+    textSize(22);
+    fill(200, alpha / 2.55);
+    textAlign(CENTER);
+    const lines = step.desc.split('\n');
+    lines.forEach((line, li) => {
+      text(line, cardW/2, 135 + li * 28);
+    });
+    
+    pop();
+  });
+  
+  // Bottom tagline
+  if (progress > 0.8) {
+    const tagT = constrain((progress - 0.8) / 0.2, 0, 1);
+    const alpha = Ease.outCubic(tagT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(24);
+    fill(red(PALETTE.textDim), green(PALETTE.textDim), blue(PALETTE.textDim), alpha / 2.55);
+    text('Zero app download · Zero password · Zero hassle', width/2, height * 0.92);
+    pop();
+  }
+}
+
+function renderScene2(t) { // 7-12s: Merchant view - "For shop owners: Live queue, auto rewards"
+  const progress = t;
+  drawBackground(progress);
+  
+  // Phone frame mockup
+  const phoneW = width * 0.7;
+  const phoneH = phoneW * 1.9;
+  const phoneX = width/2 - phoneW/2;
+  const phoneY = height * 0.18;
+  
+  const phoneT = constrain(progress / 0.3, 0, 1);
+  const eased = Ease.outCubic(phoneT);
+  const currentPhoneY = phoneY + (1 - eased) * 100;
+  const phoneAlpha = eased * 255;
+  
+  // Phone shadow
+  push();
+  noStroke();
+  fill(0, 0, 0, phoneAlpha * 0.15 / 2.55);
+  rect(width/2 - phoneW/2 * 0.9, currentPhoneY + phoneH * 0.95, phoneW * 0.9, 30, 15);
+  pop();
+  
+  // Phone frame
+  push();
+  translate(phoneX, currentPhoneY);
+  scale(eased);
+  translate(-phoneX, -currentPhoneY);
+  
+  // Phone body
+  fill(20, 20, 30, phoneAlpha / 2.55);
+  stroke(60, 60, 80, phoneAlpha / 2.55);
+  strokeWeight(3);
+  rect(phoneX, phoneY, phoneW, phoneH, 48);
+  
+  // Screen area
+  const screenPadding = 12;
+  const screenX = phoneX + screenPadding;
+  const screenY = phoneY + screenPadding;
+  const screenW = phoneW - screenPadding * 2;
+  const screenH = phoneH - screenPadding * 2;
+  
+  fill(10, 10, 15, phoneAlpha / 2.55);
+  noStroke();
+  rect(screenX, screenY, screenW, screenH, 36);
+  
+  // Dashboard content
+  const contentX = screenX + 24;
+  const contentY = screenY + 30;
+  const contentW = screenW - 48;
+  
+  // Header
+  fill(PALETTE.coral, phoneAlpha / 2.55);
+  textFont(fontBold);
+  textSize(28);
+  textAlign(LEFT);
+  text('Counter Terminal', contentX, contentY);
+  
+  // Live badge
+  const pulse = Math.sin(frameCount * 0.15) * 0.5 + 0.5;
+  fill(PALETTE.success, phoneAlpha * pulse / 2.55);
+  textFont(fontMono);
+  textSize(16);
+  text('● LIVE', contentX + 220, contentY);
+  
+  // Queue items
+  const queue = [
+    { name: 'Rahul P.', visits: 7, target: 10, status: 'waiting' },
+    { name: 'Priya S.', visits: 9, target: 10, status: 'ready' },
+    { name: 'Amit K.', visits: 3, target: 10, status: 'waiting' },
+    { name: 'Sneha R.', visits: 10, target: 10, status: 'reward!' },
+  ];
+  
+  queue.forEach((item, i) => {
+    const itemY = contentY + 55 + i * 70;
+    const itemT = constrain((progress - 0.3 - i * 0.08) / 0.15, 0, 1);
+    const itemEased = Ease.outBack(itemT);
+    if (itemT <= 0) return;
+    
+    const itemAlpha = phoneAlpha * itemEased / 2.55;
+    
+    // Row background
+    fill(30, 30, 40, itemAlpha);
+    stroke(50, 50, 60, itemAlpha);
+    strokeWeight(1);
+    rect(contentX, itemY, contentW, 58, 16);
+    
+    // Progress bar
+    const progW = contentW * 0.6;
+    const progX = contentX + 20;
+    const progY = itemY + 38;
+    fill(40, 40, 50, itemAlpha);
+    rect(progX, progY, progW, 8, 4);
+    const fillW = progW * (item.visits / item.target);
+    fill(red(item.status === 'reward!' ? PALETTE.gold : PALETTE.coral), 
+         green(item.status === 'reward!' ? PALETTE.gold : PALETTE.coral), 
+         blue(item.status === 'reward!' ? PALETTE.gold : PALETTE.coral), itemAlpha);
+    rect(progX, progY, fillW, 8, 4);
+    
+    // Name
+    fill(255, itemAlpha);
+    textFont(fontBold);
+    textSize(22);
+    text(item.name, contentX + 20, itemY + 8);
+    
+    // Status
+    textFont(fontMono);
+    textSize(16);
+    const statusText = item.status === 'reward!' ? '🎁 REWARD READY' : 
+                       item.status === 'ready' ? '✦ 1 away' : `${item.visits}/${item.target}`;
+    fill(red(item.status === 'reward!' ? PALETTE.gold : PALETTE.textDim), 
+         green(item.status === 'reward!' ? PALETTE.gold : PALETTE.textDim), 
+         blue(item.status === 'reward!' ? PALETTE.gold : PALETTE.textDim), itemAlpha);
+    text(statusText, contentX + contentW - 160, itemY + 8);
+  });
+  
+  pop(); // phone scale
+  
+  // Caption
+  if (progress > 0.6) {
+    const capT = constrain((progress - 0.6) / 0.4, 0, 1);
+    const alpha = Ease.outCubic(capT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(28);
+    fill(red(PALETTE.text), green(PALETTE.text), blue(PALETTE.text), alpha / 2.55);
+    text('Merchant dashboard → Live queue · Auto rewards · Zero training', width/2, height * 0.9);
+    pop();
+  }
+}
+
+function renderScene3(t) { // 12-18s: Customer view - "Your digital stamp card"
+  const progress = t;
+  drawBackground(progress);
+  
+  // Stamp card animation
+  const cardW = width * 0.65;
+  const cardH = cardW * 1.3;
+  const cardX = width/2 - cardW/2;
+  const cardY = height * 0.15;
+  
+  const cardT = constrain(progress / 0.4, 0, 1);
+  const eased = Ease.outElastic(cardT);
+  
+  // Card background
+  push();
+  translate(cardX, cardY);
+  scale(eased);
+  translate(-cardX, -cardY);
+  
+  // Card shadow
+  noStroke();
+  fill(0, 0, 0, 0.2);
+  rect(cardX + 8, cardY + 8, cardW, cardH, 32);
+  
+  // Card base
+  const grad = drawingContext.createLinearGradient(cardX, cardY, cardX, cardY + cardH);
+  grad.addColorStop(0, '#1a1a2e');
+  grad.addColorStop(1, '#0f0f1a');
+  drawingContext.fillStyle = grad;
+  rect(cardX, cardY, cardW, cardH, 32);
+  
+  // Border
+  stroke(PALETTE.coral);
+  strokeWeight(2);
+  noFill();
+  rect(cardX, cardY, cardW, cardH, 32);
+  
+  // Top badge
+  fill(PALETTE.coral);
+  noStroke();
+  rect(cardX, cardY, cardW, 70, 32, 32, 0, 0);
+  fill(PALETTE.cream);
+  textFont(fontBold);
+  textSize(28);
+  textAlign(CENTER);
+  text('Kesar Chai Corner', cardX + cardW/2, cardY + 20);
+  textFont(fontRegular);
+  textSize(18);
+  text('Counter Streak Loyalty', cardX + cardW/2, cardY + 52);
+  
+  // Stamp grid
+  const visitsRequired = 10;
+  const visitsDone = min(floor(progress * 12), visitsRequired);
+  const stampSize = 48;
+  const stampGap = 16;
+  const gridCols = 5;
+  const gridStartX = cardX + (cardW - (gridCols * stampSize + (gridCols - 1) * stampGap)) / 2;
+  const gridStartY = cardY + 100;
+  
+  for (let i = 0; i < visitsRequired; i++) {
+    const col = i % gridCols;
+    const row = floor(i / gridCols);
+    const sx = gridStartX + col * (stampSize + stampGap);
+    const sy = gridStartY + row * (stampSize + stampGap);
+    
+    const stampT = constrain((progress - 0.2 - i * 0.04) / 0.12, 0, 1);
+    const stampEased = Ease.outBack(stampT);
+    if (stampT <= 0) continue;
+    
+    push();
+    translate(sx + stampSize/2, sy + stampSize/2);
+    scale(stampEased);
+    translate(-stampSize/2, -stampSize/2);
+    
+    if (i < visitsDone) {
+      // Filled stamp
+      fill(PALETTE.coral);
+      stroke(PALETTE.gold);
+      strokeWeight(2);
+      ellipse(stampSize/2, stampSize/2, stampSize * 0.85);
+      fill(PALETTE.gold);
+      noStroke();
+      textFont(fontBold);
+      textSize(28);
+      textAlign(CENTER, CENTER);
+      text('✦', stampSize/2, stampSize/2 + 2);
+    } else {
+      // Empty stamp
+      noFill();
+      stroke(60, 60, 80);
+      strokeWeight(2);
+      ellipse(stampSize/2, stampSize/2, stampSize * 0.85);
+      // Number
+      fill(80, 80, 100);
+      textFont(fontMono);
+      textSize(18);
+      textAlign(CENTER, CENTER);
+      text(i + 1, stampSize/2, stampSize/2 + 2);
+    }
+    pop();
+  }
+  
+  // Progress text
+  fill(PALETTE.cream);
+  textFont(fontBold);
+  textSize(32);
+  textAlign(CENTER);
+  text(`${visitsDone} of ${visitsRequired} stamps`, cardX + cardW/2, cardY + cardH - 100);
+  
+  // Reward preview
+  if (visitsDone >= visitsRequired) {
+    const rewardY = cardY + cardH - 70;
+    fill(PALETTE.gold);
+    rect(cardX + 20, rewardY, cardW - 40, 50, 12);
+    fill('#0a0a0f');
+    textFont(fontBold);
+    textSize(22);
+    text('🎁 Free Masala Chai unlocked!', cardX + cardW/2, rewardY + 16);
+    // Confetti burst
+    if (frameCount % 3 === 0 && confetti.length < 30) {
+      confetti.push(new ConfettiPiece(cardX + random(cardW), rewardY));
+    }
+  }
+  
+  pop(); // card scale
+  
+  // Caption
+  if (progress > 0.5) {
+    const capT = constrain((progress - 0.5) / 0.5, 0, 1);
+    const alpha = Ease.outCubic(capT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(26);
+    fill(red(PALETTE.text), green(PALETTE.text), blue(PALETTE.text), alpha / 2.55);
+    text('Your wallet. Every store. One tap.', width/2, height * 0.88);
+    pop();
+  }
+}
+
+function renderScene4(t) { // 18-24s: Trust signals - "10,000+ stamps · 500+ shops · DPDP compliant"
+  const progress = t;
+  drawBackground(progress);
+  
+  // Trust badges
+  const badges = [
+    { icon: '✦', num: '10,000+', label: 'Stamps punched', color: PALETTE.coral },
+    { icon: '🏪', num: '500+', label: 'Active counters', color: PALETTE.gold },
+    { icon: '🛡️', num: '100%', label: 'DPDP compliant', color: PALETTE.success },
+    { icon: '⚡', num: '< 1s', label: 'Scan to stamp', color: PALETTE.accent2 },
+  ];
+  
+  const badgeW = width * 0.4;
+  const badgeH = 140;
+  const cols = 2;
+  const rows = 2;
+  const gapX = 40;
+  const gapY = 30;
+  const startX = width/2 - (cols * badgeW + (cols - 1) * gapX) / 2;
+  const startY = height * 0.22;
+  
+  badges.forEach((badge, i) => {
+    const col = i % cols;
+    const row = floor(i / cols);
+    const bx = startX + col * (badgeW + gapX);
+    const by = startY + row * (badgeH + gapY);
+    
+    const badgeT = constrain((progress - i * 0.12) / 0.25, 0, 1);
+    const eased = Ease.outBack(badgeT);
+    if (badgeT <= 0) return;
+    
+    const alpha = eased * 255;
+    const yOffset = (1 - eased) * 60;
+    
+    push();
+    translate(bx, by + yOffset);
+    
+    // Badge background
+    fill(red(PALETTE.card), green(PALETTE.card), blue(PALETTE.card), alpha / 2.55);
+    stroke(red(PALETTE.border), green(PALETTE.border), blue(PALETTE.border), alpha / 2.55);
+    strokeWeight(1);
+    rect(0, 0, badgeW, badgeH, 24);
+    
+    // Top accent line
+    noStroke();
+    fill(red(badge.color), green(badge.color), blue(badge.color), alpha / 2.55);
+    rect(0, 0, badgeW, 4, 24, 24, 0, 0);
+    
+    // Icon
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(40);
+    text(badge.icon, badgeW/2, 40);
+    
+    // Number
+    textFont(fontBold);
+    textSize(42);
+    fill(255, alpha / 2.55);
+    text(badge.num, badgeW/2, 95);
+    
+    // Label
+    textFont(fontRegular);
+    textSize(20);
+    fill(red(PALETTE.textDim), green(PALETTE.textDim), blue(PALETTE.textDim), alpha / 2.55);
+    text(badge.label, badgeW/2, 125);
+    
+    pop();
+  });
+  
+  // Security icons row
+  if (progress > 0.7) {
+    const secT = constrain((progress - 0.7) / 0.3, 0, 1);
+    const alpha = Ease.outCubic(secT) * 255;
+    
+    const secItems = [
+      '🔒 End-to-end encrypted',
+      '🚫 No passwords ever',
+      '🗑️ Delete data anytime',
+      '🇮🇳 Made in India',
+    ];
+    
+    secItems.forEach((item, i) => {
+      const itemY = height * 0.68 + i * 45;
+      const itemT = constrain(secT - i * 0.08, 0, 1);
+      const itemEased = Ease.outCubic(itemT);
+      if (itemT <= 0) return;
+      
+      push();
+      textAlign(CENTER);
+      textFont(fontRegular);
+      textSize(22);
+      fill(red(PALETTE.text), green(PALETTE.text), blue(PALETTE.text), alpha * itemEased / 2.55);
+      text(item, width/2, itemY);
+      pop();
+    });
+  }
+}
+
+function renderScene5(t) { // 24-30s: CTA - "Scan now. Sip free. StickTheBizz."
+  const progress = t;
+  drawBackground(progress);
+  
+  // Large QR code animation
+  const qrSize = width * 0.55;
+  const qrX = width/2 - qrSize/2;
+  const qrY = height * 0.18;
+  
+  const qrT = constrain(progress / 0.3, 0, 1);
+  const qrEased = Ease.outElastic(qrT);
+  
+  push();
+  translate(width/2, qrY + qrSize/2);
+  scale(qrEased);
+  translate(-width/2, -qrY - qrSize/2);
+  
+  // QR background
+  fill(PALETTE.cream);
+  rect(qrX, qrY, qrSize, qrSize, 24);
+  
+  // QR pattern (simplified animated)
+  const modules = 25;
+  const moduleSize = qrSize / modules;
+  for (let x = 0; x < modules; x++) {
+    for (let y = 0; y < modules; y++) {
+      // Deterministic but animated pattern
+      const n = noise(x * 0.3, y * 0.3, progress * 0.5);
+      const isDark = n > 0.55;
+      // Finder patterns
+      const inFinder = (x < 7 && y < 7) || (x > 17 && y < 7) || (x < 7 && y > 17);
+      const inFinderInner = (x > 1 && x < 6 && y > 1 && y < 6) || 
+                            (x > 18 && x < 24 && y > 1 && y < 6) || 
+                            (x > 1 && x < 6 && y > 18 && y < 24);
+      
+      if (inFinder) {
+        fill(isDark || inFinderInner ? PALETTE.navy : PALETTE.cream);
+      } else if (x === 8 || y === 8) {
+        // Timing patterns
+        fill((x + y) % 2 === 0 ? PALETTE.navy : PALETTE.cream);
+      } else {
+        fill(isDark ? PALETTE.navy : PALETTE.cream);
+      }
+      noStroke();
+      rect(qrX + x * moduleSize, qrY + y * moduleSize, moduleSize, moduleSize);
+    }
+  }
+  
+  // Center logo area
+  const logoSize = qrSize * 0.22;
+  const logoX = qrX + qrSize/2 - logoSize/2;
+  const logoY = qrY + qrSize/2 - logoSize/2;
+  fill(PALETTE.coral);
+  rect(logoX, logoY, logoSize, logoSize, 8);
+  fill(PALETTE.cream);
+  textFont(fontBold);
+  textSize(logoSize * 0.5);
+  textAlign(CENTER, CENTER);
+  text('STB', logoX + logoSize/2, logoY + logoSize/2 + 4);
+  
+  pop();
+  
+  // Scan instruction
+  if (progress > 0.35) {
+    const instT = constrain((progress - 0.35) / 0.25, 0, 1);
+    const alpha = Ease.outCubic(instT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontRegular);
+    textSize(24);
+    fill(red(PALETTE.textDim), green(PALETTE.textDim), blue(PALETTE.textDim), alpha / 2.55);
+    text('Open camera → Scan → Tap "Punch Stamp"', width/2, qrY + qrSize + 50);
+    pop();
+  }
+  
+  // Final tagline - BIG kinetic text
+  if (progress > 0.5) {
+    const tagT = constrain((progress - 0.5) / 0.5, 0, 1);
+    const eased = Ease.outExpo(tagT);
+    
+    drawKineticText('Scan now.', width/2, height * 0.68, progress * 5000, {
+      fontSize: 56, color: PALETTE.text, stagger: 50, delay: 0,
+      easeFn: Ease.outExpo
+    });
+    
+    drawKineticText('Sip free.', width/2, height * 0.76, progress * 5000, {
+      fontSize: 56, color: PALETTE.coral, stagger: 50, delay: 0.2,
+      easeFn: Ease.outElastic, wave: true, waveAmp: 10
+    });
+    
+    drawKineticText('StickTheBizz.', width/2, height * 0.84, progress * 5000, {
+      fontSize: 48, color: PALETTE.gold, stagger: 45, delay: 0.4,
+      easeFn: Ease.outBack
+    });
+  }
+  
+  // Bottom handles
+  if (progress > 0.8) {
+    const handleT = constrain((progress - 0.8) / 0.2, 0, 1);
+    const alpha = Ease.outCubic(handleT) * 255;
+    push();
+    textAlign(CENTER);
+    textFont(fontMono);
+    textSize(20);
+    fill(red(PALETTE.textDim), green(PALETTE.textDim), blue(PALETTE.textDim), alpha / 2.55);
+    text('@stickthebizz  •  stickthebizz.in', width/2, height * 0.95);
+    pop();
+  }
+  
+  // Confetti celebration at end
+  if (progress > 0.9 && confetti.length < 50) {
+    for (let i = 0; i < 3; i++) {
+      confetti.push(new ConfettiPiece(random(width), random(height * 0.3)));
+    }
+  }
+}
+
+// === BACKGROUND ===
+function drawBackground(sceneProgress) {
+  // Base gradient
+  const grad = drawingContext.createLinearGradient(0, 0, 0, height);
+  grad.addColorStop(0, PALETTE.gradStart);
+  grad.addColorStop(0.5, PALETTE.gradMid);
+  grad.addColorStop(1, PALETTE.gradEnd);
+  drawingContext.fillStyle = grad;
+  rect(0, 0, width, height);
+  
+  // Noise texture
+  if (frameCount % 2 === 0) { // Update every 2 frames for performance
+    loadPixels();
+    for (let y = 0; y < height; y += 2) {
+      for (let x = 0; x < width; x += 2) {
+        const n = noise(x * 0.01, y * 0.01, noiseOffset) - 0.5;
+        const idx = 4 * (y * width + x);
+        if (idx + 3 < pixels.length) {
+          const factor = 1 + n * 0.02;
+          pixels[idx] = constrain(pixels[idx] * factor, 0, 255);
+          pixels[idx+1] = constrain(pixels[idx+1] * factor, 0, 255);
+          pixels[idx+2] = constrain(pixels[idx+2] * factor, 0, 255);
+        }
+      }
+    }
+    updatePixels();
+  }
+  
+  // Vignette
+  loadPixels();
+  const cx = width/2, cy = height/2;
+  const maxDist = dist(0, 0, cx, cy);
+  for (let i = 0; i < pixels.length; i += 4) {
+    const x = (i/4) % width;
+    const y = floor((i/4) / width);
+    const d = dist(x, y, cx, cy) / maxDist;
+    const factor = 1 - Ease.smoothstep(constrain((d - 0.5) / 0.5, 0, 1)) * 0.35;
+    pixels[i] *= factor;
+    pixels[i+1] *= factor;
+    pixels[i+2] *= factor;
+  }
+  updatePixels();
+  
+  // Ambient particles
+  for (let p of particles) {
+    p.update();
+    p.draw();
+  }
+  
+  // Stamp particles (background)
+  for (let i = stampParticles.length - 1; i >= 0; i--) {
+    const p = stampParticles[i];
+    p.update();
+    p.draw();
+    if (p.isDead()) stampParticles.splice(i, 1);
+  }
+  
+  // Confetti
+  for (let i = confetti.length - 1; i >= 0; i--) {
+    const c = confetti[i];
+    c.update();
+    c.draw();
+    if (c.isDead()) confetti.splice(i, 1);
+  }
+  
+  noiseOffset += 0.0005;
+}
+
+// === P5.JS CORE ===
+function preload() {
+  // Fonts loaded via Google Fonts in HTML
+  fontBold = 'Space Grotesk';
+  fontMono = 'JetBrains Mono';
+  fontRegular = 'Space Grotesk';
+}
+
+function setup() {
+  createCanvas(CONFIG.width, CONFIG.height);
+  pixelDensity(1); // Critical for performance on export
+  colorMode(HSB, 360, 100, 100, 100);
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+  frameRate(CONFIG.fps);
+  
+  // Initialize ambient particles
+  for (let i = 0; i < 80; i++) {
+    particles.push(new AmbientParticle());
+  }
+  
+  // Initialize timeline (30 seconds = 30000ms)
+  timeline = new Timeline();
+  timeline
+    .at(0, 3000, renderScene0)      // 0-3s
+    .at(3000, 4000, renderScene1)   // 3-7s
+    .at(7000, 5000, renderScene2)   // 7-12s
+    .at(12000, 6000, renderScene3)  // 12-18s
+    .at(18000, 6000, renderScene4)  // 18-24s
+    .at(24000, 6000, renderScene5); // 24-30s
+}
+
+function draw() {
+  const currentMs = CONFIG.playing ? (frameCount - playStartFrame) * (1000 / CONFIG.fps) : 0;
+  
+  // Update timeline
+  timeline.update(currentMs);
+  
+  // Update UI
+  updateUI(currentMs);
+  
+  // Handle recording
+  if (CONFIG.recording) {
+    if (CONFIG.currentFrame < CONFIG.totalFrames) {
+      saveCanvas(`frame-${nf(CONFIG.currentFrame, 4)}`, 'png');
+      CONFIG.currentFrame++;
+      // Advance frame manually for recording
+      frameCount = CONFIG.currentFrame;
+    } else {
+      stopRecording();
+    }
+  }
+  
+  frameCount++;
+}
+
+function updateUI(currentMs) {
+  // Progress bar
+  const progress = currentMs / (CONFIG.duration * 1000);
+  const progressEl = document.getElementById('progress');
+  if (progressEl) progressEl.style.transform = `scaleX(${constrain(progress, 0, 1)})`;
+  
+  // Timecode
+  const timecodeEl = document.getElementById('timecode');
+  if (timecodeEl) {
+    const currSec = floor(currentMs / 1000);
+    const currMs = floor((currentMs % 1000) / 10);
+    const totalSec = CONFIG.duration;
+    timecodeEl.textContent = `${nf(currSec,2)}:${nf(currMs,2)} / ${nf(totalSec,2)}:00`;
+  }
+  
+  // Button states
+  const playBtn = document.getElementById('btnPlay');
+  const recBtn = document.getElementById('btnRecord');
+  if (playBtn) {
+    playBtn.textContent = CONFIG.playing ? '⏸ Pause' : '▶ Play';
+  }
+  if (recBtn) {
+    recBtn.textContent = CONFIG.recording ? `⏺ Recording ${CONFIG.currentFrame}/${CONFIG.totalFrames}` : '⏺ Record Frames';
+    recBtn.classList.toggle('recording', CONFIG.recording);
+  }
+}
+
+// === CONTROLS ===
+function togglePlay() {
+  CONFIG.playing = !CONFIG.playing;
+  if (CONFIG.playing) {
+    playStartFrame = frameCount;
+  }
+}
+
+function toggleRecord() {
+  if (CONFIG.recording) {
+    stopRecording();
+  } else {
+    startRecording();
+  }
+}
+
+function startRecording() {
+  CONFIG.recording = true;
+  CONFIG.currentFrame = 0;
+  CONFIG.playing = true;
+  playStartFrame = 0;
+  frameCount = 0;
+  // Reset all particle systems
+  particles.forEach(p => p.reset());
+  stampParticles.length = 0;
+  confetti.length = 0;
+  noiseOffset = 0;
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+}
+
+function stopRecording() {
+  CONFIG.recording = false;
+  CONFIG.playing = false;
+  alert(`Recorded ${CONFIG.currentFrame} frames. Use ffmpeg to stitch:\nffmpeg -framerate 30 -i frame-%04d.png -c:v libx264 -pix_fmt yuv420p reel.mp4`);
+}
+
+function resetSketch() {
+  CONFIG.playing = false;
+  CONFIG.recording = false;
+  CONFIG.currentFrame = 0;
+  frameCount = 0;
+  particles.forEach(p => p.reset());
+  stampParticles.length = 0;
+  confetti.length = 0;
+  noiseOffset = 0;
+  randomSeed(CONFIG.seed);
+  noiseSeed(CONFIG.seed);
+  playStartFrame = 0;
+}
+
+function saveCurrentFrame() {
+  saveCanvas(`stickthebizz-reel-${nf(frameCount,4)}`, 'png');
+}
+
+// === INTERACTION TRIGGERS (for demo) ===
+function mousePressed() {
+  // Spawn stamp particles on click
+  for (let i = 0; i < 12; i++) {
+    stampParticles.push(new StampParticle(mouseX, mouseY, random() > 0.5));
+  }
+}
+
+function keyPressed() {
+  if (key === ' ') togglePlay();
+  if (key === 'r' || key === 'R') toggleRecord();
+  if (key === 's' || key === 'S') saveCurrentFrame();
+  if (key === 'x' || key === 'X') resetSketch();
+  if (key >= '0' && key <= '5') {
+    // Jump to scene
+    const sceneStarts = [0, 3000, 7000, 12000, 18000, 24000];
+    const sceneIdx = parseInt(key);
+    frameCount = floor(sceneStarts[sceneIdx] / (1000/CONFIG.fps));
+    playStartFrame = frameCount;
+    CONFIG.playing = true;
+  }
+}
+</script>
+</body>
+</html>
