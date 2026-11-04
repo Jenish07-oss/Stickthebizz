@@ -1,0 +1,10 @@
+# StickTheBizz Engineering & Architecture Guidelines
+
+## Core Performance Mandates
+1. Public Customer Routes: Always use ISR (`export const revalidate = 300`). Never call `cookies()` or `headers()` in public server components.
+2. Dynamic Imports: Always lazy-load heavy components (`next/dynamic` with `ssr: false`) for `CameraQRScanner`, `ConfettiEffect`, `StampGrid`, `RewardTicket`, `CounterQR`, and modals.
+3. Dashboard Loading: Never let any loader spin indefinitely. Always implement a 4s timeout safeguard and render setup forms immediately when `needsSetup: true`.
+4. Zero Paid Services: 100% Free Bharat Stack only (Vercel Free, Supabase Free, Resend Free SMTP at support@stickthebizz.in). Never add paid SMS/WhatsApp gateways.
+5. GPU Lag Prevention: Avoid `backdrop-blur-*` on mobile overlays; use solid translucent backgrounds (`bg-black/75`).
+6. Anti-Fraud: Enforce 1-stamp-per-day IST midnight reset (`UTC + 5:30`). No hardcoded PINs ("8492").
+7. PWA / Service Worker: Static assets cached via `next-pwa` for instant repeat visits.

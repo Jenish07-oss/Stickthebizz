@@ -1,10 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createPublicClient } from "@supabase/supabase-js";
 import CustomerView from "@/components/CustomerView";
 import Link from "next/link";
 import { Store, ArrowLeft } from "lucide-react";
-import { getCustomerMerchantStatus } from "@/app/actions/scan";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 300; // 5 min cache for known shops
 
 interface Props {
   params: {
@@ -12,8 +11,25 @@ interface Props {
   };
 }
 
+export async function generateStaticParams() {
+  const supabase = createPublicClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const { data: merchants } = await supabase
+    .from("merchants")
+    .select("slug")
+    .limit(50);
+
+  return (merchants || []).map((m) => ({ slug: m.slug }));
+}
+
 export default async function ShopSlugPage({ params }: Props) {
-  const supabase = await createClient();
+  const supabase = createPublicClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // 1. Resolve merchant dynamically from DB (zero hardcoded seeds)
   const { data: merchant } = await supabase
@@ -55,75 +71,6 @@ export default async function ShopSlugPage({ params }: Props) {
     );
   }
 
-  // 2. Auto-Login: Detect customer from server session cookies
-  const { data: { user } } = await supabase.auth.getUser();
-  let initialCustomer: { id?: string; phone: string; fullName?: string | null; email?: string | null } | null = null;
-  let initialStatus: { visitsCount: number; isLockedToday: boolean } | null = null;
-
-  if (user) {
-    const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
-    const userEmail = (user.email || "").trim().toLowerCase();
-
-    let customerRow = null;
-
-    if (userPhone && userEmail) {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, phone, full_name, email")
-        .or(`email.eq.${userEmail},phone.eq.${userPhone}`)
-        .maybeSingle();
-      customerRow = data;
-    } else if (userPhone) {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, phone, full_name, email")
-        .eq("phone", userPhone)
-        .maybeSingle();
-      customerRow = data;
-    } else if (userEmail) {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, phone, full_name, email")
-        .eq("email", userEmail)
-        .maybeSingle();
-      customerRow = data;
-    }
-
-    if (!customerRow && user?.id) {
-      const { data } = await supabase
-        .from("customers")
-        .select("id, phone, full_name, email")
-        .eq("auth_id", user.id)
-        .maybeSingle();
-      customerRow = data;
-    }
-
-    if (customerRow) {
-      initialCustomer = {
-        id: customerRow.id,
-        phone: customerRow.phone,
-        fullName: customerRow.full_name,
-        email: customerRow.email,
-      };
-    } else if (userPhone) {
-      initialCustomer = {
-        phone: userPhone,
-        fullName: user.user_metadata?.full_name || null,
-        email: userEmail,
-      };
-    }
-
-    if (initialCustomer?.phone && merchant) {
-      const status = await getCustomerMerchantStatus(merchant.id, initialCustomer.phone);
-      if (status) {
-        initialStatus = {
-          visitsCount: status.visitsCount || 0,
-          isLockedToday: status.isLockedToday || false,
-        };
-      }
-    }
-  }
-
   return (
     <CustomerView
       initialMerchant={{
@@ -135,8 +82,8 @@ export default async function ShopSlugPage({ params }: Props) {
         rewardName: merchant.reward_name,
         validityDays: merchant.validity_days || 30,
       }}
-      initialCustomer={initialCustomer}
-      initialStatus={initialStatus}
+      initialCustomer={null}
+      initialStatus={null}
     />
   );
 }

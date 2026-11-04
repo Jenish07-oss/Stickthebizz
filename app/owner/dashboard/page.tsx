@@ -15,6 +15,9 @@ const CounterQR = dynamic(() => import("@/components/CounterQR"), {
 const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
   ssr: false,
 });
+const LiveActivityToast = dynamic(() => import("@/components/LiveActivityToast"), {
+  ssr: false,
+});
 import { createClient } from "@/lib/supabase/client";
 import {
   approveVisit,
@@ -155,10 +158,25 @@ export default function OwnerDashboardPage() {
           const res = await getOwnerMerchant();
           if (res?.user) activeUser = res.user;
           if (res?.merchant) m = res.merchant;
+          if (res?.needsSetup) {
+            if (mounted) {
+              setMerchant(null);
+              setLoading(false);
+            }
+            return;
+          }
         }
 
         if (!activeUser) {
           if (mounted) router.replace("/auth/owner/login");
+          return;
+        }
+
+        if (!m) {
+          if (mounted) {
+            setMerchant(null);
+            setLoading(false);
+          }
           return;
         }
 

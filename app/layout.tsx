@@ -28,6 +28,7 @@ export const metadata: Metadata = {
   title: "StickTheBizz — Turn Walk-ins into Daily Regulars",
   description:
     "Gamified digital punch-card and streak loyalty SaaS tailored for Indian retail, cafés, and kirana stores. Zero app downloads.",
+  manifest: "/manifest.json",
   icons: {
     icon: [
       { url: "/icon.svg", type: "image/svg+xml" },
@@ -53,6 +54,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${plusJakarta.variable} ${ibmPlexMono.variable}`}>
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://xzvpjprnexurgohfnimq.supabase.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://xzvpjprnexurgohfnimq.supabase.co" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -66,4 +68,3 @@ export default function RootLayout({
     </html>
   );
 }
-

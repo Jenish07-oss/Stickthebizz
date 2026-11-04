@@ -164,7 +164,7 @@ export async function getOwnerMerchant() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return { user: null, merchant: null };
+      return { user: null, merchant: null, needsSetup: false };
     }
 
     const { data: merchantList } = await supabase
@@ -212,9 +212,9 @@ export async function getOwnerMerchant() {
       }
     }
 
-    return { user, merchant };
+    return { user, merchant, needsSetup: !merchant && !!user };
   } catch (err: any) {
-    return { user: null, merchant: null, error: sanitizeError(err) };
+    return { user: null, merchant: null, needsSetup: false, error: sanitizeError(err) };
   }
 }
 

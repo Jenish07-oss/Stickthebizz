@@ -41,6 +41,18 @@ import dynamic from "next/dynamic";
 const CameraQRScanner = dynamic(() => import("@/components/CameraQRScanner"), {
   ssr: false,
 });
+const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
+  ssr: false,
+});
+const StampGrid = dynamic(() => import("@/components/StampGrid"), {
+  ssr: false,
+});
+const RewardTicket = dynamic(() => import("@/components/RewardTicket"), {
+  ssr: false,
+});
+const PhoneFrame = dynamic(() => import("@/components/PhoneFrame"), {
+  ssr: false,
+});
 
 export default function CustomerDashboardPage() {
   const router = useRouter();

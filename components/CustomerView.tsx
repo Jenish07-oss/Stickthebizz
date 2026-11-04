@@ -5,7 +5,9 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import dynamic from "next/dynamic";
-import StampGrid from "@/components/StampGrid";
+const StampGrid = dynamic(() => import("@/components/StampGrid"), {
+  ssr: false,
+});
 
 const RewardTicket = dynamic(() => import("@/components/RewardTicket"), {
   ssr: false,
@@ -152,6 +154,37 @@ export default function CustomerView({
           const savedName = localStorage.getItem("stb_customer_name") || "";
           if (savedPhone) {
             setCustomer({ phone: savedPhone, fullName: savedName });
+          }
+        }
+
+        if (!savedPhone) {
+          try {
+            const { createClient } = await import("@/lib/supabase/client");
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+              const userEmail = (user.email || "").trim().toLowerCase();
+              let cRow = null;
+              if (userPhone) {
+                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("phone", userPhone).maybeSingle();
+                cRow = data;
+              }
+              if (!cRow && userEmail) {
+                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("email", userEmail).maybeSingle();
+                cRow = data;
+              }
+              if (!cRow && user.id) {
+                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("auth_id", user.id).maybeSingle();
+                cRow = data;
+              }
+              if (cRow?.phone) {
+                savedPhone = cRow.phone;
+                setCustomer({ id: cRow.id, phone: cRow.phone, fullName: cRow.full_name });
+              }
+            }
+          } catch (e) {
+            // silent client session check
           }
         }
 
