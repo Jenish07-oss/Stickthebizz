@@ -287,3 +287,20 @@ SET name = EXCLUDED.name,
     reward_name = EXCLUDED.reward_name,
     validity_days = EXCLUDED.validity_days,
     redemption_pin = EXCLUDED.redemption_pin;
+
+-- ==========================================
+-- 9. AUTO-CONFIRM ALL USERS INSTANTLY
+-- Ensures every new customer & merchant signup is immediately active with NO email confirmation delay
+-- ==========================================
+CREATE OR REPLACE FUNCTION public.auto_confirm_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.email_confirmed_at = COALESCE(NEW.email_confirmed_at, NOW());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  BEFORE INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.auto_confirm_user();

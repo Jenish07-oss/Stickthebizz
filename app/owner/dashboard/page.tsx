@@ -117,15 +117,39 @@ export default function OwnerDashboardPage() {
     }
   };
 
-  // 1. Initial Load of Merchant and Historical Ledger
+  // 1. Initial Load of Merchant and Historical Ledger (Direct client-first + server fallback)
   useEffect(() => {
     async function init() {
       try {
-        const { user, merchant: m } = await getOwnerMerchant();
-        if (!user) {
+        // Direct browser session check
+        const { data: { user: clientUser } } = await supabase.auth.getUser();
+
+        let activeUser = clientUser;
+        let m: any = null;
+
+        if (activeUser) {
+          // Direct client query to merchants table
+          const { data: merchantData } = await supabase
+            .from("merchants")
+            .select("*")
+            .eq("owner_id", activeUser.id)
+            .maybeSingle();
+
+          m = merchantData;
+        }
+
+        // Server action fallback
+        if (!m) {
+          const res = await getOwnerMerchant();
+          if (res.user) activeUser = res.user;
+          if (res.merchant) m = res.merchant;
+        }
+
+        if (!activeUser) {
           router.replace("/auth/owner/login");
           return;
         }
+
         if (m) {
           setMerchant(m);
           setShopNameInput(m.name);
@@ -414,34 +438,65 @@ export default function OwnerDashboardPage() {
 
       <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
-          {/* Top Title Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/80 pb-6">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 font-mono text-xs font-bold text-secondary">
-                <Store className="h-3.5 w-3.5 text-primary" />
-                SHOP OWNER CASHIER TERMINAL
+          {/* Top Title Banner & Profile Card */}
+          <div className="rounded-3xl bg-white p-6 sm:p-8 border border-border shadow-card mb-8">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-border/80">
+              <div>
+                <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-1 font-mono text-xs font-bold text-secondary">
+                  <Store className="h-3.5 w-3.5 text-primary" />
+                  MERCHANT COUNTER DESK
+                </div>
+                <h1 className="mt-2 font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-secondary">
+                  {merchant?.name || "My Counter"}
+                </h1>
+                <p className="mt-1 text-xs sm:text-sm text-ink/75">
+                  Category: <strong className="text-secondary">{merchant?.category || "Retail"}</strong> • Counter Pass:{" "}
+                  <a
+                    href={scanUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-mono font-bold text-primary underline"
+                  >
+                    stickthebizz.in/s/{merchant?.slug}
+                  </a>
+                </p>
               </div>
-              <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight text-secondary sm:text-4xl">
-                {merchant?.name || "Kesar Chai Corner"}
-              </h1>
-              <p className="mt-1 text-xs sm:text-sm text-ink/75">
-                Live counter queue, custom streak rule studio &amp; acrylic standee artwork.
-              </p>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-200 shadow-xs">
+                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Terminal Online
+                </span>
+
+                <button
+                  type="button"
+                  onClick={handleSignOut}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border bg-sand/40 px-4 py-2 text-xs font-bold text-ink/75 hover:text-secondary hover:bg-sand shadow-sm"
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span>Log Out</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-success shadow-sm border border-border">
-                <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
-                Terminal Online &amp; Listening
-              </span>
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-3.5 py-2 text-xs font-bold text-ink/65 hover:text-secondary shadow-sm"
-              >
-                <LogOut className="h-3.5 w-3.5" />
-                <span>Log Out</span>
-              </button>
+            {/* Quick Profile & Counter Stats Strip */}
+            <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+              <div className="rounded-2xl bg-sand/30 p-3.5 border border-border/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-ink/50">Store PIN</span>
+                <p className="mt-0.5 font-mono text-base font-extrabold text-secondary">{merchant?.redemption_pin || "••••"}</p>
+              </div>
+              <div className="rounded-2xl bg-sand/30 p-3.5 border border-border/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-ink/50">Minimum Bill</span>
+                <p className="mt-0.5 font-mono text-base font-extrabold text-secondary">₹{merchant?.min_spend || 100}</p>
+              </div>
+              <div className="rounded-2xl bg-sand/30 p-3.5 border border-border/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-ink/50">Streak Reward</span>
+                <p className="mt-0.5 font-display text-sm font-extrabold text-secondary truncate">{merchant?.reward_name || "Special Item"}</p>
+              </div>
+              <div className="rounded-2xl bg-sand/30 p-3.5 border border-border/50">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-ink/50">Visits Required</span>
+                <p className="mt-0.5 font-mono text-base font-extrabold text-secondary">{merchant?.visits_required || 10} Visits</p>
+              </div>
             </div>
           </div>
 

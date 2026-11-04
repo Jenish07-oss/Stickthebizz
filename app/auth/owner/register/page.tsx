@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, Store, User, Phone, Mail, Lock, ArrowRight, ShieldCheck } from "lucide-react";
+import { Sparkles, Store, User, Phone, Mail, Lock, ArrowRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { registerMerchantAction } from "@/app/actions/merchant";
 
@@ -26,6 +26,7 @@ export default function OwnerRegisterPage() {
   const [mobile, setMobile] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -134,9 +135,9 @@ export default function OwnerRegisterPage() {
         }
       }
 
-      // 5. Check if Supabase project requires email confirmation
+      // 5. Account created verification
       if (authData?.user && !authData.session && (!signInData || !signInData.session)) {
-        setErrorMessage("Account created! If email confirmation is enabled in your Supabase project, please check your inbox to confirm before logging in.");
+        setErrorMessage("Account created successfully! Please click below to log in to your counter.");
         setIsSubmitting(false);
         return;
       }
@@ -188,7 +189,16 @@ export default function OwnerRegisterPage() {
 
         {errorMessage && (
           <div className="mt-4 rounded-xl bg-primary/10 border border-primary/20 p-3 text-xs font-bold text-primary text-center">
-            {errorMessage}
+            <p>{errorMessage}</p>
+            {errorMessage.includes("successfully") && (
+              <Link
+                href="/auth/owner/login"
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-primary/90"
+              >
+                <span>Login to Counter</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            )}
           </div>
         )}
 
@@ -292,7 +302,7 @@ export default function OwnerRegisterPage() {
             </div>
           </div>
 
-          {/* Password (min 8 characters) */}
+          {/* Password (min 8 characters) with See Password toggle */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
               Password (Min. 8 Characters)
@@ -302,14 +312,22 @@ export default function OwnerRegisterPage() {
                 <Lock className="h-4 w-4" />
               </span>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-4 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full rounded-xl border border-border bg-white py-3 pl-10 pr-11 font-mono text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-ink/40 hover:text-secondary focus:outline-none select-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
