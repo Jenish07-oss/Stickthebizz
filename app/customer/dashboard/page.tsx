@@ -37,7 +37,11 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import CameraQRScanner from "@/components/CameraQRScanner";
+import dynamic from "next/dynamic";
+
+const CameraQRScanner = dynamic(() => import("@/components/CameraQRScanner"), {
+  ssr: false,
+});
 
 export default function CustomerDashboardPage() {
   const router = useRouter();
@@ -429,7 +433,7 @@ export default function CustomerDashboardPage() {
 
           {/* Delete Confirmation Modal */}
           {deleteModalOpen && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
               <div className="w-full max-w-md rounded-[2rem] border border-border bg-white p-6 sm:p-8 shadow-2xl">
                 <div className="flex items-center gap-3 text-red-600">
                   <div className="grid h-10 w-10 place-items-center rounded-full bg-red-100">

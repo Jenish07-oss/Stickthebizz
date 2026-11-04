@@ -5,7 +5,11 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
-import ConfettiEffect from "@/components/ConfettiEffect";
+import dynamic from "next/dynamic";
+
+const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
+  ssr: false,
+});
 import AnimatedHero from "@/components/AnimatedHero";
 import { CategoryPreset } from "@/context/StoreContext";
 import {
@@ -735,7 +739,7 @@ export default function HomePage() {
 
         {/* INTERACTIVE ROI CALCULATOR WITH ANALYTICS ICON */}
         <section className="px-4 py-20 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-5xl rounded-[2.5rem] border border-white/40 bg-white/60 backdrop-blur-md p-8 shadow-card sm:p-12">
+          <div className="mx-auto max-w-5xl rounded-[2.5rem] border border-border bg-white p-8 shadow-card sm:p-12">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-border/60 pb-8">
               <div>
                 <div className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-xs font-bold text-primary">

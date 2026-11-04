@@ -4,8 +4,17 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import CounterQR from "@/components/CounterQR";
-import ConfettiEffect from "@/components/ConfettiEffect";
+import dynamic from "next/dynamic";
+
+const CounterQR = dynamic(() => import("@/components/CounterQR"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-96 w-full max-w-[330px] rounded-3xl bg-sand/40 animate-pulse border border-border" />
+  ),
+});
+const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
+  ssr: false,
+});
 import { createClient } from "@/lib/supabase/client";
 import {
   approveVisit,

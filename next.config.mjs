@@ -2,8 +2,10 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  compress: true,
 
   experimental: {
+    optimizePackageImports: ['lucide-react', 'qrcode.react'],
     serverActions: {
       allowedOrigins: ['localhost:3000', 'stickthebizz.in', 'stickthebizz.vercel.app', '*.vercel.app'],
     },

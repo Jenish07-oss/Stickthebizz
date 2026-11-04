@@ -91,7 +91,7 @@ export default function CounterQR({
         {/* Glossy Acrylic Standee Body */}
         <div
           ref={qrRef}
-          className="relative w-full max-w-[330px] rounded-t-3xl border-4 border-b-0 border-white/80 bg-gradient-to-b from-white via-white to-white/95 p-6 text-center shadow-[0_20px_50px_rgba(49,91,140,0.18)] backdrop-blur-md"
+          className="relative w-full max-w-[330px] rounded-t-3xl border-4 border-b-0 border-white/80 bg-gradient-to-b from-white via-white to-white/95 p-6 text-center shadow-[0_20px_50px_rgba(49,91,140,0.18)] "
         >
           {/* Acrylic Gloss Reflection Highlight */}
           <div className="pointer-events-none absolute -left-12 -top-12 h-36 w-72 -rotate-45 bg-gradient-to-r from-transparent via-white/40 to-transparent" />

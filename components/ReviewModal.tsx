@@ -32,7 +32,7 @@ export default function ReviewModal({ isOpen, onClose }: ReviewModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/60 p-4 ">
       <div className="relative w-full max-w-md rounded-3xl border border-border bg-white p-6 shadow-float">
         {/* Close Button */}
         <button

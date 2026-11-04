@@ -4,10 +4,18 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import dynamic from "next/dynamic";
 import StampGrid from "@/components/StampGrid";
-import RewardTicket from "@/components/RewardTicket";
-import ReviewModal from "@/components/ReviewModal";
-import ConfettiEffect from "@/components/ConfettiEffect";
+
+const RewardTicket = dynamic(() => import("@/components/RewardTicket"), {
+  ssr: false,
+});
+const ReviewModal = dynamic(() => import("@/components/ReviewModal"), {
+  ssr: false,
+});
+const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
+  ssr: false,
+});
 import { submitScan as submitScanAction, getCustomerMerchantStatus } from "@/app/actions/scan";
 import { playScanChime } from "@/lib/audio";
 import {
@@ -542,7 +550,7 @@ export default function CustomerView({
 
       {/* Switch Number Confirmation Modal */}
       {changeNumberModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float text-center">
             <h3 className="font-display text-lg font-extrabold text-secondary">
               Switch Mobile Number?
