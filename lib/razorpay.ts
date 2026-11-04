@@ -59,14 +59,36 @@ export const SUBSCRIPTION_PLANS: Record<SubscriptionPlanId, PlanConfig> = {
 
 export interface PromoCodeDefinition {
   code: string;
-  discountType: "PERCENT" | "FLAT";
+  discountType: "PERCENT" | "FLAT" | "FIXED_FINAL";
   discountValue: number;
   description: string;
   is100PercentOff?: boolean;
+  isRupeeOneTest?: boolean;
 }
 
 // Built-in high-availability promo codes
 export const BUILTIN_PROMO_CODES: Record<string, PromoCodeDefinition> = {
+  TEST1: {
+    code: "TEST1",
+    discountType: "FIXED_FINAL",
+    discountValue: 1,
+    description: "₹1 Payment Test Pass (Razorpay Live UPI / Card)",
+    isRupeeOneTest: true,
+  },
+  RUPEE1: {
+    code: "RUPEE1",
+    discountType: "FIXED_FINAL",
+    discountValue: 1,
+    description: "₹1 Payment Test Pass (Razorpay Live UPI / Card)",
+    isRupeeOneTest: true,
+  },
+  FREE100: {
+    code: "FREE100",
+    discountType: "PERCENT",
+    discountValue: 100,
+    description: "100% Free Activation Test Pass (₹0)",
+    is100PercentOff: true,
+  },
   BETA100: {
     code: "BETA100",
     discountType: "PERCENT",
@@ -121,7 +143,9 @@ export function calculatePlanPricing(
     const promo = BUILTIN_PROMO_CODES[cleanCode];
     if (promo) {
       appliedPromo = promo;
-      if (promo.discountType === "PERCENT") {
+      if (promo.discountType === "FIXED_FINAL") {
+        discountAmount = Math.max(0, baseAmount - promo.discountValue);
+      } else if (promo.discountType === "PERCENT") {
         discountAmount = Math.round((baseAmount * promo.discountValue) / 100);
       } else {
         discountAmount = Math.min(baseAmount, promo.discountValue);

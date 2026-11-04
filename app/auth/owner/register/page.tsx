@@ -67,6 +67,19 @@ function OwnerRegisterForm() {
   const [promoMessage, setPromoMessage] = useState<{ success: boolean; text: string } | null>(null);
   const [isValidatingPromo, setIsValidatingPromo] = useState(false);
 
+  // Localhost detection for testing
+  const [isLocalhost, setIsLocalhost] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsLocalhost(
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1" ||
+        window.location.hostname.endsWith(".local")
+      );
+    }
+  }, []);
+
   // Submission & Payment State
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -99,20 +112,24 @@ function OwnerRegisterForm() {
   };
 
   // Handle Apply Promo Code
-  const handleApplyPromo = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (!promoInput.trim()) return;
+  const handleApplyPromo = async (codeToUse?: string | React.FormEvent) => {
+    if (codeToUse && typeof codeToUse !== "string" && "preventDefault" in codeToUse) {
+      codeToUse.preventDefault();
+    }
+    const targetCode = (typeof codeToUse === "string" ? codeToUse : promoInput).trim();
+    if (!targetCode) return;
 
     setIsValidatingPromo(true);
     setPromoMessage(null);
     try {
       const res = await validatePromoCodeAction({
-        code: promoInput.trim(),
+        code: targetCode,
         planId: selectedPlan,
       });
 
       if (res.success && res.code) {
         setAppliedPromo(res.code);
+        setPromoInput(res.code);
         setPromoMessage({
           success: true,
           text: `✓ Code "${res.code}" applied: ${res.description}`,
@@ -595,7 +612,47 @@ function OwnerRegisterForm() {
                 </p>
               )}
 
+              {/* LOCALHOST DEV TESTING HELPER (Visible on Localhost Only) */}
+              {isLocalhost && (
+                <div className="mt-3 rounded-2xl border border-dashed border-amber-300 bg-amber-50/90 p-3.5 text-xs text-amber-950">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold flex items-center gap-1.5 text-amber-900">
+                      <Zap className="h-3.5 w-3.5 text-primary" />
+                      <span>Localhost Test Codes:</span>
+                    </span>
+                    <span className="rounded-full bg-amber-200/80 px-2 py-0.5 font-mono text-[9px] font-extrabold uppercase text-amber-800">
+                      Localhost Only
+                    </span>
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPromo("TEST1")}
+                      className="group flex flex-col items-start rounded-xl border border-amber-200 bg-white p-2.5 text-left transition hover:border-primary hover:shadow-xs active:scale-95"
+                    >
+                      <span className="font-mono text-xs font-extrabold text-primary group-hover:underline">
+                        TEST1 (₹1)
+                      </span>
+                      <span className="text-[10px] text-ink/70 leading-tight mt-0.5">
+                        Test live Razorpay UPI / Card checkout
+                      </span>
+                    </button>
 
+                    <button
+                      type="button"
+                      onClick={() => handleApplyPromo("FREE100")}
+                      className="group flex flex-col items-start rounded-xl border border-amber-200 bg-white p-2.5 text-left transition hover:border-emerald-600 hover:shadow-xs active:scale-95"
+                    >
+                      <span className="font-mono text-xs font-extrabold text-emerald-700 group-hover:underline">
+                        FREE100 (₹0)
+                      </span>
+                      <span className="text-[10px] text-ink/70 leading-tight mt-0.5">
+                        Test 100% free instant activation
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* BILLING BREAKDOWN CARD */}

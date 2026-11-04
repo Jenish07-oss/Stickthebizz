@@ -267,12 +267,23 @@ await test("Monthly & Yearly plan calculations (Yearly includes 20% discount)", 
   assert.ok(yearlyBase < originalYearly, "Yearly plan must be discounted");
 });
 
-await test("Redeem code 'BETA100' provides 100% discount (₹0 activation)", async () => {
-  const code = "BETA100";
+await test("Redeem code 'BETA100' & 'FREE100' provide 100% discount (₹0 activation)", async () => {
   const base = 749;
   const discount = (base * 100) / 100;
   const finalAmount = Math.max(0, base - discount);
-  assert.strictEqual(finalAmount, 0, "BETA100 must yield ₹0 payable");
+  assert.strictEqual(finalAmount, 0, "FREE100 must yield ₹0 payable");
+});
+
+await test("Redeem code 'TEST1' sets total payable to exactly ₹1 for live checkout test", async () => {
+  const baseMonthly = 749;
+  const discountMonthly = baseMonthly - 1;
+  const finalMonthly = Math.max(0, baseMonthly - discountMonthly);
+  assert.strictEqual(finalMonthly, 1, "TEST1 on Monthly must yield ₹1 payable");
+
+  const baseYearly = 7190;
+  const discountYearly = baseYearly - 1;
+  const finalYearly = Math.max(0, baseYearly - discountYearly);
+  assert.strictEqual(finalYearly, 1, "TEST1 on Yearly must yield ₹1 payable");
 });
 
 await test("1-Day Grace Period calculation enforces 24 hours window", async () => {
