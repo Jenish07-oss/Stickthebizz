@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="100%" height="100%">
+  <!-- Coral Squircle Background (Transparent canvas outside) -->
+  <rect x="8" y="12" width="98" height="98" rx="30" fill="#EE634A" />
+
+  <!-- Navy Stamp Punch Dot with Crisp White Ring -->
+  <circle cx="98" cy="18" r="12" fill="#102B4C" stroke="#FFFFFF" stroke-width="4.5" />
+
+  <!-- Lowercase Bold "sb" Brand Monogram -->
+  <text
+    x="57"
+    y="78"
+    text-anchor="middle"
+    fill="#FFFFFF"
+    font-family="'Plus Jakarta Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+    font-weight="900"
+    font-size="48"
+    letter-spacing="-2px"
+  >sb</text>
+</svg>

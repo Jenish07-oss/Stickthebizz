@@ -28,6 +28,13 @@ export const metadata: Metadata = {
   title: "StickTheBizz — Turn Walk-ins into Daily Regulars",
   description:
     "Gamified digital punch-card and streak loyalty SaaS tailored for Indian retail, cafés, and kirana stores. Zero app downloads.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.png", type: "image/png" },
+    ],
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "StickTheBizz.in — QR Loyalty for Bharat",
     description: "Zero app downloads. Turn walk-in diners and kirana shoppers into daily regulars.",
