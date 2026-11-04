@@ -30,8 +30,6 @@ import {
   Clock,
   CheckCircle2,
   Phone,
-  User,
-  LogOut,
   AlertCircle,
 } from "lucide-react";
 

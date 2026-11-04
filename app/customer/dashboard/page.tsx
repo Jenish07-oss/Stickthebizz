@@ -8,6 +8,7 @@ import {
   getCustomerWalletAction,
   exportCustomerDataAction,
   deleteCustomerAccountAction,
+  syncCustomerAccountAction,
   CustomerWalletData,
   CustomerStorePass,
 } from "@/app/actions/customer";
@@ -29,8 +30,6 @@ import {
   History,
   QrCode,
   LogOut,
-  Calendar,
-  Lock,
   Download,
   Trash2,
   AlertTriangle,
@@ -60,8 +59,23 @@ export default function CustomerDashboardPage() {
           router.replace("/auth/customer/login");
           return;
         }
+
+        // If local storage has a phone number but user account doesn't have it synced yet
+        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        if (storedPhone && /^\d{10}$/.test(storedPhone)) {
+          await syncCustomerAccountAction({ phone: storedPhone });
+        }
+
         const data = await getCustomerWalletAction();
         setWalletData(data);
+
+        // Keep localStorage healed from verified server session
+        if (data?.customer?.phone && typeof window !== "undefined") {
+          localStorage.setItem("stb_customer_phone", data.customer.phone);
+          if (data.customer.fullName) {
+            localStorage.setItem("stb_customer_name", data.customer.fullName);
+          }
+        }
       } catch (err) {
         console.error("Failed to load customer wallet:", err);
       } finally {

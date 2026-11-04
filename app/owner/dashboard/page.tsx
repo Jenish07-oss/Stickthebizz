@@ -27,21 +27,14 @@ import { getOwnerMerchant, updateMerchantRuleAction, rotateMerchantQrAction, reg
 import { playApprovalBell, playScanChime } from "@/lib/audio";
 import {
   Store,
-  Users,
   Gift,
-  Star,
   QrCode,
   CheckCircle2,
   XCircle,
-  Clock,
-  Sparkles,
   Sliders,
-  Award,
-  Search,
   KeyRound,
   BellRing,
   Printer,
-  History,
   ShieldCheck,
   RefreshCw,
   LogOut,
@@ -126,8 +119,15 @@ export default function OwnerDashboardPage() {
     }
   };
 
-  // 1. Initial Load of Merchant and Historical Ledger (Direct client-first + server fallback)
+  // 1. Initial Load of Merchant and Historical Ledger (Direct client-first + server fallback with timeout safeguard)
   useEffect(() => {
+    let mounted = true;
+    const timeoutTimer = setTimeout(() => {
+      if (mounted) {
+        setLoading(false);
+      }
+    }, 4000);
+
     async function init() {
       try {
         // Direct browser session check
@@ -153,16 +153,16 @@ export default function OwnerDashboardPage() {
         // Server action fallback
         if (!m) {
           const res = await getOwnerMerchant();
-          if (res.user) activeUser = res.user;
-          if (res.merchant) m = res.merchant;
+          if (res?.user) activeUser = res.user;
+          if (res?.merchant) m = res.merchant;
         }
 
         if (!activeUser) {
-          router.replace("/auth/owner/login");
+          if (mounted) router.replace("/auth/owner/login");
           return;
         }
 
-        if (m) {
+        if (m && mounted) {
           setMerchant(m);
           setShopNameInput(m.name);
           setMinSpendInput(Number(m.min_spend) || 100);
@@ -172,43 +172,55 @@ export default function OwnerDashboardPage() {
 
           // Fetch pending visits
           const { visits: pending } = await getPendingVisits(m.id);
-          const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => ({
-            id: v.id,
-            customerName: v.customers?.full_name || "Diner / Shopper",
-            customerMasked: v.customers?.phone || "Customer Check-in",
-            amount: Number(v.bill_amount) || m.min_spend,
-            formattedTime: "Just now",
-            status: v.status,
-          }));
-          setPendingQueue(initialQueue);
+          if (mounted) {
+            const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => ({
+              id: v.id,
+              customerName: v.customers?.full_name || "Diner / Shopper",
+              customerMasked: v.customers?.phone || "Customer Check-in",
+              amount: Number(v.bill_amount) || m.min_spend,
+              formattedTime: "Just now",
+              status: v.status,
+            }));
+            setPendingQueue(initialQueue);
+          }
 
           // Fetch ledger
           const { visits: leg } = await getMerchantLedger(m.id);
-          const initialLedger: LedgerRecord[] = (leg || []).map((v: any) => {
-            const raw = v.customers?.phone || "";
-            const msk =
-              raw.length >= 10
-                ? `+91 ${raw.slice(0, 2)}*** **${raw.slice(-2)}`
-                : "Walk-in";
-            return {
-              id: v.id,
-              customerName: v.customers?.full_name || "Customer",
-              contactMasked: msk,
-              visitDate: v.visit_date_ist,
-              billAmount: Number(v.bill_amount) || m.min_spend,
-              status: v.status,
-              createdAt: v.created_at,
-            };
-          });
-          setLedger(initialLedger);
+          if (mounted) {
+            const initialLedger: LedgerRecord[] = (leg || []).map((v: any) => {
+              const raw = v.customers?.phone || "";
+              const msk =
+                raw.length >= 10
+                  ? `+91 ${raw.slice(0, 2)}*** **${raw.slice(-2)}`
+                  : "Walk-in";
+              return {
+                id: v.id,
+                customerName: v.customers?.full_name || "Customer",
+                contactMasked: msk,
+                visitDate: v.visit_date_ist,
+                billAmount: Number(v.bill_amount) || m.min_spend,
+                status: v.status,
+                createdAt: v.created_at,
+              };
+            });
+            setLedger(initialLedger);
+          }
         }
       } catch (err) {
         console.error("Dashboard init error:", err);
       } finally {
-        setLoading(false);
+        clearTimeout(timeoutTimer);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
     init();
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutTimer);
+    };
   }, []);
 
   // 2. Realtime WebSocket Subscription to 'visits'

@@ -62,13 +62,41 @@ export default async function ShopSlugPage({ params }: Props) {
 
   if (user) {
     const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
-    const userEmail = user.email || "";
+    const userEmail = (user.email || "").trim().toLowerCase();
 
-    const { data: customerRow } = await supabase
-      .from("customers")
-      .select("id, phone, full_name, email")
-      .or(`email.eq.${userEmail},phone.eq.${userPhone}`)
-      .maybeSingle();
+    let customerRow = null;
+
+    if (userPhone && userEmail) {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, phone, full_name, email")
+        .or(`email.eq.${userEmail},phone.eq.${userPhone}`)
+        .maybeSingle();
+      customerRow = data;
+    } else if (userPhone) {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, phone, full_name, email")
+        .eq("phone", userPhone)
+        .maybeSingle();
+      customerRow = data;
+    } else if (userEmail) {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, phone, full_name, email")
+        .eq("email", userEmail)
+        .maybeSingle();
+      customerRow = data;
+    }
+
+    if (!customerRow && user?.id) {
+      const { data } = await supabase
+        .from("customers")
+        .select("id, phone, full_name, email")
+        .eq("auth_id", user.id)
+        .maybeSingle();
+      customerRow = data;
+    }
 
     if (customerRow) {
       initialCustomer = {
