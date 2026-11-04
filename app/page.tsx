@@ -238,10 +238,15 @@ export default function HomePage() {
               {/* 3. Interactive Customer Loyalty Pass Preview (Order 3 on mobile; Col 8-12 on desktop) */}
               <div className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 flex flex-col items-center justify-center pt-2 lg:pt-0">
                 <div className="w-full max-w-[340px] flex flex-col items-center">
-                  <p className="mb-2.5 text-xs font-bold uppercase tracking-wider text-secondary flex items-center justify-center gap-1.5 text-center">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                    <span>Interactive Customer Pass (Tap Below To Test)</span>
-                  </p>
+                  <div className="mb-2.5 flex flex-col items-center text-center">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-primary/25 px-3 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wider text-secondary shadow-xs">
+                      <Sparkles className="h-3 w-3 text-primary" />
+                      <span>DEMO SIMULATION • NOT A REAL SCANNER</span>
+                    </span>
+                    <p className="mt-1 text-[11px] text-ink/75 font-medium leading-tight">
+                      Interactive sample pass showing how customer stamps punch
+                    </p>
+                  </div>
 
                   {/* Sleek Pass Display Frame (Lightweight, hardware-accelerated, zero mobile lag) */}
                   <div className="relative w-full rounded-[2.2rem] border-[3px] border-[#102B4C] bg-[#102B4C] p-1.5 shadow-[0_12px_32px_rgba(16,43,76,0.18)]">
@@ -362,11 +367,13 @@ export default function HomePage() {
                                   }`}
                                 >
                                   <Sparkles className="h-4 w-4 animate-spin" />
-                                  <span>{isScanning ? "Scanning Standee..." : "✨ Scan Counter QR"}</span>
+                                  <span>{isScanning ? "Simulating Punch..." : "✨ Test Stamp Punch (Demo Animation)"}</span>
                                 </button>
-                                <p className="mt-1.5 text-center text-[10px] text-ink/50">
-                                  Tap to test laser sweep scan &amp; sound chime
-                                </p>
+                                <div className="mt-2 rounded-xl bg-sand/60 p-2 text-center border border-border/60">
+                                  <p className="text-[10px] text-ink/70 leading-relaxed font-medium">
+                                    💡 <strong>Notice for shop owners &amp; customers:</strong> This is a simulation card to demonstrate the sound chime &amp; stamp animation. At your actual shop, customers scan your physical counter acrylic stand using their real phone camera!
+                                  </p>
+                                </div>
                               </div>
                             )}
 

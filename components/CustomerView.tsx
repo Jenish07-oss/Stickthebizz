@@ -385,19 +385,24 @@ export default function CustomerView({
                 {customer ? (
                   // Identified Customer View
                   <div>
-                    <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/50 px-3 py-2 text-xs">
+                    <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/60 px-3 py-2 text-xs border border-border">
                       <div className="flex items-center gap-2">
-                        <User className="h-3.5 w-3.5 text-secondary" />
-                        <span className="font-bold text-secondary">
-                          {customer.fullName || `+91 ${customer.phone}`}
-                        </span>
+                        <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
+                          <span className="font-extrabold text-secondary text-xs">
+                            {customer.fullName || `+91 ${customer.phone}`}
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
                         onClick={() => setChangeNumberModal(true)}
-                        className="text-[11px] font-semibold text-primary hover:underline"
+                        className="text-[11px] font-bold text-primary hover:underline"
                       >
-                        Change
+                        Switch Account
                       </button>
                     </div>
 
@@ -499,6 +504,17 @@ export default function CustomerView({
                       <Sparkles className="h-4 w-4" />
                       <span>{isSubmitting ? "Verifying..." : "Punch Stamp & Save Pass"}</span>
                     </button>
+
+                    <div className="mt-3 text-center text-[11px] text-ink/70 pt-2 border-t border-border/60">
+                      <span>Already have an account? </span>
+                      <Link href="/auth/customer/login" className="font-bold text-primary hover:underline">
+                        Sign In
+                      </Link>
+                      <span> or </span>
+                      <Link href="/auth/customer/signup" className="font-bold text-secondary hover:underline">
+                        Create Account
+                      </Link>
+                    </div>
                   </form>
                 )}
 
