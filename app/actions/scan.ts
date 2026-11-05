@@ -306,16 +306,32 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
       return { success: false, error: `Visit is already ${visit.status.toLowerCase()}.` };
     }
 
-    // Atomic Conditional Update
-    const { data, error } = await db
+    // Atomic Conditional Update: try with authSupabase first, fallback to db
+    let updatedVisit: any = null;
+    const authUpdate = await authSupabase
       .from("visits")
       .update({ status: "APPROVED" })
       .eq("id", visitId)
       .eq("status", "PENDING")
-      .select()
-      .single();
+      .select();
 
-    if (error || !data) {
+    if (authUpdate.data && authUpdate.data.length > 0) {
+      updatedVisit = authUpdate.data[0];
+    } else {
+      const dbUpdate = await db
+        .from("visits")
+        .update({ status: "APPROVED" })
+        .eq("id", visitId)
+        .eq("status", "PENDING")
+        .select();
+
+      if (dbUpdate.data && dbUpdate.data.length > 0) {
+        updatedVisit = dbUpdate.data[0];
+      }
+    }
+
+    if (!updatedVisit) {
+      console.error("approveVisit update error:", authUpdate.error);
       return { success: false, error: "Visit could not be approved or was already processed." };
     }
 
@@ -326,7 +342,7 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
       resourceId: visitId,
     });
 
-    return { success: true, visit: data };
+    return { success: true, visit: updatedVisit };
   } catch (err: any) {
     return { success: false, error: sanitizeError(err) };
   }
@@ -359,15 +375,31 @@ export async function rejectVisit(visitId: string) {
     if (visitError || !visit) return { success: false, error: "VISIT_NOT_FOUND" };
     if ((visit as any).merchants?.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
 
-    const { data, error } = await db
+    let updatedVisit: any = null;
+    const authUpdate = await authSupabase
       .from("visits")
       .update({ status: "REJECTED" })
       .eq("id", visitId)
       .eq("status", "PENDING")
-      .select()
-      .single();
+      .select();
 
-    if (error || !data) {
+    if (authUpdate.data && authUpdate.data.length > 0) {
+      updatedVisit = authUpdate.data[0];
+    } else {
+      const dbUpdate = await db
+        .from("visits")
+        .update({ status: "REJECTED" })
+        .eq("id", visitId)
+        .eq("status", "PENDING")
+        .select();
+
+      if (dbUpdate.data && dbUpdate.data.length > 0) {
+        updatedVisit = dbUpdate.data[0];
+      }
+    }
+
+    if (!updatedVisit) {
+      console.error("rejectVisit update error:", authUpdate.error);
       return { success: false, error: "Visit already processed or not pending." };
     }
 
@@ -378,7 +410,7 @@ export async function rejectVisit(visitId: string) {
       resourceId: visitId,
     });
 
-    return { success: true, visit: data };
+    return { success: true, visit: updatedVisit };
   } catch (err: any) {
     return { success: false, error: sanitizeError(err) };
   }

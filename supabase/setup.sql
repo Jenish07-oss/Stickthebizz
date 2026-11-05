@@ -233,14 +233,12 @@ CREATE POLICY "Public insert visit" ON public.visits
   WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Merchant owner update visits" ON public.visits;
-CREATE POLICY "Merchant owner update visits" ON public.visits
-  FOR UPDATE TO authenticated
-  USING (
-    merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
-  )
-  WITH CHECK (
-    merchant_id IN (SELECT id FROM public.merchants WHERE owner_id = auth.uid())
-  );
+DROP POLICY IF EXISTS "Merchant owner update visits" ON public.visits;
+DROP POLICY IF EXISTS "Public update visit" ON public.visits;
+CREATE POLICY "Public update visit" ON public.visits
+  FOR UPDATE TO anon, authenticated
+  USING (true)
+  WITH CHECK (true);
 
 -- ==========================================
 -- REDEMPTIONS POLICIES

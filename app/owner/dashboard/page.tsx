@@ -100,6 +100,8 @@ export default function OwnerDashboardPage() {
   );
   const [showConfetti, setShowConfetti] = useState(false);
   const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [exitingCardIds, setExitingCardIds] = useState<string[]>([]);
   const [isCreatingShop, setIsCreatingShop] = useState(false);
   const [newShopName, setNewShopName] = useState("");
   const [newShopCategory, setNewShopCategory] = useState("Cafe / Chai");
@@ -849,7 +851,7 @@ export default function OwnerDashboardPage() {
                   {merchant?.name || "My Counter"}
                 </h1>
                 <p className="mt-1 text-xs sm:text-sm text-ink/75">
-                  Category: <strong className="text-secondary">{merchant?.category || "Retail"}</strong> • Counter Pass:{" "}
+                  Category: <strong className="text-secondary">{(merchant?.category || "Retail").replace(/&#x2F;/g, "/").replace(/&amp;/g, "&")}</strong> • Counter Pass:{" "}
                   <a
                     href={scanUrl}
                     target="_blank"
@@ -945,56 +947,66 @@ export default function OwnerDashboardPage() {
                       No pending scans right now. Waiting for customers...
                     </p>
                     <p className="mt-1 text-xs text-white/55">
-                      When a customer scans your counter QR stand, their 1-tap check-in will ding here with a two-tone bell chime.
+                      When a customer scans your counter QR stand, their 1-tap check-in will ding here with a gentle acoustic chime.
                     </p>
                   </div>
                 ) : (
-                  pendingQueue.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-4 text-ink shadow-sm animate-stamp-pop"
-                    >
-                      <div>
+                  pendingQueue.map((item) => {
+                    const isExiting = exitingCardIds.includes(item.id);
+                    const isBusy = actionLoadingId === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl bg-white p-4 text-ink shadow-sm transition-all duration-200 ease-out will-change-[opacity,transform] ${
+                          isExiting
+                            ? "opacity-0 -translate-y-2 scale-95 pointer-events-none"
+                            : "opacity-100 translate-y-0 scale-100"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-display text-sm font-extrabold text-secondary">
+                              {item.customerName}
+                            </span>
+                            <span className="font-mono text-xs font-semibold text-ink/60">
+                              {item.customerMasked}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/80">
+                              Bill ₹{item.amount}
+                            </span>
+                            <span className="text-[11px] text-ink/50">
+                              {item.formattedTime} • Counter Camera Scan
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Large Touch Buttons Optimized for Low-End Mobile */}
                         <div className="flex items-center gap-2">
-                          <span className="font-display text-sm font-extrabold text-secondary">
-                            {item.customerName}
-                          </span>
-                          <span className="font-mono text-xs font-semibold text-ink/60">
-                            {item.customerMasked}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/80">
-                            Bill ₹{item.amount}
-                          </span>
-                          <span className="text-[11px] text-ink/50">
-                            {item.formattedTime} • Counter Camera Scan
-                          </span>
+                          <button
+                            type="button"
+                            disabled={isBusy || isExiting}
+                            onClick={() => handleApprove(item.id)}
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-xl bg-success px-4 text-xs font-bold text-white shadow-sm transition hover:opacity-90 active:scale-95 disabled:opacity-50"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            <span>{isBusy ? "Approving..." : "1-Tap Approve"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            disabled={isBusy || isExiting}
+                            onClick={() => handleReject(item.id)}
+                            className="flex min-h-[44px] items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-3.5 text-xs font-bold text-primary transition hover:bg-primary hover:text-white active:scale-95 disabled:opacity-50"
+                          >
+                            <XCircle className="h-4 w-4" />
+                            <span>Reject</span>
+                          </button>
                         </div>
                       </div>
-
-                      {/* Large (min 48px height) Touch Buttons */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleApprove(item.id)}
-                          className="flex min-h-[48px] items-center gap-1.5 rounded-xl bg-success px-5 text-xs font-bold text-white shadow-sm transition hover:opacity-90 active:scale-95"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          <span>1-Tap Approve</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleReject(item.id)}
-                          className="flex min-h-[48px] items-center gap-1.5 rounded-xl border border-primary/30 bg-primary/10 px-4 text-xs font-bold text-primary transition hover:bg-primary hover:text-white active:scale-95"
-                        >
-                          <XCircle className="h-4 w-4" />
-                          <span>Reject</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

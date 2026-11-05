@@ -1,4 +1,5 @@
 // Web Audio API synthesizer for zero-dependency, ultra-responsive sound effects
+// Tuned for gentle, pleasant, low-volume cashier and customer feedback
 
 let audioCtx: AudioContext | null = null;
 
@@ -19,7 +20,7 @@ function getAudioContext(): AudioContext | null {
 }
 
 /**
- * Scan Trigger: High-frequency confirmation chime (880Hz -> 1760Hz)
+ * Scan Trigger: Gentle, warm blip (low-volume 0.05, pure sine)
  */
 export function playScanChime() {
   try {
@@ -32,24 +33,25 @@ export function playScanChime() {
     osc.type = "sine";
     const now = ctx.currentTime;
 
-    osc.frequency.setValueAtTime(880, now);
-    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.15);
+    osc.frequency.setValueAtTime(587.33, now); // D5
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.12); // A5
 
-    gain.gain.setValueAtTime(0.25, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.05, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.25);
+    osc.stop(now + 0.18);
   } catch {
     // Ignore audio errors on unsupported environments
   }
 }
 
 /**
- * Merchant Approval: Resonant two-tone counter bell (523Hz + 659Hz, C5 + E5)
+ * Merchant Approval: Soft, warm, low-volume acoustic chime (pure sine at 0.06 volume)
  */
 export function playApprovalBell() {
   try {
@@ -57,23 +59,25 @@ export function playApprovalBell() {
     if (!ctx) return;
 
     const now = ctx.currentTime;
-    const freqs = [523.25, 659.25]; // C5, E5 harmonic bell
+    // Gentle dual-sine chord (C5 + G5: warm and pleasant, zero harshness)
+    const notes = [523.25, 783.99];
 
-    freqs.forEach((freq) => {
+    notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(freq, now);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(freq, now + i * 0.03);
 
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      gain.gain.setValueAtTime(0.001, now + i * 0.03);
+      gain.gain.linearRampToValueAtTime(0.04, now + i * 0.03 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(now);
-      osc.stop(now + 0.5);
+      osc.start(now + i * 0.03);
+      osc.stop(now + 0.35);
     });
   } catch {
     // Ignore
@@ -81,7 +85,7 @@ export function playApprovalBell() {
 }
 
 /**
- * Milestone Fanfare: Celebratory ascending arpeggio when stamp 10 is reached
+ * Milestone Fanfare: Celebratory ascending warm tones at low volume (0.05)
  */
 export function playMilestoneFanfare() {
   try {
@@ -92,21 +96,22 @@ export function playMilestoneFanfare() {
     const startTime = ctx.currentTime;
 
     notes.forEach((freq, idx) => {
-      const noteTime = startTime + idx * 0.1;
+      const noteTime = startTime + idx * 0.08;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
       osc.type = "sine";
       osc.frequency.setValueAtTime(freq, noteTime);
 
-      gain.gain.setValueAtTime(0.28, noteTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.4);
+      gain.gain.setValueAtTime(0.001, noteTime);
+      gain.gain.linearRampToValueAtTime(0.05, noteTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, noteTime + 0.25);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
       osc.start(noteTime);
-      osc.stop(noteTime + 0.4);
+      osc.stop(noteTime + 0.25);
     });
   } catch {
     // Ignore
@@ -114,7 +119,7 @@ export function playMilestoneFanfare() {
 }
 
 /**
- * Scan Rejection Buzz
+ * Scan Rejection: Gentle low double-thud (low-volume 0.04, non-grating)
  */
 export function playRejectBuzz() {
   try {
@@ -124,22 +129,22 @@ export function playRejectBuzz() {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    osc.type = "sawtooth";
+    osc.type = "sine";
     const now = ctx.currentTime;
 
-    osc.frequency.setValueAtTime(220, now);
-    osc.frequency.linearRampToValueAtTime(160, now + 0.2);
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(180, now + 0.12);
 
-    gain.gain.setValueAtTime(0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.04, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
 
     osc.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.2);
+    osc.stop(now + 0.15);
   } catch {
     // Ignore
   }
 }
-
