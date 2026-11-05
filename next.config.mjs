@@ -24,6 +24,16 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
 
+  async redirects() {
+    return [
+      {
+        source: "/refund",
+        destination: "/terms",
+        permanent: true,
+      },
+    ];
+  },
+
   async headers() {
     const csp = [
       "default-src 'self'",

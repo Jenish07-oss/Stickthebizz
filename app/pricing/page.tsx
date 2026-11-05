@@ -191,7 +191,7 @@ export default function PricingPage() {
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />
-                    <span>Priority WhatsApp &amp; phone onboarding support</span>
+                    <span>Priority direct merchant onboarding support</span>
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="h-4 w-4 text-coral shrink-0 mt-0.5" />

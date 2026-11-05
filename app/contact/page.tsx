@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { MessageSquare, Mail, Phone, Send, CheckCircle2, Store } from "lucide-react";
+import { MessageSquare, Mail, Phone, Send, CheckCircle2, Store, Clock } from "lucide-react";
 
 export default function ContactPage() {
   const [name, setName] = useState("");
@@ -40,63 +40,44 @@ export default function ContactPage() {
           <div className="mt-12 grid gap-8 md:grid-cols-12">
             {/* Direct Contact Cards (5 cols) */}
             <div className="space-y-4 md:col-span-5">
-              {/* WhatsApp Card */}
+              {/* Direct Email Card */}
               <div className="rounded-3xl border border-border bg-white p-6 shadow-card">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-success/15 text-success">
-                    <Phone className="h-6 w-6" />
-                  </span>
-                  <div>
-                    <h2 className="font-display text-base font-extrabold text-secondary">
-                      Instant WhatsApp Help
-                    </h2>
-                    <p className="text-xs text-ink/65">Typical reply: Under 15 mins</p>
-                  </div>
-                </div>
-                <p className="mt-4 text-xs text-ink/75 leading-relaxed">
-                  Message our team for fast onboarding, custom acrylic stand orders, or counter questions.
-                </p>
-                <a
-                  href="https://wa.me/919876543210?text=Hello%20StickTheBizz%2C%20I%20want%20to%20set%20up%20a%20loyalty%20QR%20card%20for%20my%20shop"
-                  target="_self"
-                  rel="noopener noreferrer"
-                  className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-success text-sm font-bold text-white shadow-sm transition hover:opacity-90"
-                >
-                  <MessageSquare className="h-4 w-4" />
-                  Chat on WhatsApp
-                </a>
-              </div>
-
-              {/* Email Card */}
-              <div className="rounded-3xl border border-border bg-white p-6 shadow-card">
-                <div className="flex items-center gap-3">
-                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-secondary/15 text-secondary">
+                  <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                     <Mail className="h-6 w-6" />
                   </span>
                   <div>
                     <h2 className="font-display text-base font-extrabold text-secondary">
                       Email Merchant Support
                     </h2>
-                    <p className="text-xs text-ink/65">For billing &amp; partnerships</p>
+                    <p className="text-xs text-ink/65">Direct response within 2 hours</p>
                   </div>
                 </div>
                 <p className="mt-4 text-xs text-ink/75 leading-relaxed">
-                  Have an enterprise franchise with multiple outlets? Email our partnership desk.
+                  Have questions about your counter setup, QR standee delivery, or billing? Message our priority merchant desk.
                 </p>
                 <a
                   href="mailto:support@stickthebizz.in"
-                  className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-secondary text-sm font-bold text-white shadow-sm transition hover:bg-primary"
+                  className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-secondary"
                 >
                   <Mail className="h-4 w-4" />
                   support@stickthebizz.in
                 </a>
               </div>
 
-              {/* Office Details */}
-              <div className="rounded-3xl border border-border bg-sand/60 p-5 text-xs text-ink/70 space-y-1">
-                <p className="font-bold text-secondary">StickTheBizz Technologies Pvt Ltd</p>
-                <p>Indiranagar, Bengaluru, Karnataka 560038</p>
-                <p>Operating Hours: Mon - Sat (9:00 AM - 8:00 PM IST)</p>
+              {/* Operating Info Card */}
+              <div className="rounded-3xl border border-border bg-white p-6 shadow-card space-y-3">
+                <div className="flex items-center gap-2 text-secondary font-display font-bold text-sm">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <span>Support Desk Hours</span>
+                </div>
+                <p className="text-xs text-ink/70 leading-relaxed">
+                  Monday &ndash; Saturday • 9:00 AM &ndash; 8:00 PM IST
+                </p>
+                <div className="pt-2 border-t border-border/60 text-xs text-ink/65">
+                  <p className="font-bold text-secondary">StickTheBizz Pvt Ltd</p>
+                  <p className="mt-0.5">Empowering Bharat&apos;s retail counters with simple digital passes.</p>
+                </div>
               </div>
             </div>
 
@@ -123,7 +104,7 @@ export default function ContactPage() {
                     Request Received!
                   </h3>
                   <p className="mt-2 text-sm text-ink/75">
-                    Thank you, {name}! Our merchant onboarding manager will reach out via WhatsApp at <span className="font-mono font-bold text-secondary">{phone}</span> to confirm your shop details.
+                    Thank you, {name}! Our merchant onboarding manager will reach out directly to <span className="font-mono font-bold text-secondary">{phone}</span> to confirm your shop details.
                   </p>
                   <button
                     type="button"
@@ -183,7 +164,7 @@ export default function ContactPage() {
                         htmlFor="mobile"
                         className="block text-xs font-bold uppercase tracking-wider text-ink/70"
                       >
-                        WhatsApp Number
+                        10-Digit Mobile Number
                       </label>
                       <input
                         id="mobile"
@@ -232,4 +213,3 @@ export default function ContactPage() {
     </div>
   );
 }
-

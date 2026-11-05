@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ShieldCheck, Heart, Share2, X, ExternalLink } from "lucide-react";
+import { ShieldCheck, Share2, X, ExternalLink } from "lucide-react";
 import Logo from "@/components/Logo";
 
 export default function Footer() {
@@ -13,21 +13,18 @@ export default function Footer() {
       name: "Instagram",
       handle: "@stickthebizz",
       url: "https://www.instagram.com/stickthebizz?dlrf=MW02Ynhub2YwbTlidg==",
-      color: "from-purple-500 via-pink-500 to-amber-500",
       description: "Daily counter highlights, new shop launches, and customer stories.",
     },
     {
       name: "Reddit",
       handle: "u/sadcozsomethinhbad",
       url: "https://www.reddit.com/u/sadcozsomethinhbad/s/CogUjQdDLq",
-      color: "from-orange-500 to-red-600",
       description: "Founder updates, retail loyalty discussions, and community Q&A.",
     },
     {
       name: "X (formerly Twitter)",
       handle: "@StickTheBizz",
       url: "https://x.com/StickTheBizz",
-      color: "from-slate-900 to-slate-800",
       description: "Product updates, feature drops, and live SaaS metrics.",
     },
   ];
@@ -58,7 +55,7 @@ export default function Footer() {
                 <Link
                   href="/customer/dashboard"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Customer Pass Wallet
                 </Link>
@@ -67,7 +64,7 @@ export default function Footer() {
                 <Link
                   href="/owner"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Shop Owner Terminal
                 </Link>
@@ -76,7 +73,7 @@ export default function Footer() {
                 <Link
                   href="/how-it-works"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   How It Works
                 </Link>
@@ -85,7 +82,7 @@ export default function Footer() {
                 <Link
                   href="/#pricing"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Pricing Plan (₹749/mo)
                 </Link>
@@ -103,7 +100,7 @@ export default function Footer() {
                 <Link
                   href="/about"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   About Our Mission
                 </Link>
@@ -112,16 +109,16 @@ export default function Footer() {
                 <Link
                   href="/contact"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
-                  Merchant Support &amp; WhatsApp
+                  Merchant Support Desk
                 </Link>
               </li>
               <li>
                 <Link
                   href="/#faq"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Frequently Asked Questions
                 </Link>
@@ -130,7 +127,7 @@ export default function Footer() {
                 <button
                   type="button"
                   onClick={() => setSocialsOpen(true)}
-                  className="flex min-h-[48px] items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-secondary text-left group"
+                  className="flex min-h-[44px] items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-secondary text-left group"
                 >
                   <span>Our Socials</span>
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary group-hover:bg-primary group-hover:text-white transition">
@@ -151,7 +148,7 @@ export default function Footer() {
                 <Link
                   href="/privacy"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Privacy Policy (DPDP)
                 </Link>
@@ -160,25 +157,16 @@ export default function Footer() {
                 <Link
                   href="/terms"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   Terms of Service
                 </Link>
               </li>
               <li>
                 <Link
-                  href="/refund"
-                  target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
-                >
-                  Refund Policy (7-Day Guarantee)
-                </Link>
-              </li>
-              <li>
-                <Link
                   href="/grievance"
                   target="_self"
-                  className="flex min-h-[48px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
+                  className="flex min-h-[44px] items-center text-sm font-semibold text-ink/70 transition hover:text-secondary"
                 >
                   DPDP Grievance Redressal
                 </Link>
@@ -187,13 +175,69 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom Legal Credit */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-ink/10 pt-8 sm:flex-row">
-          <p className="text-xs text-ink/60">
-            &copy; 2026 StickTheBizz Technologies Pvt Ltd. Made with{" "}
-            <Heart className="inline h-3.5 w-3.5 fill-primary text-primary" /> in Surat &amp; Bengaluru, Bharat.
-          </p>
-          <div className="flex items-center gap-4 text-xs font-semibold text-ink/60">
+        {/* Elegant Bottom Bar with Direct Social Media Symbols */}
+        <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-6 border-t border-ink/10 pt-8">
+          <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
+            <p className="text-xs font-semibold text-ink/75">
+              &copy; {new Date().getFullYear()} StickTheBizz Pvt Ltd. All rights reserved.
+            </p>
+            <span className="hidden sm:inline text-ink/30">•</span>
+            <div className="flex items-center gap-1.5 text-xs font-bold text-secondary">
+              <ShieldCheck className="h-3.5 w-3.5 text-success" />
+              <span>DPDP Act 2023 Compliant</span>
+            </div>
+          </div>
+
+          {/* Direct Social Media Clickable Symbols */}
+          <div className="flex items-center gap-3">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-ink/50 mr-0.5">
+              Follow Us:
+            </span>
+
+            {/* Instagram Symbol */}
+            <a
+              href="https://www.instagram.com/stickthebizz?dlrf=MW02Ynhub2YwbTlidg=="
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Follow StickTheBizz on Instagram"
+              className="grid h-9 w-9 place-items-center rounded-xl bg-white border border-border text-ink/70 shadow-xs transition hover:text-pink-600 hover:border-pink-300 hover:scale-110 active:scale-95"
+              title="Instagram: @stickthebizz"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+              </svg>
+            </a>
+
+            {/* Reddit Symbol */}
+            <a
+              href="https://www.reddit.com/u/sadcozsomethinhbad/s/CogUjQdDLq"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Join StickTheBizz community on Reddit"
+              className="grid h-9 w-9 place-items-center rounded-xl bg-white border border-border text-ink/70 shadow-xs transition hover:text-orange-600 hover:border-orange-300 hover:scale-110 active:scale-95"
+              title="Reddit: u/sadcozsomethinhbad"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.702zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.197-2.512-.73a.326.326 0 0 0-.232-.095z" />
+              </svg>
+            </a>
+
+            {/* X (formerly Twitter) Symbol */}
+            <a
+              href="https://x.com/StickTheBizz"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Follow StickTheBizz on X"
+              className="grid h-9 w-9 place-items-center rounded-xl bg-white border border-border text-ink/70 shadow-xs transition hover:text-black hover:border-black/50 hover:scale-110 active:scale-95"
+              title="X: @StickTheBizz"
+            >
+              <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+              </svg>
+            </a>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs font-semibold text-ink/60">
             <span>ISO/IEC 27001 Ready</span>
             <span>&bull;</span>
             <span>100% Data Stored in India</span>
@@ -223,7 +267,7 @@ export default function Footer() {
                     Our Socials
                   </h3>
                   <p className="text-xs text-ink/65">
-                    Follow StickTheBizz official channels
+                    Official verified channels for StickTheBizz
                   </p>
                 </div>
               </div>

@@ -197,7 +197,7 @@ console.log("\n--- 4. HTTP ROUTES & LEGAL PAGES ---");
 const localBase = "http://localhost:3000";
 
 const routesToTest = [
-  { path: "/refund", expectedTitle: "Refund" },
+  { path: "/how-it-works", expectedTitle: "How It Works" },
   { path: "/grievance", expectedTitle: "Grievance" },
   { path: "/privacy", expectedTitle: "Privacy" },
   { path: "/terms", expectedTitle: "Terms" },

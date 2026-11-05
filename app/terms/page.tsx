@@ -26,7 +26,7 @@ export default function TermsPage() {
               Terms of Service
             </h1>
             <p className="mt-3 text-sm text-ink/70">
-              Last Updated: November 2026 • StickTheBizz Technologies Pvt Ltd
+              Last Updated: November 2026 • StickTheBizz Pvt Ltd
             </p>
           </div>
 
@@ -78,7 +78,7 @@ export default function TermsPage() {
                 StickTheBizz provides the software platform connecting merchants and customers. Any direct disputes regarding merchandise quality, food hygiene, or customer service at individual physical shops are the sole responsibility of the merchant.
               </p>
               <p className="mt-2">
-                All legal disputes are subject to the exclusive jurisdiction of the courts of Bengaluru, Karnataka, India.
+                All legal disputes are subject to the exclusive jurisdiction of the competent courts of India.
               </p>
             </div>
           </div>
