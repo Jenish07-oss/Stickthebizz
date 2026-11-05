@@ -183,10 +183,10 @@ export default function CounterQR({
     </div>
     <p class="notice">No customer app download required • Instant digital loyalty pass</p>
     <div class="footer">
-      <svg width="22" height="22" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="24" height="24" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="10" y="14" width="96" height="96" rx="30" fill="#EE634A"/>
         <circle cx="96" cy="18" r="11" fill="#102B4C" stroke="#FFFFFF" stroke-width="4"/>
-        <text x="57" y="75" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" letter-spacing="-1.5px">sb</text>
+        <text x="57" y="75" text-anchor="middle" fill="#FFFFFF" font-family="Plus Jakarta Sans, Inter, system-ui, -apple-system, sans-serif" font-weight="900" font-size="44" letter-spacing="-1.5px">sb</text>
       </svg>
       <span class="footer-text"><span style="color: #102B4C; font-weight: 800;">stickthe</span><span style="color: #EE634A; font-weight: 800;">bizz</span><span style="color: #555555; font-weight: 700;">.in</span></span>
     </div>
@@ -306,8 +306,12 @@ export default function CounterQR({
 
           {/* Permanent Static Bottom Mark (Strictly NO dynamic changing rules) */}
           <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-center gap-1.5 text-xs text-ink/70">
-            <LogoIcon size={16} />
-            <span className="font-bold text-secondary">stickthebizz.in</span>
+            <LogoIcon size={18} />
+            <span className="font-bold">
+              <span className="text-[#102B4C]">stickthe</span>
+              <span className="text-[#EE634A]">bizz</span>
+              <span className="text-[#555555]">.in</span>
+            </span>
             <span className="text-ink/40">• Digital Loyalty Pass</span>
           </div>
         </div>
@@ -420,9 +424,13 @@ export default function CounterQR({
                 Zero app downloads • Instant digital pass
               </p>
 
-              <div className="mt-3 pt-2.5 border-t border-border/50 w-full flex items-center justify-center gap-1.5 text-[11px] text-ink/60">
-                <LogoIcon size={14} />
-                <span className="font-bold text-secondary">stickthebizz.in</span>
+              <div className="mt-3 pt-2.5 border-t border-border/50 w-full flex items-center justify-center gap-1.5 text-[12px]">
+                <LogoIcon size={18} />
+                <span className="font-bold">
+                  <span className="text-[#102B4C]">stickthe</span>
+                  <span className="text-[#EE634A]">bizz</span>
+                  <span className="text-[#555555]">.in</span>
+                </span>
               </div>
             </div>
 
