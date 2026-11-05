@@ -330,7 +330,14 @@ export default function CounterQR({
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => setPrintModalOpen(true)}
+            onClick={() => {
+              const printTarget = document.getElementById("standee-print-target");
+              if (printTarget) printTarget.style.display = "flex";
+              handlePrint();
+              window.onafterprint = () => {
+                if (printTarget) printTarget.style.display = "none";
+              };
+            }}
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
           >
             <Printer className="h-4 w-4" />

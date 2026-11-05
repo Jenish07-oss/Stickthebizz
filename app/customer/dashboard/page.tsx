@@ -44,6 +44,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import { useToast } from "@/components/ui/Toast";
 
 const CameraQRScanner = dynamic(() => import("@/components/CameraQRScanner"), {
   ssr: false,
@@ -64,6 +65,7 @@ const PhoneFrame = dynamic(() => import("@/components/PhoneFrame"), {
 export default function CustomerDashboardPage() {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   const [walletData, setWalletData] = useState<CustomerWalletData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -115,6 +117,40 @@ export default function CustomerDashboardPage() {
     }
     loadWallet();
   }, [router, supabase]);
+
+  // Realtime Broadcast Subscription for Live Visit & Redemption Updates (Fix 2A)
+  useEffect(() => {
+    const customerId = walletData?.customer?.id;
+    if (!customerId) return;
+
+    const channel = supabase
+      .channel(`customer:${customerId}`)
+      .on("broadcast", { event: "visit_approved" }, async () => {
+        toast.success("Visit approved by shop owner!");
+        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const fresh = await getCustomerWalletAction((storedPhone || "").replace(/\D/g, "") || undefined);
+        if (fresh) setWalletData(fresh);
+      })
+      .on("broadcast", { event: "stamp_updated" }, async (payload: any) => {
+        if (payload?.payload?.rewardReady) {
+          toast.success("🎉 Reward unlocked! Visit the counter to claim.");
+        }
+        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const fresh = await getCustomerWalletAction((storedPhone || "").replace(/\D/g, "") || undefined);
+        if (fresh) setWalletData(fresh);
+      })
+      .on("broadcast", { event: "reward_burned" }, async (payload: any) => {
+        toast.success(`Reward redeemed: ${payload?.payload?.rewardTitle || "Special Reward"}`);
+        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const fresh = await getCustomerWalletAction((storedPhone || "").replace(/\D/g, "") || undefined);
+        if (fresh) setWalletData(fresh);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [walletData?.customer?.id, supabase, toast]);
 
   const handleSignOut = async () => {
     if (typeof window !== "undefined") {

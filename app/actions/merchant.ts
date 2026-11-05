@@ -146,6 +146,18 @@ export async function rotateMerchantQrAction(merchantId: string) {
       });
     }
 
+    try {
+      const channelMerchant = supabase.channel(`merchant:${merchantId}`);
+      await channelMerchant.send({
+        type: "broadcast",
+        event: "qr_rotated",
+        payload: { newCycle: monthCycle, timestamp: new Date().toISOString() },
+      });
+      await supabase.removeChannel(channelMerchant);
+    } catch (bcErr) {
+      console.warn("Realtime broadcast error on rotateMerchantQrAction:", bcErr);
+    }
+
     return { success: true, merchant: data };
   } catch (err: any) {
     return { success: false, error: sanitizeError(err) };
@@ -281,3 +293,7 @@ export async function registerMerchantAction(params: {
     return { success: false, error: sanitizeError(err) };
   }
 }
+
+// Export alias for flexible naming
+export const rotateQrCodeAction = rotateMerchantQrAction;
+

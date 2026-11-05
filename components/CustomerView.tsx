@@ -20,6 +20,8 @@ const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
 });
 import { submitScan as submitScanAction, getCustomerMerchantStatus } from "@/app/actions/scan";
 import { playScanChime } from "@/lib/audio";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 import {
   Sparkles,
   QrCode,
@@ -274,6 +276,49 @@ export default function CustomerView({
 
     loadCustomerState();
   }, [merchant.id, initialCustomer]);
+
+  const toast = useToast();
+  const supabase = createClient();
+
+  // Realtime subscription for customer scan page (Fix 2B)
+  useEffect(() => {
+    if (!customer?.id) return;
+    const channel = supabase
+      .channel(`customer:${customer.id}`)
+      .on("broadcast", { event: "visit_approved" }, async () => {
+        if (merchant.id && customer.phone) {
+          const res = await getCustomerMerchantStatus(merchant.id, customer.phone);
+          if (res.visitsCount !== undefined) {
+            setVisitsCount(res.visitsCount);
+            if (res.visitsCount >= visitsRequired) {
+              setShowConfetti(true);
+            }
+          }
+          if (res.isLockedToday !== undefined) {
+            setIsLockedToday(res.isLockedToday);
+          }
+        }
+        toast.success("Visit approved by cashier!");
+      })
+      .on("broadcast", { event: "stamp_updated" }, (payload: any) => {
+        if (typeof payload?.payload?.newStampCount === "number") {
+          setVisitsCount(payload.payload.newStampCount);
+        }
+        if (payload?.payload?.rewardReady) {
+          setShowConfetti(true);
+          toast.success("Reward unlocked! Visit the counter to claim.");
+        }
+      })
+      .on("broadcast", { event: "reward_burned" }, (payload: any) => {
+        setShowConfetti(true);
+        toast.success(`Enjoy your ${payload?.payload?.rewardTitle || "Reward"}!`);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [customer?.id, customer?.phone, merchant.id, visitsRequired, supabase, toast]);
 
   const safeVisits = Math.min(visitsCount, visitsRequired);
   const isGoalCompleted = visitsCount >= visitsRequired;

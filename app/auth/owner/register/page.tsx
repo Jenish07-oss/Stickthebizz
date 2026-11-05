@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 import {
   SubscriptionPlanId,
   SUBSCRIPTION_PLANS,
@@ -47,6 +48,7 @@ function OwnerRegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  const toast = useToast();
 
   // Plan selection
   const initialPlan = (searchParams.get("plan")?.toUpperCase() === "YEARLY" ? "YEARLY" : "MONTHLY") as SubscriptionPlanId;
@@ -134,12 +136,14 @@ function OwnerRegisterForm() {
           success: true,
           text: `✓ Code "${res.code}" applied: ${res.description}`,
         });
+        toast.success(`Promo "${res.code}" applied!`);
       } else {
         setAppliedPromo(null);
         setPromoMessage({
           success: false,
           text: res.message || "Invalid redeem code.",
         });
+        toast.error(res.message || "Invalid promo code");
       }
     } catch {
       setPromoMessage({ success: false, text: "Error verifying redeem code." });
@@ -243,7 +247,7 @@ function OwnerRegisterForm() {
         modal: {
           ondismiss: () => {
             setIsSubmitting(false);
-            setErrorMessage("Payment was cancelled. Complete checkout to activate your counter account.");
+            toast.info("Payment window closed. Form details preserved.");
           },
         },
         handler: async (response: any) => {

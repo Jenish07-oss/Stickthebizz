@@ -1,7 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, IBM_Plex_Mono } from "next/font/google";
+import { headers } from "next/headers";
 import "./globals.css";
 import { StoreProvider } from "@/context/StoreContext";
+import { ToastContainer } from "@/components/ui/Toast";
+import ConsoleCleaner from "@/components/ConsoleCleaner";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -51,6 +54,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  let nonce = "";
+  try {
+    nonce = headers().get("x-csp-nonce") || "";
+  } catch {
+    // headers() may not be available during static generation
+  }
+
   return (
     <html lang="en" className={`${plusJakarta.variable} ${ibmPlexMono.variable}`}>
       <head>
@@ -59,11 +69,21 @@ export default function RootLayout({
         <link rel="dns-prefetch" href="https://xzvpjprnexurgohfnimq.supabase.co" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {nonce ? (
+          <script
+            nonce={nonce}
+            dangerouslySetInnerHTML={{
+              __html: `window.__CSP_NONCE__ = '${nonce}';`,
+            }}
+          />
+        ) : null}
       </head>
       <body className="min-h-screen bg-sand font-sans text-ink antialiased selection:bg-coral/20 selection:text-coral overflow-x-hidden">
+        <ConsoleCleaner />
         <StoreProvider>
           {children}
         </StoreProvider>
+        <ToastContainer />
       </body>
     </html>
   );

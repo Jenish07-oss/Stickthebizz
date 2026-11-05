@@ -343,7 +343,7 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
     // Verify visit belongs to user's merchant
     const { data: visit, error: visitError } = await db
       .from("visits")
-      .select("id, merchant_id, status, merchants!inner(owner_id)")
+      .select("id, merchant_id, customer_id, status, merchants!inner(owner_id)")
       .eq("id", visitId)
       .single();
 
@@ -370,6 +370,56 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
     }
 
     const updatedVisit = updated[0];
+
+    // Realtime Broadcasts: Customer and Merchant
+    try {
+      const channelCustomer = db.channel(`customer:${visit.customer_id}`);
+      await channelCustomer.send({
+        type: "broadcast",
+        event: "visit_approved",
+        payload: { visitId, status: "approved", timestamp: new Date().toISOString() },
+      });
+
+      // Calculate stamps to broadcast stamp_updated
+      const { count: approvedCount } = await db
+        .from("visits")
+        .select("id", { count: "exact", head: true })
+        .eq("merchant_id", visit.merchant_id)
+        .eq("customer_id", visit.customer_id)
+        .eq("status", "APPROVED");
+
+      const { data: merchInfo } = await db
+        .from("merchants")
+        .select("visits_required, reward_name")
+        .eq("id", visit.merchant_id)
+        .single();
+
+      const reqStamps = merchInfo?.visits_required || 10;
+      const currentStamps = approvedCount || 1;
+      const isRewardReady = currentStamps >= reqStamps;
+
+      await channelCustomer.send({
+        type: "broadcast",
+        event: "stamp_updated",
+        payload: {
+          newStampCount: currentStamps,
+          rewardReady: isRewardReady,
+          rewardTitle: merchInfo?.reward_name || "Special Reward",
+          timestamp: new Date().toISOString(),
+        },
+      });
+      await db.removeChannel(channelCustomer);
+
+      const channelMerchant = db.channel(`merchant:${visit.merchant_id}`);
+      await channelMerchant.send({
+        type: "broadcast",
+        event: "queue_updated",
+        payload: { visitId, action: "approved", timestamp: new Date().toISOString() },
+      });
+      await db.removeChannel(channelMerchant);
+    } catch (bcErr) {
+      console.warn("Realtime broadcast error on approveVisit:", bcErr);
+    }
 
     await auditLog({
       userId: user.id,
@@ -477,7 +527,7 @@ export async function verifyRedemptionPin(
 
     const { data: merchant, error: merchError } = await db
       .from("merchants")
-      .select("id, redemption_pin, reward_name, visits_required")
+      .select("id, redemption_pin, reward_name, visits_required, shop_name, business_name")
       .eq("id", merchantId)
       .single();
 
@@ -559,6 +609,31 @@ export async function verifyRedemptionPin(
         redeemed_at: new Date().toISOString(),
         redeemed_by_user_id: user?.id || null,
       });
+
+      // Realtime Broadcasts for Redemption (Fix 3)
+      try {
+        const channelCustomer = db.channel(`customer:${customer.id}`);
+        await channelCustomer.send({
+          type: "broadcast",
+          event: "reward_burned",
+          payload: {
+            rewardTitle: merchant.reward_name,
+            shopName: merchant.shop_name || merchant.business_name || "Store",
+            timestamp: new Date().toISOString(),
+          },
+        });
+        await db.removeChannel(channelCustomer);
+
+        const channelMerchant = db.channel(`merchant:${merchantId}`);
+        await channelMerchant.send({
+          type: "broadcast",
+          event: "ledger_updated",
+          payload: { action: "redeemed", timestamp: new Date().toISOString() },
+        });
+        await db.removeChannel(channelMerchant);
+      } catch (bcErr) {
+        console.warn("Realtime broadcast error on verifyRedemptionPin:", bcErr);
+      }
     }
 
     if (user) {
@@ -747,3 +822,8 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
     return { customer: null, visitsCount: 0, isLockedToday: false, error: sanitizeError(err) };
   }
 }
+
+// Export aliases for flexible imports
+export const approveVisitAction = approveVisit;
+export const validateVoucherPinAction = verifyRedemptionPin;
+

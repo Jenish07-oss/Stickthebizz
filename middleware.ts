@@ -111,7 +111,17 @@ export async function middleware(request: NextRequest) {
   }
 
   // Supabase auth refresh (existing logic)
-  return await updateSession(request);
+  const response = await updateSession(request);
+
+  // Generate CSP Nonce (Fix 9)
+  const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
+  const isDev = process.env.NODE_ENV === "development";
+  const cspHeader = `default-src 'self'; script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ""}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://xzvpjprnexurgohfnimq.supabase.co wss://xzvpjprnexurgohfnimq.supabase.co https://api.razorpay.com; frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;`;
+
+  response.headers.set("Content-Security-Policy", cspHeader);
+  response.headers.set("x-csp-nonce", nonce);
+
+  return response;
 }
 
 export const config = {

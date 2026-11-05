@@ -19,6 +19,7 @@ const LiveActivityToast = dynamic(() => import("@/components/LiveActivityToast")
   ssr: false,
 });
 import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/components/ui/Toast";
 import {
   approveVisit,
   rejectVisit,
@@ -76,6 +77,7 @@ interface LedgerRecord {
 export default function OwnerDashboardPage() {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   const [merchant, setMerchant] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -488,8 +490,11 @@ export default function OwnerDashboardPage() {
     const res = await rotateMerchantQrAction(merchant.id);
     if (res.success && res.merchant) {
       setMerchant(res.merchant);
+      toast.success("QR code rotated! Old links work for 30 days.");
       setRuleSaveMessage("✓ QR Standee rotated for fresh 30-day cycle! Old QR code expired.");
       setTimeout(() => setRuleSaveMessage(null), 3500);
+    } else {
+      toast.error("Failed to rotate QR code.");
     }
     setIsRotatingQr(false);
   };

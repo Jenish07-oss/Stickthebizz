@@ -7,10 +7,12 @@ import { Phone, Mail, User, ArrowRight, ShieldCheck, CheckCircle2, RotateCcw, Lo
 import Logo from "@/components/Logo";
 import { createClient } from "@/lib/supabase/client";
 import { syncCustomerAccountAction } from "@/app/actions/customer";
+import { useToast } from "@/components/ui/Toast";
 
 export default function CustomerAuthPage() {
   const router = useRouter();
   const supabase = createClient();
+  const toast = useToast();
 
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [step, setStep] = useState<"details" | "otp">("details");
@@ -115,6 +117,7 @@ export default function CustomerAuthPage() {
       }
 
       setOtpSuccessMessage(`Verification code sent to ${cleanEmail}! Check your inbox.`);
+      toast.success("Verification code sent! Check your inbox.");
       setStep("otp");
     } catch (err: any) {
       setErrorMessage(err.message || "Unable to send verification code. Please try again.");
@@ -258,6 +261,7 @@ export default function CustomerAuthPage() {
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("redirect")
           : null;
+      toast.success("Login verified! Welcome to your Loyalty Pass.");
       router.replace(redirectUrl || "/customer/dashboard");
     } catch (err: any) {
       setErrorMessage(err.message || "Verification failed. Please retry.");
