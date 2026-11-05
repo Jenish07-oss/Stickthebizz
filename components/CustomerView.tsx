@@ -34,6 +34,7 @@ import {
   Phone,
   AlertCircle,
 } from "lucide-react";
+import { decodeHtml } from "@/lib/utils/sanitize";
 
 export interface InitialMerchantData {
   id?: string;
@@ -281,7 +282,8 @@ export default function CustomerView({
     const targetName = customer?.fullName || nameInput.trim();
 
     if (!targetPhone || targetPhone.length < 10) {
-      setErrorMessage("Please enter a valid 10-digit mobile number.");
+      setErrorMessage("Please enter your 10-digit mobile number to collect your stamp.");
+      setChangeNumberModal(true);
       return;
     }
 
@@ -357,7 +359,7 @@ export default function CustomerView({
           <div className="mb-4 text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-1.5 font-mono text-xs font-bold text-secondary border border-border shadow-sm">
               <Store className="h-3.5 w-3.5 text-primary" />
-              {merchant.name} Loyalty Pass
+              {decodeHtml(merchant.name)} Loyalty Pass
             </span>
           </div>
 
@@ -386,7 +388,7 @@ export default function CustomerView({
                 <div className="flex items-start justify-between">
                   <div>
                     <h1 className="font-display text-xl font-extrabold tracking-tight text-secondary">
-                      {merchant.name}
+                      {decodeHtml(merchant.name)}
                     </h1>
                     <p className="text-[11px] text-ink/65">
                       Counter Streak Loyalty Card

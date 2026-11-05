@@ -534,3 +534,64 @@ export async function deleteCustomerAccountAction() {
     return { success: false, error: sanitizeError(err) };
   }
 }
+
+/**
+ * Update authenticated customer profile (Name and Mobile Number).
+ */
+export async function updateCustomerProfileAction(params: { fullName: string; phone: string }) {
+  try {
+    const authSupabase = await createClient();
+    const { data: { user } } = await authSupabase.auth.getUser();
+    if (!user) return { success: false, error: "UNAUTHENTICATED" };
+
+    const cleanPhone = params.phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10) {
+      return { success: false, error: "Please enter a valid 10-digit mobile number." };
+    }
+    const cleanName = params.fullName.trim();
+    if (!cleanName) {
+      return { success: false, error: "Please enter your name." };
+    }
+
+    const db = createUnauthenticatedClient();
+    let { data: customer } = await db
+      .from("customers")
+      .select("id, phone, full_name, email, auth_id")
+      .or(`auth_id.eq.${user.id}${user.email ? `,email.eq.${user.email.toLowerCase()}` : ""}`)
+      .limit(1)
+      .maybeSingle();
+
+    if (customer) {
+      const { data: updated, error } = await db
+        .from("customers")
+        .update({
+          full_name: cleanName,
+          phone: cleanPhone,
+          auth_id: user.id,
+          email: user.email || customer.email,
+        })
+        .eq("id", customer.id)
+        .select()
+        .single();
+
+      if (error) return { success: false, error: sanitizeError(error) };
+      return { success: true, customer: updated };
+    } else {
+      const { data: inserted, error } = await db
+        .from("customers")
+        .insert({
+          auth_id: user.id,
+          email: user.email || null,
+          phone: cleanPhone,
+          full_name: cleanName,
+        })
+        .select()
+        .single();
+
+      if (error) return { success: false, error: sanitizeError(error) };
+      return { success: true, customer: inserted };
+    }
+  } catch (err: any) {
+    return { success: false, error: sanitizeError(err) };
+  }
+}

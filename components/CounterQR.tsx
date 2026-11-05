@@ -3,8 +3,9 @@
 import React, { useRef, useState, useEffect } from "react";
 import Link from "next/link";
 import { QRCodeSVG } from "qrcode.react";
-import { Printer, Sparkles, Store, ShieldCheck, QrCode, Copy, Check, ExternalLink } from "lucide-react";
-import { LogoIcon, LogoWordmark } from "@/components/Logo";
+import { Printer, Store, ShieldCheck, QrCode, Copy, Check, ExternalLink, X, Download } from "lucide-react";
+import { LogoIcon } from "@/components/Logo";
+import { decodeHtml } from "@/lib/utils/sanitize";
 
 interface CounterQRProps {
   shopName?: string;
@@ -27,18 +28,19 @@ export default function CounterQR({
   minSpend = 100,
   visitsNeeded,
   visitsRequired,
-  rewardName = "Free Masala Chai",
+  rewardName = "Free Special Item",
   validityDays = 30,
   qrToken,
   onRotateQr,
   isRotating = false,
 }: CounterQRProps) {
   const qrRef = useRef<HTMLDivElement>(null);
-  const displayName = shopName || name || "Kesar Chai Corner";
-  const displayVisits = visitsRequired || visitsNeeded || 10;
+  const rawName = shopName || name || "Kesar Chai Corner";
+  const displayName = decodeHtml(rawName);
 
   const [baseUrl, setBaseUrl] = useState("https://stickthebizz.in");
   const [copied, setCopied] = useState(false);
+  const [printModalOpen, setPrintModalOpen] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -62,90 +64,107 @@ export default function CounterQR({
     window.print();
   };
 
+  const handleDownloadQr = () => {
+    try {
+      const svg = document.getElementById("clean-standee-qr");
+      if (!svg) return;
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      const img = new Image();
+      img.onload = () => {
+        canvas.width = 1000;
+        canvas.height = 1000;
+        if (ctx) {
+          ctx.fillStyle = "#FFFFFF";
+          ctx.fillRect(0, 0, 1000, 1000);
+          ctx.drawImage(img, 0, 0, 1000, 1000);
+          const pngFile = canvas.toDataURL("image/png");
+          const downloadLink = document.createElement("a");
+          downloadLink.download = `${slug}-counter-qr.png`;
+          downloadLink.href = pngFile;
+          downloadLink.click();
+        }
+      };
+      img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+    } catch (err) {
+      console.error("QR download error:", err);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center">
+      {/* Strict Print CSS: isolates ONLY the Standee Print Area and hides all web UI */}
       <style>{`
         @media print {
-          nav, header, footer, .no-print, [role="navigation"] {
-            display: none !important;
+          body * {
+            visibility: hidden !important;
           }
-          body {
-            background: #ffffff !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          #standee-print-target,
+          #standee-print-target * {
+            visibility: visible !important;
           }
-          .printable-standee-wrapper {
+          #standee-print-target {
             position: fixed !important;
-            left: 50% !important;
-            top: 50% !important;
-            transform: translate(-50%, -50%) !important;
-            width: 100% !important;
-            max-width: 360px !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 2cm !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: #ffffff !important;
+            box-sizing: border-box !important;
+            z-index: 999999 !important;
+          }
+          @page {
+            size: 5in 7in;
+            margin: 0;
           }
         }
       `}</style>
-      {/* 3D Acrylic Table Standee Container */}
-      <div className="printable-standee-wrapper relative pt-4 pb-8 flex flex-col items-center">
+
+      {/* 3D Acrylic Table Standee Container (Dashboard On-Screen Preview) */}
+      <div className="relative pt-4 pb-8 flex flex-col items-center">
         {/* Glossy Acrylic Standee Body */}
         <div
           ref={qrRef}
-          className="relative w-full max-w-[330px] rounded-t-3xl border-4 border-b-0 border-white/80 bg-gradient-to-b from-white via-white to-white/95 p-6 text-center shadow-[0_20px_50px_rgba(49,91,140,0.18)] "
+          className="relative w-full max-w-[330px] rounded-t-3xl border-4 border-b-0 border-white/80 bg-gradient-to-b from-white via-white to-white/95 p-6 text-center shadow-[0_20px_50px_rgba(49,91,140,0.18)]"
         >
           {/* Acrylic Gloss Reflection Highlight */}
           <div className="pointer-events-none absolute -left-12 -top-12 h-36 w-72 -rotate-45 bg-gradient-to-r from-transparent via-white/40 to-transparent" />
 
-          {/* Standee Top Badge */}
-          <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-sand px-3.5 py-1 text-[11px] font-bold text-secondary shadow-sm">
-            <LogoIcon size={18} />
-            <div className="flex items-center gap-1">
-              <span className="text-[#102B4C]">stickthe</span><span className="text-[#EE634A]">bizz</span>
-              <span className="text-ink/40 font-normal">| Counter Stand</span>
-            </div>
-          </div>
-
           {/* Shop Title */}
-          <h2 className="mt-3 font-display text-2xl font-extrabold tracking-tight text-secondary">
-            {displayName}
-          </h2>
-          <p className="mt-0.5 text-xs font-semibold text-ink/65">
-            Scan with any phone camera • Zero app needed
-          </p>
+          <div className="mb-2">
+            <h2 className="font-display text-2xl font-extrabold tracking-tight text-secondary">
+              {displayName}
+            </h2>
+            <p className="mt-1 text-xs font-semibold text-ink/65">
+              Scan with Phone Camera to Punch Stamp
+            </p>
+          </div>
 
           {/* QR Code Inset Box */}
           <div className="my-4 flex justify-center rounded-2xl border-2 border-dashed border-border bg-sand/30 p-4 shadow-inner">
             <QRCodeSVG
+              id="clean-standee-qr"
               value={scanUrl}
-              size={175}
+              size={185}
               level="H"
               bgColor="#FFFFFF"
-              fgColor="#413333"
+              fgColor="#102B4C"
               includeMargin={true}
             />
           </div>
 
-          {/* Reward Callout */}
-          <div className="rounded-2xl bg-secondary p-4 text-white shadow-md">
-            <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-primary">
-              <Sparkles className="h-4 w-4" />
-              <span>COUNTER REWARD</span>
-            </div>
-            <p className="mt-1 font-display text-lg font-extrabold">
-              {rewardName}
-            </p>
-            <p className="mt-1 font-mono text-xs text-white/80">
-              Spend ₹{minSpend}+ • Complete {displayVisits} stamps
-            </p>
-          </div>
-
-          {/* Anti-Fraud & Monthly Expiry Notice */}
-          <div className="mt-3 flex flex-col items-center gap-1 text-[11px] font-medium text-ink/60">
-            <div className="flex items-center gap-1.5 font-bold text-secondary">
-              <ShieldCheck className="h-3.5 w-3.5 text-success" />
-              <span>Valid for {validityDays} Days • Active Standee</span>
-            </div>
-            <span className="text-[10px] text-ink/40">1-Scan Daily Limit • DPDP Safe</span>
+          {/* Permanent Static Bottom Mark (Strictly NO dynamic changing rules) */}
+          <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-center gap-1.5 text-xs text-ink/70">
+            <LogoIcon size={16} />
+            <span className="font-bold text-secondary">stickthebizz.in</span>
+            <span className="text-ink/40">• Digital Loyalty Pass</span>
           </div>
         </div>
 
@@ -163,11 +182,11 @@ export default function CounterQR({
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
-            onClick={handlePrint}
+            onClick={() => setPrintModalOpen(true)}
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
           >
             <Printer className="h-4 w-4" />
-            Print Counter Acrylic Stand
+            <span>Print Acrylic Counter Standee (5x7)</span>
           </button>
 
           {onRotateQr && (
@@ -188,7 +207,7 @@ export default function CounterQR({
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
           >
             <ExternalLink className="h-4 w-4 text-primary" />
-            Test Customer Pass (/s/{slug})
+            <span>Test Customer Pass (/s/{slug})</span>
           </Link>
 
           <button
@@ -197,7 +216,7 @@ export default function CounterQR({
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full border border-border bg-white px-5 text-sm font-bold text-secondary transition hover:bg-sand"
           >
             {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4 text-primary" />}
-            {copied ? "URL Copied!" : "Copy Scan URL"}
+            <span>{copied ? "URL Copied!" : "Copy Scan URL"}</span>
           </button>
         </div>
 
@@ -205,6 +224,119 @@ export default function CounterQR({
         <div className="mt-1 flex items-center gap-2 text-xs font-mono text-ink/60 bg-sand/60 px-3 py-1.5 rounded-xl border border-border">
           <span className="font-bold text-secondary">Live QR Link:</span>
           <span className="text-primary truncate max-w-[280px] sm:max-w-md">{scanUrl}</span>
+        </div>
+      </div>
+
+      {/* PRINT PREVIEW MODAL */}
+      {printModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-secondary/80 p-4 backdrop-blur-sm animate-in fade-in no-print">
+          <div className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl border border-border">
+            <button
+              type="button"
+              onClick={() => setPrintModalOpen(false)}
+              className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full bg-sand text-ink/60 hover:text-secondary"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sand px-3 py-1 text-xs font-bold text-secondary">
+                <Printer className="h-3.5 w-3.5 text-primary" />
+                PRINT-READY 5x7 COUNTER STANDEE
+              </span>
+              <h3 className="mt-2 font-display text-xl font-extrabold text-secondary">
+                Physical Acrylic Standee Preview
+              </h3>
+              <p className="mt-1 text-xs text-ink/65">
+                Optimized with zero background web clutter. Only your fixed shop name, sharp QR code, and small bottom company mark.
+              </p>
+            </div>
+
+            {/* Standee Preview Frame */}
+            <div className="my-6 mx-auto flex flex-col items-center justify-center rounded-2xl border-2 border-border/80 bg-white p-6 shadow-sm max-w-[320px]">
+              <h4 className="font-display text-2xl font-extrabold text-[#102B4C] text-center">
+                {displayName}
+              </h4>
+              <p className="mt-1 text-[11px] font-semibold text-ink/70 text-center">
+                Scan with Phone Camera to Punch Stamp
+              </p>
+
+              <div className="my-4 p-2 bg-white rounded-xl border border-border/60">
+                <QRCodeSVG
+                  value={scanUrl}
+                  size={190}
+                  level="H"
+                  bgColor="#FFFFFF"
+                  fgColor="#102B4C"
+                  includeMargin={true}
+                />
+              </div>
+
+              <p className="text-[10px] text-ink/50 text-center">
+                Zero app downloads • Instant digital pass
+              </p>
+
+              <div className="mt-3 pt-2.5 border-t border-border/50 w-full flex items-center justify-center gap-1.5 text-[11px] text-ink/60">
+                <LogoIcon size={14} />
+                <span className="font-bold text-secondary">stickthebizz.in</span>
+              </div>
+            </div>
+
+            {/* Print Modal Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-primary px-4 text-xs font-bold text-white shadow-card transition hover:bg-primary/90"
+              >
+                <Printer className="h-4 w-4" />
+                <span>Print Standee Now</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadQr}
+                className="flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-border bg-sand/40 px-4 text-xs font-bold text-secondary transition hover:bg-sand"
+              >
+                <Download className="h-4 w-4 text-primary" />
+                <span>Download QR (PNG)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DEDICATED PRINT CONTAINER: This is the ONLY element visible during window.print() */}
+      <div id="standee-print-target" style={{ display: "none" }}>
+        <div style={{ textAlign: "center", maxWidth: "420px", width: "100%", padding: "24px", boxSizing: "border-box" }}>
+          <h1 style={{ fontFamily: "sans-serif", fontSize: "36px", fontWeight: "900", color: "#102B4C", margin: "0 0 8px 0", letterSpacing: "-0.5px" }}>
+            {displayName}
+          </h1>
+          <p style={{ fontFamily: "sans-serif", fontSize: "14px", fontWeight: "600", color: "#555555", margin: "0 0 24px 0" }}>
+            Scan with Phone Camera to Punch Stamp
+          </p>
+
+          <div style={{ display: "flex", justifyContent: "center", margin: "16px 0" }}>
+            <QRCodeSVG
+              value={scanUrl}
+              size={290}
+              level="H"
+              bgColor="#FFFFFF"
+              fgColor="#102B4C"
+              includeMargin={true}
+            />
+          </div>
+
+          <p style={{ fontFamily: "sans-serif", fontSize: "12px", color: "#777777", margin: "16px 0 24px 0" }}>
+            No customer app download required • Instant digital loyalty card
+          </p>
+
+          <div style={{ borderTop: "2px solid #E5E7EB", paddingTop: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+            <LogoIcon size={18} />
+            <span style={{ fontFamily: "sans-serif", fontSize: "13px", fontWeight: "800", color: "#102B4C" }}>
+              stickthebizz.in
+            </span>
+          </div>
         </div>
       </div>
     </div>

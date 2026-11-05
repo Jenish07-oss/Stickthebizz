@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getAuthenticatedMerchant } from "@/lib/utils/auth";
-import { sanitizeHtml, sanitizeError, maskPhone } from "@/lib/utils/sanitize";
+import { sanitizeHtml, decodeHtml, sanitizeError, maskPhone } from "@/lib/utils/sanitize";
 import { auditLog } from "@/lib/utils/audit";
 import { updateMerchantRuleSchema } from "@/lib/utils/validation";
 import crypto from "crypto";
@@ -210,6 +210,11 @@ export async function getOwnerMerchant() {
           console.warn("Auto-provision merchant note:", insertError.message);
         }
       }
+    }
+
+    if (merchant) {
+      if (merchant.category) merchant.category = decodeHtml(merchant.category);
+      if (merchant.name) merchant.name = decodeHtml(merchant.name);
     }
 
     return { user, merchant, needsSetup: !merchant && !!user };

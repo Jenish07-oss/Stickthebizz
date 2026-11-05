@@ -14,16 +14,23 @@ export function sanitizeHtml(input: string): string {
     .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
     // Remove javascript: URIs
     .replace(/javascript\s*:/gi, "")
-    // Encode dangerous characters
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-    .replace(/\//g, "&#x2F;")
     // Normalize whitespace
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/**
+ * Decodes HTML entities back to clean human-readable text.
+ */
+export function decodeHtml(input: string): string {
+  if (!input || typeof input !== "string") return "";
+  return input
+    .replace(/&#x2F;/g, "/")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
 }
 
 /**

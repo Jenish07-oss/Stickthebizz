@@ -28,6 +28,7 @@ import {
 } from "@/app/actions/scan";
 import { getOwnerMerchant, updateMerchantRuleAction, rotateMerchantQrAction, registerMerchantAction } from "@/app/actions/merchant";
 import { playApprovalBell, playScanChime } from "@/lib/audio";
+import { decodeHtml } from "@/lib/utils/sanitize";
 import {
   Store,
   Gift,
@@ -103,6 +104,7 @@ export default function OwnerDashboardPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [exitingCardIds, setExitingCardIds] = useState<string[]>([]);
   const processedVisitIdsRef = useRef<Set<string>>(new Set());
+  const processedStatusMapRef = useRef<Map<string, string>>(new Map());
   const knownVisitIdsRef = useRef<Set<string>>(new Set());
   const [isCreatingShop, setIsCreatingShop] = useState(false);
   const [newShopName, setNewShopName] = useState("");
@@ -222,7 +224,7 @@ export default function OwnerDashboardPage() {
                 customerMasked: v.customers?.phone || "Customer Check-in",
                 amount: Number(v.bill_amount) || m.min_spend,
                 formattedTime: "Just now",
-                status: v.status,
+                status: processedStatusMapRef.current.get(v.id) || v.status,
               };
             });
             setPendingQueue(initialQueue);
@@ -250,7 +252,7 @@ export default function OwnerDashboardPage() {
                 contactMasked: msk,
                 visitDate: v.visit_date_ist,
                 billAmount: Number(v.bill_amount) || m.min_spend,
-                status: v.status,
+                status: processedStatusMapRef.current.get(v.id) || v.status,
                 createdAt: v.created_at,
               };
             });
@@ -290,11 +292,14 @@ export default function OwnerDashboardPage() {
         },
         async (payload) => {
           const v = payload.new;
-          if (v.status === "PENDING") {
+          if (v.status === "PENDING" && !processedVisitIdsRef.current.has(v.id)) {
             playApprovalBell();
             const { visits: freshPending } = await getPendingVisits(merchant.id);
             if (freshPending) {
-              const updatedQueue: LivePendingScan[] = freshPending.map((item: any) => ({
+              const activePending = freshPending.filter(
+                (item: any) => !processedVisitIdsRef.current.has(item.id)
+              );
+              const updatedQueue: LivePendingScan[] = activePending.map((item: any) => ({
                 id: item.id,
                 customerName: item.customers?.full_name || "Customer Check-in",
                 customerMasked: item.customers?.phone || "Customer Check-in",
@@ -381,6 +386,7 @@ export default function OwnerDashboardPage() {
   const handleApprove = async (scanId: string) => {
     // 1. Mark as processed immediately so polling NEVER re-adds it
     processedVisitIdsRef.current.add(scanId);
+    processedStatusMapRef.current.set(scanId, "APPROVED");
     setActionLoadingId(scanId);
     playApprovalBell();
 
@@ -416,7 +422,7 @@ export default function OwnerDashboardPage() {
               contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
               visitDate: v.visit_date_ist,
               billAmount: Number(v.bill_amount) || merchant.min_spend,
-              status: v.status,
+              status: processedStatusMapRef.current.get(v.id) || v.status,
               createdAt: v.created_at,
             }))
           );
@@ -430,6 +436,7 @@ export default function OwnerDashboardPage() {
   const handleReject = async (scanId: string) => {
     // 1. Mark as processed immediately so polling NEVER re-adds it
     processedVisitIdsRef.current.add(scanId);
+    processedStatusMapRef.current.set(scanId, "REJECTED");
     setActionLoadingId(scanId);
 
     // 2. Smooth hardware-accelerated exit animation
@@ -464,7 +471,7 @@ export default function OwnerDashboardPage() {
               contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
               visitDate: v.visit_date_ist,
               billAmount: Number(v.bill_amount) || merchant.min_spend,
-              status: v.status,
+              status: processedStatusMapRef.current.get(v.id) || v.status,
               createdAt: v.created_at,
             }))
           );
@@ -918,10 +925,10 @@ export default function OwnerDashboardPage() {
                   MERCHANT COUNTER DESK
                 </div>
                 <h1 className="mt-2 font-display text-2xl sm:text-4xl font-extrabold tracking-tight text-secondary">
-                  {merchant?.name || "My Counter"}
+                  {decodeHtml(merchant?.name || "My Counter")}
                 </h1>
                 <p className="mt-1 text-xs sm:text-sm text-ink/75">
-                  Category: <strong className="text-secondary">{(merchant?.category || "Retail").replace(/&#x2F;/g, "/").replace(/&amp;/g, "&")}</strong> • Counter Pass:{" "}
+                  Category: <strong className="text-secondary">{decodeHtml(merchant?.category || "Retail")}</strong> • Counter Pass:{" "}
                   <a
                     href={scanUrl}
                     target="_blank"
@@ -1196,15 +1203,6 @@ export default function OwnerDashboardPage() {
                   onRotateQr={handleRotateQr}
                   isRotating={isRotatingQr}
                 />
-
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="mt-6 inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-card transition hover:bg-primary"
-                >
-                  <Printer className="h-4 w-4" />
-                  <span>Print Acrylic Counter Standee (5x7)</span>
-                </button>
               </div>
             </div>
 

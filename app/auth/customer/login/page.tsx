@@ -24,10 +24,22 @@ export default function CustomerAuthPage() {
   // 6-digit OTP
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [resendAttempts, setResendAttempts] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [otpSuccessMessage, setOtpSuccessMessage] = useState<string | null>(null);
 
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // 60-Second Cooldown Timer for 2nd/3rd Resends
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resendCooldown]);
 
   // 1. Auto-Login Check: If customer has an active session, redirect straight to target or dashboard
   useEffect(() => {
@@ -90,6 +102,54 @@ export default function CustomerAuthPage() {
       setErrorMessage(err.message || "Unable to send verification code. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    setErrorMessage(null);
+    setOtpSuccessMessage(null);
+
+    try {
+      const cleanEmail = email.trim().toLowerCase();
+      const cleanPhone = phone.replace(/\D/g, "");
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          data: {
+            full_name: fullName.trim() || (authMode === "login" ? "Retail Regular" : "New Customer"),
+            phone: cleanPhone || undefined,
+          },
+        },
+      });
+
+      if (error) {
+        if (error.message?.includes("rate") || (error as any).status === 429) {
+          setErrorMessage("Email delivery rate limit reached. Please check your Spam/Junk folder or wait a moment.");
+        } else {
+          setErrorMessage(error.message || "Failed to resend code. Please try again.");
+        }
+        setIsResending(false);
+        return;
+      }
+
+      setOtpSuccessMessage(`✓ New verification code sent to ${cleanEmail}! Check inbox & Spam.`);
+      setOtp(["", "", "", "", "", ""]);
+      otpInputs.current[0]?.focus();
+
+      // Rule: First resend is immediate without priority/penalty.
+      // Second and third resend trigger strict 60 second timer.
+      if (resendAttempts === 0) {
+        setResendAttempts(1);
+      } else {
+        setResendAttempts((prev) => prev + 1);
+        setResendCooldown(60);
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Unable to resend verification code.");
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -370,18 +430,39 @@ export default function CustomerAuthPage() {
                 <ArrowRight className="h-4 w-4" />
               </button>
 
-              <div className="text-center pt-2">
+              <div className="flex flex-col items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  disabled={resendCooldown > 0 || isResending}
+                  onClick={handleResendOtp}
+                  className="inline-flex items-center gap-2 text-xs font-bold text-primary hover:text-primary/80 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RotateCcw className={`h-3.5 w-3.5 ${isResending ? "animate-spin" : ""}`} />
+                  <span>
+                    {isResending
+                      ? "Resending code..."
+                      : resendCooldown > 0
+                      ? `Resend code in ${resendCooldown}s`
+                      : "Resend Verification Code"}
+                  </span>
+                </button>
+
+                <p className="text-[11px] text-ink/60 text-center max-w-xs">
+                  Didn&apos;t receive it? Please check your <strong>Spam / Junk</strong> folder.
+                  Codes typically arrive within 5–15 seconds.
+                </p>
+
                 <button
                   type="button"
                   onClick={() => {
                     setStep("details");
                     setOtp(["", "", "", "", "", ""]);
                     setErrorMessage(null);
+                    setOtpSuccessMessage(null);
                   }}
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-ink/65 hover:text-secondary transition"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/50 hover:text-secondary transition"
                 >
-                  <RotateCcw className="h-3.5 w-3.5" />
-                  <span>Change Email / Resend Code</span>
+                  <span>Edit Email Address</span>
                 </button>
               </div>
             </form>

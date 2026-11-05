@@ -212,22 +212,41 @@ export async function submitScan(
 
         if (!customer) {
           console.error("submitScan customer insert error:", insertCustError);
-          return {
-            success: false,
-            locked: false,
-            message: "Unable to register customer record. Please check phone number and try again.",
-            error: insertCustError?.message,
-          };
+          // If insert failed due to duplicate key or race condition, do an upsert or single lookup
+          const { data: finalLookup } = await db
+            .from("customers")
+            .select("id, phone, full_name, auth_id, email")
+            .or(`phone.eq.${cleanPhone}${authUserId ? `,auth_id.eq.${authUserId}` : ""}${authUserEmail ? `,email.eq.${authUserEmail}` : ""}`)
+            .limit(1)
+            .maybeSingle();
+
+          if (finalLookup) {
+            customer = finalLookup;
+          } else {
+            return {
+              success: false,
+              locked: false,
+              message: "Unable to register customer record. Please check phone number and try again.",
+              error: insertCustError?.message,
+            };
+          }
         }
       } else {
         customer = newCustomer;
       }
-    } else if (authUserId && !customer.auth_id) {
-      // Link customer record to authenticated user
-      await db
-        .from("customers")
-        .update({ auth_id: authUserId, ...(authUserEmail ? { email: authUserEmail } : {}) })
-        .eq("id", customer.id);
+    }
+
+    // Keep customer record synchronized with phone and auth metadata
+    if (customer) {
+      const updates: any = {};
+      if (authUserId && !customer.auth_id) updates.auth_id = authUserId;
+      if (authUserEmail && !customer.email) updates.email = authUserEmail;
+      if (cleanPhone && (!customer.phone || customer.phone !== cleanPhone)) updates.phone = cleanPhone;
+      if (validData.customerName && !customer.full_name) updates.full_name = sanitizeHtml(validData.customerName);
+
+      if (Object.keys(updates).length > 0) {
+        await db.from("customers").update(updates).eq("id", customer.id);
+      }
     }
 
     if (!customer) {
@@ -329,40 +348,28 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
       .single();
 
     if (visitError || !visit) return { success: false, error: "VISIT_NOT_FOUND" };
-    if ((visit as any).merchants?.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
-
-    if (visit.status !== "PENDING") {
-      return { success: false, error: `Visit is already ${visit.status.toLowerCase()}.` };
+    const merchantOwnerId = (visit as any).merchants?.owner_id;
+    if (merchantOwnerId && merchantOwnerId !== user.id) {
+      return { success: false, error: "FORBIDDEN" };
     }
 
-    // Atomic Conditional Update: try with authSupabase first, fallback to db
-    let updatedVisit: any = null;
-    const authUpdate = await authSupabase
+    if (visit.status === "APPROVED") {
+      return { success: true, visit, message: "Visit already approved." };
+    }
+
+    // Direct atomic update
+    const { data: updated, error: updateErr } = await db
       .from("visits")
       .update({ status: "APPROVED" })
       .eq("id", visitId)
-      .eq("status", "PENDING")
       .select();
 
-    if (authUpdate.data && authUpdate.data.length > 0) {
-      updatedVisit = authUpdate.data[0];
-    } else {
-      const dbUpdate = await db
-        .from("visits")
-        .update({ status: "APPROVED" })
-        .eq("id", visitId)
-        .eq("status", "PENDING")
-        .select();
-
-      if (dbUpdate.data && dbUpdate.data.length > 0) {
-        updatedVisit = dbUpdate.data[0];
-      }
+    if (updateErr || !updated || updated.length === 0) {
+      console.error("approveVisit update error:", updateErr);
+      return { success: false, error: "Visit could not be approved." };
     }
 
-    if (!updatedVisit) {
-      console.error("approveVisit update error:", authUpdate.error);
-      return { success: false, error: "Visit could not be approved or was already processed." };
-    }
+    const updatedVisit = updated[0];
 
     await auditLog({
       userId: user.id,
@@ -402,35 +409,27 @@ export async function rejectVisit(visitId: string) {
       .single();
 
     if (visitError || !visit) return { success: false, error: "VISIT_NOT_FOUND" };
-    if ((visit as any).merchants?.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
+    const merchantOwnerId = (visit as any).merchants?.owner_id;
+    if (merchantOwnerId && merchantOwnerId !== user.id) {
+      return { success: false, error: "FORBIDDEN" };
+    }
 
-    let updatedVisit: any = null;
-    const authUpdate = await authSupabase
+    if (visit.status === "REJECTED") {
+      return { success: true, visit, message: "Visit already rejected." };
+    }
+
+    const { data: updated, error: updateErr } = await db
       .from("visits")
       .update({ status: "REJECTED" })
       .eq("id", visitId)
-      .eq("status", "PENDING")
       .select();
 
-    if (authUpdate.data && authUpdate.data.length > 0) {
-      updatedVisit = authUpdate.data[0];
-    } else {
-      const dbUpdate = await db
-        .from("visits")
-        .update({ status: "REJECTED" })
-        .eq("id", visitId)
-        .eq("status", "PENDING")
-        .select();
-
-      if (dbUpdate.data && dbUpdate.data.length > 0) {
-        updatedVisit = dbUpdate.data[0];
-      }
+    if (updateErr || !updated || updated.length === 0) {
+      console.error("rejectVisit update error:", updateErr);
+      return { success: false, error: "Visit could not be rejected." };
     }
 
-    if (!updatedVisit) {
-      console.error("rejectVisit update error:", authUpdate.error);
-      return { success: false, error: "Visit already processed or not pending." };
-    }
+    const updatedVisit = updated[0];
 
     await auditLog({
       userId: user.id,
