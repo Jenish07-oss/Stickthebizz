@@ -61,7 +61,143 @@ export default function CounterQR({
   };
 
   const handlePrint = () => {
-    window.print();
+    // Isolated 1-page print frame: completely bypasses the multi-page dashboard DOM
+    const oldFrame = document.getElementById("standee-print-frame");
+    if (oldFrame) oldFrame.remove();
+
+    const iframe = document.createElement("iframe");
+    iframe.id = "standee-print-frame";
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) {
+      window.print();
+      return;
+    }
+
+    const svgEl = document.getElementById("clean-standee-qr");
+    const svgHtml = svgEl ? svgEl.outerHTML : "";
+
+    doc.open();
+    doc.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${displayName} - Counter QR Standee</title>
+  <style>
+    @page {
+      size: portrait;
+      margin: 0;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    h1 {
+      font-size: 34px;
+      font-weight: 900;
+      color: #102B4C;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+    .sub {
+      font-size: 14px;
+      font-weight: 600;
+      color: #555555;
+      margin-bottom: 20px;
+    }
+    .qr-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 8px 0;
+      padding: 16px;
+      background: #ffffff;
+      border: 2px solid #E5E7EB;
+      border-radius: 20px;
+    }
+    .qr-container svg {
+      width: 270px !important;
+      height: 270px !important;
+    }
+    .notice {
+      font-size: 12px;
+      color: #777777;
+      margin-top: 14px;
+      margin-bottom: 20px;
+    }
+    .footer {
+      border-top: 2px solid #E5E7EB;
+      padding-top: 14px;
+      width: 100%;
+      max-width: 320px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .footer-text {
+      font-size: 13px;
+      font-weight: 800;
+      color: #102B4C;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>${displayName}</h1>
+    <p class="sub">Scan with Phone Camera to Punch Stamp</p>
+    <div class="qr-container">
+      ${svgHtml}
+    </div>
+    <p class="notice">No customer app download required • Instant digital loyalty pass</p>
+    <div class="footer">
+      <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
+        <rect width="40" height="40" rx="10" fill="#EE634A"/>
+        <path d="M12 28V12L28 28V12" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="footer-text">stickthebizz.in</span>
+    </div>
+  </div>
+</body>
+</html>`);
+    doc.close();
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+    }, 250);
   };
 
   const handleDownloadQr = () => {
@@ -97,31 +233,38 @@ export default function CounterQR({
       {/* Strict Print CSS: isolates ONLY the Standee Print Area and hides all web UI */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden !important;
+          html, body {
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
           }
-          #standee-print-target,
-          #standee-print-target * {
-            visibility: visible !important;
+          body > *:not(#standee-print-target) {
+            display: none !important;
           }
           #standee-print-target {
-            position: fixed !important;
+            display: flex !important;
+            position: absolute !important;
             left: 0 !important;
             top: 0 !important;
             width: 100vw !important;
             height: 100vh !important;
+            max-height: 100vh !important;
             margin: 0 !important;
-            padding: 2cm !important;
-            display: flex !important;
+            padding: 24px !important;
             flex-direction: column !important;
             align-items: center !important;
             justify-content: center !important;
             background: #ffffff !important;
             box-sizing: border-box !important;
-            z-index: 999999 !important;
+            page-break-after: avoid !important;
+            break-after: avoid !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
           }
           @page {
-            size: 5in 7in;
+            size: portrait;
             margin: 0;
           }
         }
@@ -307,7 +450,7 @@ export default function CounterQR({
       )}
 
       {/* DEDICATED PRINT CONTAINER: This is the ONLY element visible during window.print() */}
-      <div id="standee-print-target" style={{ display: "none" }}>
+      <div id="standee-print-target" className="hidden print:flex">
         <div style={{ textAlign: "center", maxWidth: "420px", width: "100%", padding: "24px", boxSizing: "border-box" }}>
           <h1 style={{ fontFamily: "sans-serif", fontSize: "36px", fontWeight: "900", color: "#102B4C", margin: "0 0 8px 0", letterSpacing: "-0.5px" }}>
             {displayName}
