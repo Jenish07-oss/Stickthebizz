@@ -8,3 +8,4 @@
 2. **Single-Page Standee Printing**:
    - The acrylic counter QR standee printout must always print as strictly 1 single page in all browsers (Chrome, Edge, Brave, Safari).
    - Use isolated document frames or print media isolation to ensure the multi-page dashboard DOM never bleeds into print previews.
+

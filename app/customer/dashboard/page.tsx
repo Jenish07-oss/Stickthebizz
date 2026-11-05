@@ -73,10 +73,12 @@ export default function CustomerDashboardPage() {
   useEffect(() => {
     async function loadWallet() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // 1. Check client session
+        const { data: { session } } = await supabase.auth.getSession();
+        let user = session?.user ?? null;
         if (!user) {
-          router.replace("/auth/customer/login");
-          return;
+          const { data } = await supabase.auth.getUser();
+          user = data.user;
         }
 
         // If local storage has a phone number but user account doesn't have it synced yet
@@ -85,7 +87,15 @@ export default function CustomerDashboardPage() {
           await syncCustomerAccountAction({ phone: storedPhone });
         }
 
+        // 2. Fetch server-verified customer wallet
         const data = await getCustomerWalletAction();
+
+        // 3. Only redirect if genuinely unauthenticated on BOTH client and server
+        if (!user && !data?.customer) {
+          router.replace("/auth/customer/login");
+          return;
+        }
+
         setWalletData(data);
 
         // Keep localStorage healed from verified server session

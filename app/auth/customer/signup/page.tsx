@@ -164,6 +164,20 @@ export default function CustomerSignUpPage() {
     }
   };
 
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (!pasted) return;
+    const digits = pasted.split("");
+    const updated = [...otp];
+    digits.forEach((d, i) => {
+      if (i < 6) updated[i] = d;
+    });
+    setOtp(updated);
+    const nextIndex = Math.min(digits.length, 5);
+    otpInputs.current[nextIndex]?.focus();
+  };
+
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpInputs.current[index - 1]?.focus();
@@ -194,18 +208,23 @@ export default function CustomerSignUpPage() {
         return;
       }
 
-      // Sync customer profile with database
+      // Save customer session markers immediately to localStorage
       const cleanPhone = phone.replace(/\D/g, "");
-      await syncCustomerAccountAction({
-        fullName: fullName.trim() || undefined,
-        phone: cleanPhone || undefined,
-        email: email.trim().toLowerCase(),
-      });
-
-      // Save phone to localStorage for instant counter recognition
       if (typeof window !== "undefined") {
+        localStorage.setItem("stb_customer_email", email.trim().toLowerCase());
         if (cleanPhone) localStorage.setItem("stb_customer_phone", cleanPhone);
         if (fullName.trim()) localStorage.setItem("stb_customer_name", fullName.trim());
+      }
+
+      // Sync customer profile with database (safe non-blocking)
+      try {
+        await syncCustomerAccountAction({
+          fullName: fullName.trim() || undefined,
+          phone: cleanPhone || undefined,
+          email: email.trim().toLowerCase(),
+        });
+      } catch (syncErr) {
+        console.warn("Background profile sync update:", syncErr);
       }
 
       // Session established -> Full reload into redirect target or customer dashboard
@@ -380,6 +399,7 @@ export default function CustomerSignUpPage() {
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(idx, e)}
+                    onPaste={handleOtpPaste}
                     className="h-12 w-11 sm:h-14 sm:w-12 rounded-xl border-2 border-border text-center font-mono text-xl font-extrabold text-secondary outline-none focus:border-primary focus:bg-sand/30"
                   />
                 ))}

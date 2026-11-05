@@ -19,7 +19,6 @@ export async function createClient() {
                 ...options,
                 secure: process.env.NODE_ENV === "production",
                 sameSite: "lax",
-                httpOnly: true,
                 path: "/",
               });
             });

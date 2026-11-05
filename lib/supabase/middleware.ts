@@ -17,50 +17,23 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
+      getAll() {
+        return request.cookies.getAll();
       },
-      set(name: string, value: string, options: CookieOptions) {
-        request.cookies.set({
-          name,
-          value,
-          ...options,
-        });
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({
           request: {
             headers: request.headers,
           },
         });
-        response.cookies.set({
-          name,
-          value,
-          ...options,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          httpOnly: true,
-          path: '/',
-        });
-      },
-      remove(name: string, options: CookieOptions) {
-        request.cookies.set({
-          name,
-          value: "",
-          ...options,
-        });
-        response = NextResponse.next({
-          request: {
-            headers: request.headers,
-          },
-        });
-        response.cookies.set({
-          name,
-          value: "",
-          ...options,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          httpOnly: true,
-          path: '/',
-        });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          })
+        );
       },
     },
   });

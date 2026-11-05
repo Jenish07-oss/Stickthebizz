@@ -183,11 +183,12 @@ export default function CounterQR({
     </div>
     <p class="notice">No customer app download required • Instant digital loyalty pass</p>
     <div class="footer">
-      <svg width="18" height="18" viewBox="0 0 40 40" fill="none">
-        <rect width="40" height="40" rx="10" fill="#EE634A"/>
-        <path d="M12 28V12L28 28V12" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <svg width="22" height="22" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="10" y="14" width="96" height="96" rx="30" fill="#EE634A"/>
+        <circle cx="96" cy="18" r="11" fill="#102B4C" stroke="#FFFFFF" stroke-width="4"/>
+        <text x="57" y="75" text-anchor="middle" fill="#FFFFFF" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="900" font-size="44" letter-spacing="-1.5px">sb</text>
       </svg>
-      <span class="footer-text">stickthebizz.in</span>
+      <span class="footer-text"><span style="color: #102B4C; font-weight: 800;">stickthe</span><span style="color: #EE634A; font-weight: 800;">bizz</span><span style="color: #555555; font-weight: 700;">.in</span></span>
     </div>
   </div>
 </body>
@@ -475,9 +476,11 @@ export default function CounterQR({
           </p>
 
           <div style={{ borderTop: "2px solid #E5E7EB", paddingTop: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            <LogoIcon size={18} />
-            <span style={{ fontFamily: "sans-serif", fontSize: "13px", fontWeight: "800", color: "#102B4C" }}>
-              stickthebizz.in
+            <LogoIcon size={20} />
+            <span style={{ fontFamily: "sans-serif", fontSize: "14px", fontWeight: "800" }}>
+              <span style={{ color: "#102B4C" }}>stickthe</span>
+              <span style={{ color: "#EE634A" }}>bizz</span>
+              <span style={{ color: "#555555" }}>.in</span>
             </span>
           </div>
         </div>
