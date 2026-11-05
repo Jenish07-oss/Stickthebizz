@@ -41,18 +41,36 @@ export default function CustomerAuthPage() {
     return () => clearInterval(timer);
   }, [resendCooldown]);
 
-  // 1. Auto-Login Check: If customer has an active session, redirect straight to target or dashboard
+  const [checkingExistingSession, setCheckingExistingSession] = useState(true);
+
+  // 1. Auto-Login Check: If customer already has an active session on this device, route immediately without flashing the login form
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const isSwitch = params.get("switch") === "true";
+    const redirectUrl = params.get("redirect");
+
+    // Instant local device check
+    const savedPhone = localStorage.getItem("stb_customer_phone");
+    const savedEmail = localStorage.getItem("stb_customer_email");
+
+    if (!isSwitch && ((savedPhone && savedPhone.replace(/\D/g, "").length === 10) || savedEmail)) {
+      router.replace(redirectUrl || "/customer/dashboard");
+      return;
+    }
+
+    // Supabase auth check
     supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user) {
-        const redirectUrl =
-          typeof window !== "undefined"
-            ? new URLSearchParams(window.location.search).get("redirect")
-            : null;
-        window.location.href = redirectUrl || "/customer/dashboard";
+      if (!isSwitch && user) {
+        router.replace(redirectUrl || "/customer/dashboard");
+      } else {
+        setCheckingExistingSession(false);
       }
+    }).catch(() => {
+      setCheckingExistingSession(false);
     });
-  }, [supabase]);
+  }, [router, supabase]);
 
   const handleRequestOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -220,11 +238,17 @@ export default function CustomerAuthPage() {
       // Sync customer profile with database (safe non-blocking)
       try {
         const cleanPhone = phone.replace(/\D/g, "");
-        await syncCustomerAccountAction({
+        const syncRes = await syncCustomerAccountAction({
           fullName: fullName.trim() || undefined,
           phone: cleanPhone || undefined,
           email: email.trim().toLowerCase(),
         });
+        if (syncRes.customer?.phone && typeof window !== "undefined") {
+          localStorage.setItem("stb_customer_phone", syncRes.customer.phone.replace(/\D/g, ""));
+          if (syncRes.customer.full_name) {
+            localStorage.setItem("stb_customer_name", syncRes.customer.full_name);
+          }
+        }
       } catch (syncErr) {
         console.warn("Background profile sync update:", syncErr);
       }
@@ -234,12 +258,26 @@ export default function CustomerAuthPage() {
         typeof window !== "undefined"
           ? new URLSearchParams(window.location.search).get("redirect")
           : null;
-      window.location.href = redirectUrl || "/customer/dashboard";
+      router.replace(redirectUrl || "/customer/dashboard");
     } catch (err: any) {
       setErrorMessage(err.message || "Verification failed. Please retry.");
       setIsSubmitting(false);
     }
   };
+
+  if (checkingExistingSession) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-sand px-4 py-12">
+        <div className="flex flex-col items-center justify-center gap-3">
+          <Logo href="/" size="lg" />
+          <div className="mt-4 flex items-center gap-2 text-xs font-bold text-secondary">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>Loading verified customer pass...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-sand px-4 py-12 sm:px-6">

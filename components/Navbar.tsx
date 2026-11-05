@@ -562,7 +562,7 @@ export default function Navbar() {
                 ) : (
                   <>
                     <Link
-                      href="/auth/customer/login"
+                      href="/customer/dashboard"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center justify-center gap-2 rounded-xl bg-sand py-3 text-sm font-bold text-secondary border border-border"
                     >

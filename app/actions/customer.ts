@@ -245,15 +245,17 @@ export async function syncCustomerAccountAction(params: {
   }
 }
 
-export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
+export async function getCustomerWalletAction(phoneOverride?: string): Promise<CustomerWalletData> {
   const authSupabase = await createClient();
   const supabase = createUnauthenticatedClient();
 
-  const {
+  let {
     data: { user },
   } = await authSupabase.auth.getUser();
 
-  if (!user) {
+  const cleanPhoneOverride = (phoneOverride || "").replace(/\D/g, "");
+
+  if (!user && (!cleanPhoneOverride || cleanPhoneOverride.length !== 10)) {
     return {
       customer: null,
       passes: [],
@@ -261,12 +263,25 @@ export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
     };
   }
 
-  const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
-  const userEmail = user.email || "";
+  const userPhone = (user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
+  const userEmail = user?.email || "";
   const userName = user?.user_metadata?.full_name || null;
 
   let customer: any = null;
-  if (userPhone) {
+
+  // 1. Check phoneOverride from verified device
+  if (cleanPhoneOverride && cleanPhoneOverride.length === 10) {
+    const { data: c } = await supabase
+      .from("customers")
+      .select("id, phone, full_name, email")
+      .eq("phone", cleanPhoneOverride)
+      .maybeSingle();
+
+    if (c) customer = c;
+  }
+
+  // 2. Check user phone from Supabase session
+  if (!customer && userPhone) {
     const cleanPhone = userPhone.replace(/\D/g, "");
     const { data: c } = await supabase
       .from("customers")

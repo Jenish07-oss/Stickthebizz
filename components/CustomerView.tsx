@@ -200,6 +200,12 @@ export default function CustomerView({
               if (cRow?.phone && cRow.phone.replace(/\D/g, "").length === 10) {
                 savedPhone = cRow.phone.replace(/\D/g, "");
                 setCustomer({ id: cRow.id, phone: savedPhone, fullName: cRow.full_name || userName });
+                if (typeof window !== "undefined") {
+                  localStorage.setItem("stb_customer_phone", savedPhone);
+                  if (cRow.full_name || userName) {
+                    localStorage.setItem("stb_customer_name", cRow.full_name || userName);
+                  }
+                }
               }
             }
           } catch (e) {
@@ -339,6 +345,8 @@ export default function CustomerView({
     if (typeof window !== "undefined") {
       localStorage.removeItem("stb_customer_phone");
       localStorage.removeItem("stb_customer_name");
+      localStorage.removeItem("stb_customer_email");
+      localStorage.removeItem("stb_customer_device_session");
     }
     setCustomer(null);
     setVisitsCount(0);

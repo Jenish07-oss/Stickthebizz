@@ -73,6 +73,9 @@ export default function CustomerDashboardPage() {
   useEffect(() => {
     async function loadWallet() {
       try {
+        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const cleanStored = (storedPhone || "").replace(/\D/g, "");
+
         // 1. Check client session
         const { data: { session } } = await supabase.auth.getSession();
         let user = session?.user ?? null;
@@ -82,16 +85,15 @@ export default function CustomerDashboardPage() {
         }
 
         // If local storage has a phone number but user account doesn't have it synced yet
-        const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
-        if (storedPhone && /^\d{10}$/.test(storedPhone)) {
-          await syncCustomerAccountAction({ phone: storedPhone });
+        if (cleanStored.length === 10) {
+          await syncCustomerAccountAction({ phone: cleanStored });
         }
 
-        // 2. Fetch server-verified customer wallet
-        const data = await getCustomerWalletAction();
+        // 2. Fetch server-verified customer wallet using session or verified device phone
+        const data = await getCustomerWalletAction(cleanStored || undefined);
 
-        // 3. Only redirect if genuinely unauthenticated on BOTH client and server
-        if (!user && !data?.customer) {
+        // 3. Only redirect if genuinely unauthenticated on BOTH device and server
+        if (!user && !data?.customer && cleanStored.length !== 10) {
           router.replace("/auth/customer/login");
           return;
         }
@@ -118,9 +120,11 @@ export default function CustomerDashboardPage() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("stb_customer_phone");
       localStorage.removeItem("stb_customer_name");
+      localStorage.removeItem("stb_customer_email");
+      localStorage.removeItem("stb_customer_device_session");
     }
     await supabase.auth.signOut();
-    router.push("/auth/customer/login");
+    router.replace("/auth/customer/login?switch=true");
   };
 
   const [isExporting, setIsExporting] = useState(false);
