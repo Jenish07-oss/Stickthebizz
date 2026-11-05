@@ -80,7 +80,7 @@ export default function CustomerView({
   const validityDays = Number(merchant.validityDays) || 30;
 
   // Real Database State
-  const [customer, setCustomer] = useState<{ id?: string; phone: string; fullName?: string | null } | null>(
+  const [customer, setCustomer] = useState<{ id?: string; phone: string; displayPhone?: string; fullName?: string | null } | null>(
     initialCustomer ? { id: initialCustomer.id, phone: initialCustomer.phone, fullName: initialCustomer.fullName } : null
   );
   const [visitsCount, setVisitsCount] = useState<number>(initialStatus?.visitsCount || 0);
@@ -138,22 +138,30 @@ export default function CustomerView({
     async function loadCustomerState() {
       try {
         if (initialCustomer?.phone) {
-          if (typeof window !== "undefined") {
-            localStorage.setItem("stb_customer_phone", initialCustomer.phone);
-            if (initialCustomer.fullName) {
-              localStorage.setItem("stb_customer_name", initialCustomer.fullName);
+          const cleanInit = initialCustomer.phone.replace(/\D/g, "");
+          if (cleanInit.length === 10) {
+            if (typeof window !== "undefined") {
+              localStorage.setItem("stb_customer_phone", cleanInit);
+              if (initialCustomer.fullName) {
+                localStorage.setItem("stb_customer_name", initialCustomer.fullName);
+              }
             }
+            setCustomer({ id: initialCustomer.id, phone: cleanInit, fullName: initialCustomer.fullName });
+            setLoadingStatus(false);
+            return;
           }
-          setLoadingStatus(false);
-          return;
         }
 
         let savedPhone = "";
         if (typeof window !== "undefined") {
-          savedPhone = localStorage.getItem("stb_customer_phone") || "";
-          const savedName = localStorage.getItem("stb_customer_name") || "";
-          if (savedPhone) {
-            setCustomer({ phone: savedPhone, fullName: savedName });
+          const raw = localStorage.getItem("stb_customer_phone") || "";
+          const clean = raw.replace(/\D/g, "");
+          if (clean.length === 10) {
+            savedPhone = clean;
+            const savedName = localStorage.getItem("stb_customer_name") || "";
+            setCustomer({ phone: clean, fullName: savedName });
+          } else {
+            localStorage.removeItem("stb_customer_phone");
           }
         }
 
@@ -165,10 +173,19 @@ export default function CustomerView({
             if (user) {
               const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
               const userEmail = (user.email || "").trim().toLowerCase();
+              const userName = user.user_metadata?.full_name || "";
+              if (userName) {
+                setNameInput(userName);
+              }
+
               let cRow = null;
-              if (userPhone) {
+              if (userPhone && userPhone.length === 10) {
                 const { data } = await supabase.from("customers").select("id, phone, full_name").eq("phone", userPhone).maybeSingle();
                 cRow = data;
+                if (!cRow) {
+                  savedPhone = userPhone;
+                  setCustomer({ phone: userPhone, fullName: userName });
+                }
               }
               if (!cRow && userEmail) {
                 const { data } = await supabase.from("customers").select("id, phone, full_name").eq("email", userEmail).maybeSingle();
@@ -178,9 +195,9 @@ export default function CustomerView({
                 const { data } = await supabase.from("customers").select("id, phone, full_name").eq("auth_id", user.id).maybeSingle();
                 cRow = data;
               }
-              if (cRow?.phone) {
-                savedPhone = cRow.phone;
-                setCustomer({ id: cRow.id, phone: cRow.phone, fullName: cRow.full_name });
+              if (cRow?.phone && cRow.phone.replace(/\D/g, "").length === 10) {
+                savedPhone = cRow.phone.replace(/\D/g, "");
+                setCustomer({ id: cRow.id, phone: savedPhone, fullName: cRow.full_name || userName });
               }
             }
           } catch (e) {
@@ -190,14 +207,15 @@ export default function CustomerView({
 
         if (merchant.id) {
           const res = await getCustomerMerchantStatus(merchant.id, savedPhone);
-          if (res.customer) {
-            setCustomer(res.customer);
+          if (res.customer && res.customer.phone && res.customer.phone.replace(/\D/g, "").length === 10) {
+            const validPhone = res.customer.phone.replace(/\D/g, "");
+            setCustomer({ ...res.customer, phone: validPhone });
             setVisitsCount(res.visitsCount || 0);
             setIsLockedToday(res.isLockedToday);
-            if (typeof window !== "undefined" && res.customer.phone) {
-              localStorage.setItem("stb_customer_phone", res.customer.phone);
-              if (res.customer.full_name) {
-                localStorage.setItem("stb_customer_name", res.customer.full_name);
+            if (typeof window !== "undefined") {
+              localStorage.setItem("stb_customer_phone", validPhone);
+              if (res.customer.fullName) {
+                localStorage.setItem("stb_customer_name", res.customer.fullName);
               }
             }
           }
@@ -424,7 +442,7 @@ export default function CustomerView({
                         <div>
                           <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
                           <span className="font-extrabold text-secondary text-xs">
-                            {customer.fullName || `+91 ${customer.phone}`}
+                            {customer.fullName || customer.displayPhone || `+91 ${customer.phone}`}
                           </span>
                         </div>
                       </div>

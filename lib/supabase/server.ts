@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
 
 export async function createClient() {
@@ -27,6 +28,23 @@ export async function createClient() {
             // This can be safely ignored in Next.js if middleware is refreshing sessions.
           }
         },
+      },
+    }
+  );
+}
+
+/**
+ * Creates an unauthenticated, stateless Supabase client for safe server operations
+ * that should not inherit the caller's session cookies or trigger authenticated RLS loops.
+ */
+export function createUnauthenticatedClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
       },
     }
   );

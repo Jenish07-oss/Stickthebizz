@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createUnauthenticatedClient } from "@/lib/supabase/server";
 import { getAuthenticatedMerchant } from "@/lib/utils/auth";
 import { sanitizeHtml, sanitizeError, maskPhone } from "@/lib/utils/sanitize";
 import { auditLog } from "@/lib/utils/audit";
@@ -105,11 +105,28 @@ export async function submitScan(
       });
     }
 
-    const supabase = await createClient();
+    // Check optional authenticated user session
+    let authUserId: string | null = null;
+    let authUserEmail: string | null = null;
+    try {
+      const authSupabase = await createClient();
+      const {
+        data: { user },
+      } = await authSupabase.auth.getUser();
+      if (user) {
+        authUserId = user.id;
+        authUserEmail = user.email || null;
+      }
+    } catch {
+      // Unauthenticated check-in is supported
+    }
+
+    // Use unauthenticated client for public counter database operations to avoid session RLS loops
+    const db = createUnauthenticatedClient();
 
     // 4. Validate QR token matches merchant's current token (anti-replay)
     if (validData.scannedQrToken) {
-      const { data: merchant } = await supabase
+      const { data: merchant } = await db
         .from("merchants")
         .select("qr_token, validity_days")
         .eq("id", validData.merchantId)
@@ -125,27 +142,41 @@ export async function submitScan(
     }
 
     // 5. Query or insert customer in 'customers' table
-    let { data: customer } = await supabase
+    let { data: customer } = await db
       .from("customers")
-      .select("id, phone, full_name")
+      .select("id, phone, full_name, auth_id, email")
       .eq("phone", cleanPhone)
       .maybeSingle();
 
+    if (!customer && authUserId) {
+      const { data: authCust } = await db
+        .from("customers")
+        .select("id, phone, full_name, auth_id, email")
+        .eq("auth_id", authUserId)
+        .maybeSingle();
+      if (authCust) {
+        customer = authCust;
+      }
+    }
+
     if (!customer) {
-      const { data: newCustomer, error: insertCustError } = await supabase
+      const { data: newCustomer, error: insertCustError } = await db
         .from("customers")
         .insert({
           phone: cleanPhone,
           full_name: validData.customerName ? sanitizeHtml(validData.customerName) : null,
+          auth_id: authUserId,
+          email: authUserEmail,
         })
-        .select("id, phone, full_name")
+        .select("id, phone, full_name, auth_id, email")
         .single();
 
       if (insertCustError) {
-        // If concurrent insert occurred, retry fetch once
-        const { data: retryCustomer } = await supabase
+        console.error("submitScan customer insert error:", insertCustError);
+        // If concurrent insert occurred or conflict, retry fetch once
+        const { data: retryCustomer } = await db
           .from("customers")
-          .select("id, phone, full_name")
+          .select("id, phone, full_name, auth_id, email")
           .eq("phone", cleanPhone)
           .maybeSingle();
 
@@ -162,15 +193,27 @@ export async function submitScan(
       } else {
         customer = newCustomer;
       }
+    } else if (authUserId && !customer.auth_id) {
+      // Link customer record to authenticated user
+      await db
+        .from("customers")
+        .update({ auth_id: authUserId, ...(authUserEmail ? { email: authUserEmail } : {}) })
+        .eq("id", customer.id);
+    }
+
+    if (!customer) {
+      return {
+        success: false,
+        locked: false,
+        message: "Failed to establish customer record. Please try again.",
+      };
     }
 
     // 6. Calculate IST visit date (YYYY-MM-DD)
     const visitDateIst = await getVisitDateIST();
 
     // 7. Attempt insert into 'visits' with status 'PENDING'
-    // Note: Do NOT use .select() here because PostgREST adds RETURNING * which triggers
-    // a SELECT RLS check on anon check-ins, resulting in error 42501.
-    const { error: visitError } = await supabase
+    const { error: visitError } = await db
       .from("visits")
       .insert({
         customer_id: customer.id,
@@ -199,10 +242,11 @@ export async function submitScan(
         return lockedResponse;
       }
 
+      console.error("submitScan insert visit error:", visitError);
       return {
         success: false,
         locked: false,
-        message: "Scan verification failed: " + sanitizeError(visitError),
+        message: "Failed to record stamp visit: " + sanitizeError(visitError),
         error: visitError.message,
       };
     }
@@ -210,14 +254,7 @@ export async function submitScan(
     const successResponse: SubmitScanResult = {
       success: true,
       locked: false,
-      visit: {
-        customer_id: customer.id,
-        merchant_id: validData.merchantId,
-        visit_date_ist: visitDateIst,
-        bill_amount: validData.billAmount || 100,
-        status: "PENDING",
-      },
-      message: "QR Scanned! Sent to counter terminal for 1-tap verification.",
+      message: "✓ Today's stamp punched! Cashier counter notified.",
     };
 
     if (validData.idempotencyKey) {
@@ -226,6 +263,7 @@ export async function submitScan(
 
     return successResponse;
   } catch (err: any) {
+    console.error("submitScan unexpected error:", err);
     return {
       success: false,
       locked: false,
@@ -241,36 +279,39 @@ export async function submitScan(
  */
 export async function approveVisit(visitId: string, idempotencyKey?: string) {
   try {
-    // 1. Zod Validation
     const validation = visitActionSchema.safeParse({ visitId, idempotencyKey });
     if (!validation.success) {
       return { success: false, error: validation.error.issues[0]?.message || "Invalid visit ID." };
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authSupabase = await createClient();
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser();
     if (!user) return { success: false, error: "UNAUTHENTICATED" };
 
-    // 2. Verify visit belongs to user's merchant
-    const { data: visit, error: visitError } = await supabase
+    const db = createUnauthenticatedClient();
+
+    // Verify visit belongs to user's merchant
+    const { data: visit, error: visitError } = await db
       .from("visits")
       .select("id, merchant_id, status, merchants!inner(owner_id)")
       .eq("id", visitId)
       .single();
 
     if (visitError || !visit) return { success: false, error: "VISIT_NOT_FOUND" };
-    if ((visit as any).merchants.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
+    if ((visit as any).merchants?.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
 
     if (visit.status !== "PENDING") {
       return { success: false, error: `Visit is already ${visit.status.toLowerCase()}.` };
     }
 
-    // 3. Atomic Conditional Update
-    const { data, error } = await supabase
+    // Atomic Conditional Update
+    const { data, error } = await db
       .from("visits")
       .update({ status: "APPROVED" })
       .eq("id", visitId)
-      .eq("status", "PENDING") // Strict atomic conditional check
+      .eq("status", "PENDING")
       .select()
       .single();
 
@@ -278,7 +319,6 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
       return { success: false, error: "Visit could not be approved or was already processed." };
     }
 
-    // 4. Audit Log with cashier user ID
     await auditLog({
       userId: user.id,
       action: "visit_approve",
@@ -302,20 +342,24 @@ export async function rejectVisit(visitId: string) {
       return { success: false, error: validation.error.issues[0]?.message || "Invalid visit ID." };
     }
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authSupabase = await createClient();
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser();
     if (!user) return { success: false, error: "UNAUTHENTICATED" };
 
-    const { data: visit, error: visitError } = await supabase
+    const db = createUnauthenticatedClient();
+
+    const { data: visit, error: visitError } = await db
       .from("visits")
-      .select("id, merchant_id, merchants!inner(owner_id)")
+      .select("id, merchant_id, status, merchants!inner(owner_id)")
       .eq("id", visitId)
       .single();
 
     if (visitError || !visit) return { success: false, error: "VISIT_NOT_FOUND" };
-    if ((visit as any).merchants.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
+    if ((visit as any).merchants?.owner_id !== user.id) return { success: false, error: "FORBIDDEN" };
 
-    const { data, error } = await supabase
+    const { data, error } = await db
       .from("visits")
       .update({ status: "REJECTED" })
       .eq("id", visitId)
@@ -342,11 +386,6 @@ export async function rejectVisit(visitId: string) {
 
 /**
  * Verify 4-digit PIN for reward voucher redemption.
- * Hardened:
- * - NO fallback PIN (hardcoded default completely eliminated).
- * - Verifies customer has accumulated at least visits_required stamps.
- * - Atomically burns ONLY the required threshold of visits, preserving excess visits.
- * - Records an immutable audit row in 'public.redemptions'.
  */
 export async function verifyRedemptionPin(
   merchantId: string,
@@ -355,7 +394,6 @@ export async function verifyRedemptionPin(
   idempotencyKey?: string
 ) {
   try {
-    // 1. Zod Validation
     const validation = verifyRedemptionSchema.safeParse({
       merchantId,
       pin,
@@ -367,15 +405,17 @@ export async function verifyRedemptionPin(
       return { success: false, message: validation.error.issues[0]?.message || "Invalid redemption input." };
     }
 
-    // 2. Ownership verification
     await getAuthenticatedMerchant(merchantId);
 
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const authSupabase = await createClient();
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser();
     const cleanPin = pin.trim();
 
-    // 3. Verify against merchant redemption_pin (NO hardcoded fallback)
-    const { data: merchant, error: merchError } = await supabase
+    const db = createUnauthenticatedClient();
+
+    const { data: merchant, error: merchError } = await db
       .from("merchants")
       .select("id, redemption_pin, reward_name, visits_required")
       .eq("id", merchantId)
@@ -393,12 +433,11 @@ export async function verifyRedemptionPin(
       return { success: false, message: "Invalid 4-Digit Voucher PIN. Check customer phone." };
     }
 
-    // 4. Verify Customer Stamp Threshold & Atomically Burn Required Stamps
     let remainingSurplus = 0;
 
     if (customerPhone) {
       const cleanPhone = customerPhone.replace(/\D/g, "");
-      const { data: customer } = await supabase
+      const { data: customer } = await db
         .from("customers")
         .select("id")
         .eq("phone", cleanPhone)
@@ -408,8 +447,7 @@ export async function verifyRedemptionPin(
         return { success: false, message: "Customer account not found for this phone number." };
       }
 
-      // Fetch all APPROVED visits for this customer at this merchant
-      const { data: approvedVisits, error: approvedError } = await supabase
+      const { data: approvedVisits, error: approvedError } = await db
         .from("visits")
         .select("id, created_at")
         .eq("merchant_id", merchantId)
@@ -431,10 +469,9 @@ export async function verifyRedemptionPin(
         };
       }
 
-      // Take ONLY the oldest `required` visits to burn
       const visitsToBurn = approvedVisits.slice(0, required).map((v) => v.id);
 
-      const { error: burnError } = await supabase
+      const { error: burnError } = await db
         .from("visits")
         .update({ status: "REDEEMED" })
         .in("id", visitsToBurn);
@@ -445,13 +482,12 @@ export async function verifyRedemptionPin(
 
       remainingSurplus = totalApproved - required;
 
-      // 5. Insert audit row in public.redemptions
       const voucherHash = crypto
         .createHash("sha256")
         .update(`${merchantId}:${customer.id}:${cleanPin}`)
         .digest("hex");
 
-      await supabase.from("redemptions").insert({
+      await db.from("redemptions").insert({
         merchant_id: merchantId,
         customer_id: customer.id,
         reward_name: merchant.reward_name,
@@ -465,7 +501,6 @@ export async function verifyRedemptionPin(
       });
     }
 
-    // 6. Security Audit Log
     if (user) {
       await auditLog({
         userId: user.id,
@@ -498,8 +533,8 @@ export async function getPendingVisits(merchantId: string) {
   try {
     await getAuthenticatedMerchant(merchantId);
 
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const db = createUnauthenticatedClient();
+    const { data, error } = await db
       .from("visits")
       .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
       .eq("merchant_id", merchantId)
@@ -510,7 +545,6 @@ export async function getPendingVisits(merchantId: string) {
       return { visits: [], error: sanitizeError(error) };
     }
 
-    // Mask phone numbers server-side
     const maskedVisits = (data || []).map((v) => {
       const cust = Array.isArray(v.customers) ? v.customers[0] : v.customers;
       return {
@@ -532,8 +566,8 @@ export async function getMerchantLedger(merchantId: string) {
   try {
     await getAuthenticatedMerchant(merchantId);
 
-    const supabase = await createClient();
-    const { data, error } = await supabase
+    const db = createUnauthenticatedClient();
+    const { data, error } = await db
       .from("visits")
       .select("id, customer_id, merchant_id, visit_date_ist, status, created_at, bill_amount, customers (id, phone, full_name)")
       .eq("merchant_id", merchantId)
@@ -563,13 +597,13 @@ export async function getMerchantLedger(merchantId: string) {
  */
 export async function getCustomerMerchantStatus(merchantId: string, customerPhone?: string) {
   try {
-    const supabase = await createClient();
+    const db = createUnauthenticatedClient();
     const cleanPhone = (customerPhone || "").replace(/\D/g, "");
 
     let customer: any = null;
 
-    if (cleanPhone) {
-      const { data } = await supabase
+    if (cleanPhone && cleanPhone.length === 10) {
+      const { data } = await db
         .from("customers")
         .select("id, phone, full_name, email")
         .eq("phone", cleanPhone)
@@ -578,26 +612,40 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
     }
 
     if (!customer) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        const uPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
-        if (uPhone) {
-          const { data } = await supabase
-            .from("customers")
-            .select("id, phone, full_name, email")
-            .eq("phone", uPhone)
-            .maybeSingle();
-          customer = data;
-        } else if (user.email) {
-          const { data } = await supabase
-            .from("customers")
-            .select("id, phone, full_name, email")
-            .eq("email", user.email)
-            .maybeSingle();
-          customer = data;
+      try {
+        const authSupabase = await createClient();
+        const {
+          data: { user },
+        } = await authSupabase.auth.getUser();
+        if (user) {
+          const uPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+          if (uPhone && uPhone.length === 10) {
+            const { data } = await db
+              .from("customers")
+              .select("id, phone, full_name, email")
+              .eq("phone", uPhone)
+              .maybeSingle();
+            customer = data;
+          }
+          if (!customer && user.id) {
+            const { data } = await db
+              .from("customers")
+              .select("id, phone, full_name, email")
+              .eq("auth_id", user.id)
+              .maybeSingle();
+            customer = data;
+          }
+          if (!customer && user.email) {
+            const { data } = await db
+              .from("customers")
+              .select("id, phone, full_name, email")
+              .eq("email", user.email.toLowerCase())
+              .maybeSingle();
+            customer = data;
+          }
         }
+      } catch {
+        // Fallback for unauthenticated
       }
     }
 
@@ -606,7 +654,7 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
     }
 
     // 1. Check total APPROVED visits for this customer at this merchant
-    const { count: visitsCount } = await supabase
+    const { count: visitsCount } = await db
       .from("visits")
       .select("id", { count: "exact", head: true })
       .eq("merchant_id", merchantId)
@@ -615,7 +663,7 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
 
     // 2. Check if a visit was recorded today in IST
     const todayIST = await getVisitDateIST();
-    const { data: todayVisit } = await supabase
+    const { data: todayVisit } = await db
       .from("visits")
       .select("id, status")
       .eq("merchant_id", merchantId)
@@ -625,8 +673,11 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
 
     return {
       customer: {
-        ...customer,
-        phone: maskPhone(customer.phone),
+        id: customer.id,
+        phone: customer.phone,
+        displayPhone: maskPhone(customer.phone),
+        fullName: customer.full_name,
+        email: customer.email,
       },
       visitsCount: visitsCount || 0,
       isLockedToday: Boolean(todayVisit),

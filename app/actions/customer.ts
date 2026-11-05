@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createUnauthenticatedClient } from "@/lib/supabase/server";
 import { getVisitDateIST } from "./scan";
 import { sanitizeError, maskPhone } from "@/lib/utils/sanitize";
 import { auditLog } from "@/lib/utils/audit";
@@ -163,33 +163,55 @@ export async function syncCustomerAccountAction(params: {
   email?: string;
 }) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    let authUserId: string | null = null;
+    let authUserPhone: string | null = null;
+    let authUserEmail: string | null = null;
+    let authUserName: string | null = null;
 
-    const cleanPhone = (params.phone || user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
-    const emailToUse = (params.email || user?.email || "").trim().toLowerCase();
-    const nameToUse = params.fullName || user?.user_metadata?.full_name || "Valued Regular";
+    try {
+      const authSupabase = await createClient();
+      const {
+        data: { user },
+      } = await authSupabase.auth.getUser();
+      if (user) {
+        authUserId = user.id;
+        authUserPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+        authUserEmail = user.email || null;
+        authUserName = user.user_metadata?.full_name || null;
+      }
+    } catch {
+      // unauthenticated sync fallback
+    }
+
+    const cleanPhone = (params.phone || authUserPhone || "").replace(/\D/g, "");
+    const emailToUse = (params.email || authUserEmail || "").trim().toLowerCase();
+    const nameToUse = params.fullName || authUserName || "Valued Regular";
 
     if (!cleanPhone && !emailToUse) {
       return { success: false, message: "Phone or email required" };
     }
 
-    let existingQuery = supabase.from("customers").select("*");
+    const db = createUnauthenticatedClient();
+
+    let existing: any = null;
     if (cleanPhone) {
-      existingQuery = existingQuery.eq("phone", cleanPhone);
-    } else if (emailToUse) {
-      existingQuery = existingQuery.eq("email", emailToUse);
+      const { data } = await db.from("customers").select("*").eq("phone", cleanPhone).maybeSingle();
+      existing = data;
+    }
+    if (!existing && authUserId) {
+      const { data } = await db.from("customers").select("*").eq("auth_id", authUserId).maybeSingle();
+      existing = data;
+    }
+    if (!existing && emailToUse) {
+      const { data } = await db.from("customers").select("*").eq("email", emailToUse).maybeSingle();
+      existing = data;
     }
 
-    const { data: existing } = await existingQuery.maybeSingle();
-
     if (existing) {
-      const { data: updated, error } = await supabase
+      const { data: updated, error } = await db
         .from("customers")
         .update({
-          auth_id: user?.id || existing.auth_id,
+          auth_id: authUserId || existing.auth_id,
           full_name: nameToUse || existing.full_name,
           email: emailToUse || existing.email,
           ...(cleanPhone ? { phone: cleanPhone } : {}),
@@ -204,10 +226,10 @@ export async function syncCustomerAccountAction(params: {
       if (!cleanPhone) {
         return { success: false, message: "A 10-digit mobile number is required to create a pass." };
       }
-      const { data: inserted, error } = await supabase
+      const { data: inserted, error } = await db
         .from("customers")
         .insert({
-          auth_id: user?.id || null,
+          auth_id: authUserId || null,
           phone: cleanPhone,
           email: emailToUse || null,
           full_name: nameToUse,
@@ -223,16 +245,13 @@ export async function syncCustomerAccountAction(params: {
   }
 }
 
-/**
- * Fetches the aggregated multi-store digital wallet for an authenticated customer.
- * 100% real Supabase data — zero mock visits or fake counters.
- */
 export async function getCustomerWalletAction(): Promise<CustomerWalletData> {
-  const supabase = await createClient();
+  const authSupabase = await createClient();
+  const supabase = createUnauthenticatedClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } = await authSupabase.auth.getUser();
 
   if (!user) {
     return {
