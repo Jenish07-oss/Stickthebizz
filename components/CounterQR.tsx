@@ -241,12 +241,15 @@ export default function CounterQR({
             padding: 0 !important;
             overflow: hidden !important;
           }
-          body > *:not(#standee-print-target) {
-            display: none !important;
+          body * {
+            visibility: hidden !important;
+          }
+          #standee-print-target, #standee-print-target * {
+            visibility: visible !important;
           }
           #standee-print-target {
             display: flex !important;
-            position: absolute !important;
+            position: fixed !important;
             left: 0 !important;
             top: 0 !important;
             width: 100vw !important;
@@ -263,6 +266,7 @@ export default function CounterQR({
             break-after: avoid !important;
             page-break-inside: avoid !important;
             break-inside: avoid !important;
+            z-index: 999999 !important;
           }
           @page {
             size: portrait;
@@ -333,7 +337,7 @@ export default function CounterQR({
             onClick={() => {
               const printTarget = document.getElementById("standee-print-target");
               if (printTarget) printTarget.style.display = "flex";
-              handlePrint();
+              window.print();
               window.onafterprint = () => {
                 if (printTarget) printTarget.style.display = "none";
               };

@@ -100,6 +100,14 @@ export default function CustomerDashboardPage() {
           return;
         }
 
+        if (data?.customer && cleanStored.length === 10) {
+          data.customer.phone = cleanStored;
+          if (!data.customer.fullName && typeof window !== "undefined") {
+            const savedName = localStorage.getItem("stb_customer_name");
+            if (savedName) data.customer.fullName = savedName;
+          }
+        }
+
         setWalletData(data);
 
         // Keep localStorage healed from verified server session

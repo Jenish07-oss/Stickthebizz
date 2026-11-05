@@ -269,15 +269,27 @@ export async function getCustomerWalletAction(phoneOverride?: string): Promise<C
 
   let customer: any = null;
 
-  // 1. Check phoneOverride from verified device
+  // 1. Check phoneOverride from verified device (takes strict precedence over merchant owner session)
   if (cleanPhoneOverride && cleanPhoneOverride.length === 10) {
     const { data: c } = await supabase
       .from("customers")
       .select("id, phone, full_name, email")
-      .eq("phone", cleanPhoneOverride)
+      .or(`phone.eq.${cleanPhoneOverride},phone.eq.+91${cleanPhoneOverride}`)
       .maybeSingle();
 
-    if (c) customer = c;
+    if (c) {
+      customer = {
+        ...c,
+        phone: cleanPhoneOverride,
+      };
+    } else {
+      customer = {
+        id: "cust_" + cleanPhoneOverride,
+        phone: cleanPhoneOverride,
+        full_name: "Loyal Customer",
+        email: null,
+      };
+    }
   }
 
   // 2. Check user phone from Supabase session

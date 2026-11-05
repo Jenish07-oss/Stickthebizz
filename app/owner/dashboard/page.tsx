@@ -283,7 +283,31 @@ export default function OwnerDashboardPage() {
     if (!merchant?.id) return;
 
     const channel = supabase
-      .channel("merchant-scans")
+      .channel(`merchant:${merchant.id}`)
+      .on("broadcast", { event: "new_scan" }, async () => {
+        playApprovalBell();
+        const { visits: freshPending } = await getPendingVisits(merchant.id);
+        if (freshPending) {
+          const activePending = freshPending.filter(
+            (item: any) => !processedVisitIdsRef.current.has(item.id)
+          );
+          const updatedQueue: LivePendingScan[] = activePending.map((item: any) => ({
+            id: item.id,
+            customerName: item.customers?.full_name || "Customer Check-in",
+            customerMasked: item.customers?.phone || "Customer Check-in",
+            amount: Number(item.bill_amount) || merchant.min_spend,
+            formattedTime: "Just now",
+            status: item.status,
+          }));
+          setPendingQueue(updatedQueue);
+        }
+      })
+      .on("broadcast", { event: "queue_updated" }, async (payload: any) => {
+        const visitId = payload?.payload?.visitId;
+        if (visitId) {
+          setPendingQueue((prev) => prev.filter((q) => q.id !== visitId));
+        }
+      })
       .on(
         "postgres_changes",
         {

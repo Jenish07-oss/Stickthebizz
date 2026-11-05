@@ -282,43 +282,83 @@ export default function CustomerView({
 
   // Realtime subscription for customer scan page (Fix 2B)
   useEffect(() => {
-    if (!customer?.id) return;
-    const channel = supabase
-      .channel(`customer:${customer.id}`)
-      .on("broadcast", { event: "visit_approved" }, async () => {
-        if (merchant.id && customer.phone) {
-          const res = await getCustomerMerchantStatus(merchant.id, customer.phone);
-          if (res.visitsCount !== undefined) {
-            setVisitsCount(res.visitsCount);
-            if (res.visitsCount >= visitsRequired) {
-              setShowConfetti(true);
-            }
-          }
-          if (res.isLockedToday !== undefined) {
-            setIsLockedToday(res.isLockedToday);
+    const custId = customer?.id;
+    const custPhone = (customer?.phone || (typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : "") || "").replace(/\D/g, "");
+
+    if (!custId && !custPhone) return;
+
+    const channels: any[] = [];
+
+    const handleApproved = async () => {
+      if (merchant.id && custPhone) {
+        const res = await getCustomerMerchantStatus(merchant.id, custPhone);
+        if (res.visitsCount !== undefined) {
+          setVisitsCount(res.visitsCount);
+          if (res.visitsCount >= visitsRequired) {
+            setShowConfetti(true);
           }
         }
-        toast.success("Visit approved by cashier!");
-      })
-      .on("broadcast", { event: "stamp_updated" }, (payload: any) => {
-        if (typeof payload?.payload?.newStampCount === "number") {
-          setVisitsCount(payload.payload.newStampCount);
+        if (res.isLockedToday !== undefined) {
+          setIsLockedToday(res.isLockedToday);
         }
-        if (payload?.payload?.rewardReady) {
+      }
+      toast.success("Visit approved by cashier!");
+    };
+
+    if (custId) {
+      const ch1 = supabase
+        .channel(`customer:${custId}`)
+        .on("broadcast", { event: "visit_approved" }, handleApproved)
+        .on("broadcast", { event: "stamp_updated" }, (payload: any) => {
+          if (typeof payload?.payload?.newStampCount === "number") {
+            setVisitsCount(payload.payload.newStampCount);
+          }
+          if (payload?.payload?.rewardReady) {
+            setShowConfetti(true);
+            toast.success("Reward unlocked! Visit the counter to claim.");
+          }
+        })
+        .on("broadcast", { event: "reward_burned" }, (payload: any) => {
           setShowConfetti(true);
-          toast.success("Reward unlocked! Visit the counter to claim.");
+          toast.success(`Enjoy your ${payload?.payload?.rewardTitle || "Reward"}!`);
+        })
+        .subscribe();
+      channels.push(ch1);
+    }
+
+    if (custPhone) {
+      const ch2 = supabase
+        .channel(`customer:phone_${custPhone}`)
+        .on("broadcast", { event: "visit_approved" }, handleApproved)
+        .on("broadcast", { event: "reward_burned" }, (payload: any) => {
+          setShowConfetti(true);
+          toast.success(`Enjoy your ${payload?.payload?.rewardTitle || "Reward"}!`);
+        })
+        .subscribe();
+      channels.push(ch2);
+    }
+
+    // Resilient fallback polling every 3 seconds if waiting for today's approval
+    const pollInterval = setInterval(async () => {
+      if (merchant.id && custPhone) {
+        const res = await getCustomerMerchantStatus(merchant.id, custPhone);
+        if (res.visitsCount !== undefined && res.visitsCount !== visitsCount) {
+          setVisitsCount(res.visitsCount);
+          if (res.visitsCount >= visitsRequired) {
+            setShowConfetti(true);
+          }
         }
-      })
-      .on("broadcast", { event: "reward_burned" }, (payload: any) => {
-        setShowConfetti(true);
-        toast.success(`Enjoy your ${payload?.payload?.rewardTitle || "Reward"}!`);
-      })
-      .subscribe();
+        if (res.isLockedToday !== undefined && res.isLockedToday !== isLockedToday) {
+          setIsLockedToday(res.isLockedToday);
+        }
+      }
+    }, 3000);
 
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach((ch) => supabase.removeChannel(ch));
+      clearInterval(pollInterval);
     };
-  }, [customer?.id, customer?.phone, merchant.id, visitsRequired, supabase, toast]);
+  }, [customer?.id, customer?.phone, merchant.id, visitsRequired, supabase, toast, visitsCount, isLockedToday]);
 
   const safeVisits = Math.min(visitsCount, visitsRequired);
   const isGoalCompleted = visitsCount >= visitsRequired;
@@ -364,7 +404,7 @@ export default function CustomerView({
         const nextVisits = visitsCount + 1;
         setVisitsCount(nextVisits);
         setIsLockedToday(true);
-        setCustomer({ phone: targetPhone, fullName: targetName });
+        setCustomer({ id: res.customer?.id || res.customerId, phone: targetPhone, fullName: targetName });
 
         if (typeof window !== "undefined") {
           localStorage.setItem("stb_customer_phone", targetPhone);

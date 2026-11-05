@@ -18,6 +18,12 @@ export interface SubmitScanResult {
   message: string;
   visit?: any;
   error?: string;
+  customerId?: string;
+  customer?: {
+    id: string;
+    phone: string;
+    fullName?: string | null;
+  };
 }
 
 /**
@@ -261,7 +267,7 @@ export async function submitScan(
     const visitDateIst = await getVisitDateIST();
 
     // 7. Attempt insert into 'visits' with status 'PENDING'
-    const { error: visitError } = await db
+    const { data: insertedVisits, error: visitError } = await db
       .from("visits")
       .insert({
         customer_id: customer.id,
@@ -269,7 +275,8 @@ export async function submitScan(
         visit_date_ist: visitDateIst,
         bill_amount: validData.billAmount || 100,
         status: "PENDING",
-      });
+      })
+      .select("id, customer_id, merchant_id, bill_amount, status");
 
     if (visitError) {
       // Postgres error code 23505 = unique_violation (unique_daily_scan)
@@ -283,6 +290,12 @@ export async function submitScan(
           success: false,
           locked: true,
           message: "Today's visit verified! Next stamp unlocks strictly at 12:00:00 AM IST.",
+          customerId: customer.id,
+          customer: {
+            id: customer.id,
+            phone: customer.phone,
+            fullName: customer.full_name,
+          },
         };
         if (validData.idempotencyKey) {
           await saveIdempotency(validData.idempotencyKey, "submitScan", { cleanPhone, merchantId: validData.merchantId }, 200, lockedResponse);
@@ -299,10 +312,39 @@ export async function submitScan(
       };
     }
 
+    const insertedVisit = insertedVisits?.[0];
+
+    // Realtime Broadcast to Merchant Queue (CRITICAL FIX 1)
+    try {
+      const channelMerchant = db.channel(`merchant:${validData.merchantId}`);
+      await channelMerchant.send({
+        type: "broadcast",
+        event: "new_scan",
+        payload: {
+          visitId: insertedVisit?.id,
+          customerId: customer.id,
+          customerName: customer.full_name || "Customer Check-in",
+          customerPhone: maskPhone(customer.phone),
+          billAmount: validData.billAmount || 100,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      await db.removeChannel(channelMerchant);
+    } catch (bcErr) {
+      console.warn("Broadcast new_scan error:", bcErr);
+    }
+
     const successResponse: SubmitScanResult = {
       success: true,
       locked: false,
       message: "✓ Today's stamp punched! Cashier counter notified.",
+      visit: insertedVisit,
+      customerId: customer.id,
+      customer: {
+        id: customer.id,
+        phone: customer.phone,
+        fullName: customer.full_name,
+      },
     };
 
     if (validData.idempotencyKey) {
@@ -409,6 +451,24 @@ export async function approveVisit(visitId: string, idempotencyKey?: string) {
         },
       });
       await db.removeChannel(channelCustomer);
+
+      // Also broadcast by customer phone channel
+      const { data: custRecord } = await db
+        .from("customers")
+        .select("phone")
+        .eq("id", visit.customer_id)
+        .maybeSingle();
+
+      if (custRecord?.phone) {
+        const cleanPhone = custRecord.phone.replace(/\D/g, "");
+        const phoneChan = db.channel(`customer:phone_${cleanPhone}`);
+        await phoneChan.send({
+          type: "broadcast",
+          event: "visit_approved",
+          payload: { visitId, status: "approved", newStampCount: currentStamps, rewardReady: isRewardReady, timestamp: new Date().toISOString() },
+        });
+        await db.removeChannel(phoneChan);
+      }
 
       const channelMerchant = db.channel(`merchant:${visit.merchant_id}`);
       await channelMerchant.send({
@@ -549,7 +609,7 @@ export async function verifyRedemptionPin(
       const cleanPhone = customerPhone.replace(/\D/g, "");
       const { data: customer } = await db
         .from("customers")
-        .select("id")
+        .select("id, phone")
         .eq("phone", cleanPhone)
         .maybeSingle();
 
@@ -623,6 +683,21 @@ export async function verifyRedemptionPin(
           },
         });
         await db.removeChannel(channelCustomer);
+
+        if (customer.phone) {
+          const cleanCustPhone = customer.phone.replace(/\D/g, "");
+          const phoneChan = db.channel(`customer:phone_${cleanCustPhone}`);
+          await phoneChan.send({
+            type: "broadcast",
+            event: "reward_burned",
+            payload: {
+              rewardTitle: merchant.reward_name,
+              shopName: merchant.shop_name || merchant.business_name || "Store",
+              timestamp: new Date().toISOString(),
+            },
+          });
+          await db.removeChannel(phoneChan);
+        }
 
         const channelMerchant = db.channel(`merchant:${merchantId}`);
         await channelMerchant.send({
@@ -824,6 +899,8 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
 }
 
 // Export aliases for flexible imports
+export const punchStampAction = submitScan;
 export const approveVisitAction = approveVisit;
+export const redeemVoucherAction = verifyRedemptionPin;
 export const validateVoucherPinAction = verifyRedemptionPin;
 
