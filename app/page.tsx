@@ -11,6 +11,7 @@ const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
   ssr: false,
 });
 import AnimatedHero from "@/components/AnimatedHero";
+import WriteReviewSection from "@/components/WriteReviewSection";
 import { CategoryPreset } from "@/context/StoreContext";
 import {
   ChaiCupIcon,
@@ -639,6 +640,9 @@ export default function HomePage() {
             </div>
           </div>
         </section>
+
+        {/* WRITE A REVIEW SECTION */}
+        <WriteReviewSection />
 
         {/* REAL-WORLD TESTIMONIALS SECTION */}
         <section className="bg-white px-4 py-20 sm:px-6 lg:px-8">

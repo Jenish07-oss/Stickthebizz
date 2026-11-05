@@ -29,11 +29,15 @@ export default function CustomerAuthPage() {
 
   const otpInputs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // 1. Auto-Login Check: If customer has an active session, redirect straight to dashboard
+  // 1. Auto-Login Check: If customer has an active session, redirect straight to target or dashboard
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        window.location.href = "/customer/dashboard";
+        const redirectUrl =
+          typeof window !== "undefined"
+            ? new URLSearchParams(window.location.search).get("redirect")
+            : null;
+        window.location.href = redirectUrl || "/customer/dashboard";
       }
     });
   }, [supabase]);
@@ -139,8 +143,12 @@ export default function CustomerAuthPage() {
         email: email.trim().toLowerCase(),
       });
 
-      // Session established -> Full reload into customer dashboard
-      window.location.href = "/customer/dashboard";
+      // Session established -> Full reload into redirect target or customer dashboard
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? new URLSearchParams(window.location.search).get("redirect")
+          : null;
+      window.location.href = redirectUrl || "/customer/dashboard";
     } catch (err: any) {
       setErrorMessage(err.message || "Verification failed. Please retry.");
       setIsSubmitting(false);

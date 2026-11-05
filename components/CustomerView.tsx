@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -100,6 +100,7 @@ export default function CustomerView({
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [countdownStr, setCountdownStr] = useState("");
   const [changeNumberModal, setChangeNumberModal] = useState(false);
+  const autoPunchedRef = useRef(false);
 
   // 1. Calculate Countdown to 12:00:00 AM IST
   useEffect(() => {
@@ -209,13 +210,50 @@ export default function CustomerView({
           const res = await getCustomerMerchantStatus(merchant.id, savedPhone);
           if (res.customer && res.customer.phone && res.customer.phone.replace(/\D/g, "").length === 10) {
             const validPhone = res.customer.phone.replace(/\D/g, "");
-            setCustomer({ ...res.customer, phone: validPhone });
+            const custObj = { ...res.customer, phone: validPhone };
+            setCustomer(custObj);
             setVisitsCount(res.visitsCount || 0);
             setIsLockedToday(res.isLockedToday);
             if (typeof window !== "undefined") {
               localStorage.setItem("stb_customer_phone", validPhone);
               if (res.customer.fullName) {
                 localStorage.setItem("stb_customer_name", res.customer.fullName);
+              }
+            }
+
+            // Direct auto-punch for existing/returning account on QR scan
+            if (!autoPunchedRef.current && !res.isLockedToday && (res.visitsCount || 0) < visitsRequired) {
+              autoPunchedRef.current = true;
+              setIsSubmitting(true);
+              setFeedbackMessage("⚡ Verified account recognized! Punching today's stamp...");
+              playScanChime();
+
+              try {
+                const punchRes = await submitScanAction(
+                  validPhone,
+                  merchant.id,
+                  merchant.minSpend,
+                  custObj.fullName || ""
+                );
+
+                if (punchRes.locked) {
+                  setIsLockedToday(true);
+                  setFeedbackMessage(punchRes.message);
+                } else if (punchRes.success) {
+                  const nextVisits = (res.visitsCount || 0) + 1;
+                  setVisitsCount(nextVisits);
+                  setIsLockedToday(true);
+                  setFeedbackMessage("✓ Today's stamp punched directly! Cashier counter notified.");
+                  if (nextVisits >= visitsRequired) {
+                    setShowConfetti(true);
+                  }
+                } else {
+                  setErrorMessage(punchRes.message || "Failed to punch stamp.");
+                }
+              } catch (autoErr) {
+                console.error("Auto punch error:", autoErr);
+              } finally {
+                setIsSubmitting(false);
               }
             }
           }
@@ -488,14 +526,18 @@ export default function CustomerView({
                     )}
                   </div>
                 ) : (
-                  // First-Time Visitor Check-In Form (Seamless, No Fake OTP Modal!)
-                  <form onSubmit={handleClaimStamp} className="space-y-3 rounded-2xl bg-sand/30 p-4 border border-border">
+                  // New Customer Sign Up Form (As requested: ask new users to sign up to claim pass)
+                  <form onSubmit={handleClaimStamp} className="space-y-3.5 rounded-2xl bg-sand/30 p-5 border border-border">
                     <div className="text-center">
-                      <p className="text-xs font-extrabold text-secondary">
-                        Claim Your Visit Stamp
-                      </p>
-                      <p className="text-[11px] text-ink/65 mt-0.5">
-                        Enter mobile number to save your progress. Zero app download.
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-[10px] font-extrabold tracking-wider text-primary">
+                        <Sparkles className="h-3 w-3" />
+                        NEW CUSTOMER SIGN UP
+                      </span>
+                      <h2 className="mt-2 font-display text-base font-extrabold text-secondary">
+                        Sign Up &amp; Claim Your Loyalty Pass
+                      </h2>
+                      <p className="text-[11px] text-ink/70 mt-0.5 leading-snug">
+                        Create your official digital card in 10 seconds. No app download needed.
                       </p>
                     </div>
 
@@ -521,10 +563,11 @@ export default function CustomerView({
 
                     <div>
                       <label className="block text-[11px] font-bold uppercase tracking-wider text-ink/70">
-                        Your Name (Optional)
+                        Your Full Name
                       </label>
                       <input
                         type="text"
+                        required
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
                         placeholder="e.g. Rahul Patel"
@@ -541,27 +584,26 @@ export default function CustomerView({
                         className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
                       />
                       <label htmlFor="consent-check" className="text-[10px] leading-relaxed text-ink/70">
-                        I agree to save my loyalty visits with <strong>{merchant.name}</strong> under the DPDP Act 2023.
+                        I agree to create my verified digital pass with <strong>{merchant.name}</strong> under the DPDP Act 2023.
                       </label>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={isSubmitting || mobileInput.length < 10 || !consentChecked}
+                      disabled={isSubmitting || mobileInput.length < 10 || !nameInput.trim() || !consentChecked}
                       className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-secondary disabled:opacity-50"
                     >
                       <Sparkles className="h-4 w-4" />
-                      <span>{isSubmitting ? "Verifying..." : "Punch Stamp & Save Pass"}</span>
+                      <span>{isSubmitting ? "Creating Pass..." : "Sign Up & Punch Stamp (+1 Visit)"}</span>
                     </button>
 
-                    <div className="mt-3 text-center text-[11px] text-ink/70 pt-2 border-t border-border/60">
+                    <div className="mt-3 text-center text-xs text-ink/70 pt-2.5 border-t border-border/60">
                       <span>Already have an account? </span>
-                      <Link href="/auth/customer/login" className="font-bold text-primary hover:underline">
-                        Sign In
-                      </Link>
-                      <span> or </span>
-                      <Link href="/auth/customer/signup" className="font-bold text-secondary hover:underline">
-                        Create Account
+                      <Link
+                        href={`/auth/customer/login?redirect=/s/${merchant.slug}`}
+                        className="font-bold text-primary hover:underline"
+                      >
+                        Log In to Auto-Punch
                       </Link>
                     </div>
                   </form>

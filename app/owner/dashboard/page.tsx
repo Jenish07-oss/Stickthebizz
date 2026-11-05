@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -102,6 +102,8 @@ export default function OwnerDashboardPage() {
   const [printModalOpen, setPrintModalOpen] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [exitingCardIds, setExitingCardIds] = useState<string[]>([]);
+  const processedVisitIdsRef = useRef<Set<string>>(new Set());
+  const knownVisitIdsRef = useRef<Set<string>>(new Set());
   const [isCreatingShop, setIsCreatingShop] = useState(false);
   const [newShopName, setNewShopName] = useState("");
   const [newShopCategory, setNewShopCategory] = useState("Cafe / Chai");
@@ -212,14 +214,17 @@ export default function OwnerDashboardPage() {
           // Fetch pending visits
           const { visits: pending } = await getPendingVisits(m.id);
           if (mounted) {
-            const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => ({
-              id: v.id,
-              customerName: v.customers?.full_name || "Diner / Shopper",
-              customerMasked: v.customers?.phone || "Customer Check-in",
-              amount: Number(v.bill_amount) || m.min_spend,
-              formattedTime: "Just now",
-              status: v.status,
-            }));
+            const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => {
+              knownVisitIdsRef.current.add(v.id);
+              return {
+                id: v.id,
+                customerName: v.customers?.full_name || "Diner / Shopper",
+                customerMasked: v.customers?.phone || "Customer Check-in",
+                amount: Number(v.bill_amount) || m.min_spend,
+                formattedTime: "Just now",
+                status: v.status,
+              };
+            });
             setPendingQueue(initialQueue);
           }
 
@@ -325,7 +330,12 @@ export default function OwnerDashboardPage() {
       try {
         const { visits: freshPending } = await getPendingVisits(merchant.id);
         if (freshPending) {
-          const updatedQueue: LivePendingScan[] = freshPending.map((item: any) => ({
+          // Exclude visits that were already approved or rejected in this session
+          const activePending = freshPending.filter(
+            (item: any) => !processedVisitIdsRef.current.has(item.id)
+          );
+
+          const updatedQueue: LivePendingScan[] = activePending.map((item: any) => ({
             id: item.id,
             customerName: item.customers?.full_name || "Customer Check-in",
             customerMasked: item.customers?.phone || "Customer Check-in",
@@ -334,13 +344,23 @@ export default function OwnerDashboardPage() {
             status: item.status,
           }));
 
+          // Only play gentle chime for genuinely new visits
+          let hasNewVisits = false;
+          updatedQueue.forEach((v) => {
+            if (!knownVisitIdsRef.current.has(v.id)) {
+              knownVisitIdsRef.current.add(v.id);
+              hasNewVisits = true;
+            }
+          });
+
+          if (hasNewVisits) {
+            playScanChime();
+          }
+
           setPendingQueue((prev) => {
             const prevIds = prev.map((p) => p.id).join(",");
             const newIds = updatedQueue.map((p) => p.id).join(",");
             if (prevIds !== newIds) {
-              if (updatedQueue.length > prev.length) {
-                playApprovalBell();
-              }
               return updatedQueue;
             }
             return prev;
@@ -357,50 +377,100 @@ export default function OwnerDashboardPage() {
     };
   }, [merchant?.id, merchant?.min_spend, supabase]);
 
-  // 1-Tap Actions
+  // 1-Tap Actions (Immediate optimistic feedback + zero flicker)
   const handleApprove = async (scanId: string) => {
-    setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
+    // 1. Mark as processed immediately so polling NEVER re-adds it
+    processedVisitIdsRef.current.add(scanId);
+    setActionLoadingId(scanId);
     playApprovalBell();
-    await approveVisit(scanId);
 
-    // Refresh ledger
+    // 2. Smooth hardware-accelerated exit animation
+    setExitingCardIds((prev) => [...prev, scanId]);
+    setTimeout(() => {
+      setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
+      setExitingCardIds((prev) => prev.filter((id) => id !== scanId));
+      setActionLoadingId(null);
+    }, 220);
+
+    // 3. Immediately update ledger row so it doesn't show PENDING
+    setLedger((prev) =>
+      prev.map((row) => (row.id === scanId ? { ...row, status: "APPROVED" } : row))
+    );
+
+    // 4. Server call to finalize approval
+    try {
+      await approveVisit(scanId);
+    } catch (err) {
+      console.error("Approve visit server error:", err);
+    }
+
+    // 5. Silent refresh of full ledger
     if (merchant?.id) {
-      const { visits: leg } = await getMerchantLedger(merchant.id);
-      if (leg) {
-        setLedger(
-          leg.map((v: any) => ({
-            id: v.id,
-            customerName: v.customers?.full_name || "Customer",
-            contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
-            visitDate: v.visit_date_ist,
-            billAmount: Number(v.bill_amount) || merchant.min_spend,
-            status: v.status,
-            createdAt: v.created_at,
-          }))
-        );
+      try {
+        const { visits: leg } = await getMerchantLedger(merchant.id);
+        if (leg && leg.length > 0) {
+          setLedger(
+            leg.map((v: any) => ({
+              id: v.id,
+              customerName: v.customers?.full_name || "Customer",
+              contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
+              visitDate: v.visit_date_ist,
+              billAmount: Number(v.bill_amount) || merchant.min_spend,
+              status: v.status,
+              createdAt: v.created_at,
+            }))
+          );
+        }
+      } catch {
+        // silent sync fallback
       }
     }
   };
 
   const handleReject = async (scanId: string) => {
-    setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
-    await rejectVisit(scanId);
+    // 1. Mark as processed immediately so polling NEVER re-adds it
+    processedVisitIdsRef.current.add(scanId);
+    setActionLoadingId(scanId);
 
-    // Refresh ledger after reject
+    // 2. Smooth hardware-accelerated exit animation
+    setExitingCardIds((prev) => [...prev, scanId]);
+    setTimeout(() => {
+      setPendingQueue((prev) => prev.filter((q) => q.id !== scanId));
+      setExitingCardIds((prev) => prev.filter((id) => id !== scanId));
+      setActionLoadingId(null);
+    }, 220);
+
+    // 3. Immediately update ledger row to REJECTED so it doesn't show PENDING
+    setLedger((prev) =>
+      prev.map((row) => (row.id === scanId ? { ...row, status: "REJECTED" } : row))
+    );
+
+    // 4. Server call to finalize reject
+    try {
+      await rejectVisit(scanId);
+    } catch (err) {
+      console.error("Reject visit server error:", err);
+    }
+
+    // 5. Silent refresh of full ledger
     if (merchant?.id) {
-      const { visits: leg } = await getMerchantLedger(merchant.id);
-      if (leg) {
-        setLedger(
-          leg.map((v: any) => ({
-            id: v.id,
-            customerName: v.customers?.full_name || "Customer",
-            contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
-            visitDate: v.visit_date_ist,
-            billAmount: Number(v.bill_amount) || merchant.min_spend,
-            status: v.status,
-            createdAt: v.created_at,
-          }))
-        );
+      try {
+        const { visits: leg } = await getMerchantLedger(merchant.id);
+        if (leg && leg.length > 0) {
+          setLedger(
+            leg.map((v: any) => ({
+              id: v.id,
+              customerName: v.customers?.full_name || "Customer",
+              contactMasked: v.customers?.phone ? `+91 ${v.customers.phone.slice(0, 2)}***` : "Walk-in",
+              visitDate: v.visit_date_ist,
+              billAmount: Number(v.bill_amount) || merchant.min_spend,
+              status: v.status,
+              createdAt: v.created_at,
+            }))
+          );
+        }
+      } catch {
+        // silent sync fallback
       }
     }
   };

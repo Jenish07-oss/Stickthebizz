@@ -2,7 +2,7 @@ import React from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import Link from "next/link";
-import { Sparkles, Heart, Store, Shield, ArrowRight } from "lucide-react";
+import { Sparkles, Store, Shield, ArrowRight } from "lucide-react";
 
 export const metadata = {
   title: "About Us — StickTheBizz",
@@ -59,10 +59,10 @@ export default function AboutPage() {
             {/* Core Values */}
             <div className="border-t border-border/80 pt-8">
               <h2 className="font-display text-2xl font-extrabold text-secondary">
-                Our 3 Unshakeable Guarantees
+                Our Core Commitments
               </h2>
 
-              <div className="mt-6 grid gap-6 sm:grid-cols-3">
+              <div className="mt-6 grid gap-6 sm:grid-cols-2">
                 <div className="rounded-2xl bg-sand/40 p-5">
                   <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white">
                     <Store className="h-5 w-5" />
@@ -86,18 +86,6 @@ export default function AboutPage() {
                     Strict adherence to India&apos;s DPDP Act. We never sell or share customer phone numbers.
                   </p>
                 </div>
-
-                <div className="rounded-2xl bg-sand/40 p-5">
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-warning text-white">
-                    <Heart className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-4 font-display text-base font-extrabold text-secondary">
-                    Always Affordable
-                  </h3>
-                  <p className="mt-2 text-xs text-ink/70">
-                    Free for the first 50 customers, then just ₹199/month. Accessible to every small business.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -108,7 +96,7 @@ export default function AboutPage() {
                   Ready to launch it at your counter?
                 </h3>
                 <p className="mt-1 text-xs text-white/80">
-                  Launch in under 3 minutes with our free trial.
+                  Launch in under 3 minutes at flat ₹749/mo.
                 </p>
               </div>
               <Link

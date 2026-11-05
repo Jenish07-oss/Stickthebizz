@@ -159,6 +159,17 @@ export async function submitScan(
       }
     }
 
+    if (!customer && authUserEmail) {
+      const { data: emailCust } = await db
+        .from("customers")
+        .select("id, phone, full_name, auth_id, email")
+        .eq("email", authUserEmail)
+        .maybeSingle();
+      if (emailCust) {
+        customer = emailCust;
+      }
+    }
+
     if (!customer) {
       const { data: newCustomer, error: insertCustError } = await db
         .from("customers")
@@ -169,25 +180,43 @@ export async function submitScan(
           email: authUserEmail,
         })
         .select("id, phone, full_name, auth_id, email")
-        .single();
+        .maybeSingle();
 
-      if (insertCustError) {
-        console.error("submitScan customer insert error:", insertCustError);
-        // If concurrent insert occurred or conflict, retry fetch once
-        const { data: retryCustomer } = await db
+      if (insertCustError || !newCustomer) {
+        // Fallback retry: check by phone, then auth_id, then email
+        const { data: retryPhone } = await db
           .from("customers")
           .select("id, phone, full_name, auth_id, email")
           .eq("phone", cleanPhone)
           .maybeSingle();
 
-        if (retryCustomer) {
-          customer = retryCustomer;
-        } else {
+        if (retryPhone) {
+          customer = retryPhone;
+        } else if (authUserId) {
+          const { data: retryAuth } = await db
+            .from("customers")
+            .select("id, phone, full_name, auth_id, email")
+            .eq("auth_id", authUserId)
+            .maybeSingle();
+          if (retryAuth) customer = retryAuth;
+        }
+
+        if (!customer && authUserEmail) {
+          const { data: retryEmail } = await db
+            .from("customers")
+            .select("id, phone, full_name, auth_id, email")
+            .eq("email", authUserEmail)
+            .maybeSingle();
+          if (retryEmail) customer = retryEmail;
+        }
+
+        if (!customer) {
+          console.error("submitScan customer insert error:", insertCustError);
           return {
             success: false,
             locked: false,
-            message: "Unable to register customer record: " + sanitizeError(insertCustError),
-            error: insertCustError.message,
+            message: "Unable to register customer record. Please check phone number and try again.",
+            error: insertCustError?.message,
           };
         }
       } else {

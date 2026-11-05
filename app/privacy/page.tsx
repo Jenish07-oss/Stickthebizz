@@ -123,25 +123,11 @@ export default function PrivacyPage() {
                       >
                         privacy@stickthebizz.in
                       </a>{" "}
-                      or contact our Data Grievance Officer directly via WhatsApp. Your record will be wiped within 48 business hours.
+                      or email <span className="font-mono text-secondary">privacy@stickthebizz.in</span>. Your record will be wiped within 48 business hours.
                     </p>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <h2 className="font-display text-xl font-extrabold text-secondary">
-                5. Contacting Our Data Protection Officer
-              </h2>
-              <p className="mt-2">
-                For questions regarding DPDP compliance or data safety:
-              </p>
-              <p className="mt-1 font-mono text-xs text-secondary">
-                Data Grievance Officer, StickTheBizz Technologies Pvt Ltd<br />
-                Email: privacy@stickthebizz.in<br />
-                Address: Bengaluru, Karnataka, India
-              </p>
             </div>
           </div>
         </div>

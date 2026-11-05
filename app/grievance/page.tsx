@@ -1,7 +1,7 @@
 import React from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { ShieldCheck, Mail, MapPin, Clock, FileCheck } from "lucide-react";
+import { ShieldCheck, Clock, FileCheck } from "lucide-react";
 import Link from "next/link";
 
 export const metadata = {
@@ -32,41 +32,6 @@ export default function GrievancePage() {
 
           {/* Grievance Details Card */}
           <div className="mt-12 space-y-8 rounded-[2.5rem] border border-border bg-white p-8 shadow-card sm:p-12 text-ink/80 leading-relaxed text-sm">
-            <div>
-              <h2 className="font-display text-xl font-extrabold text-secondary">
-                Data Protection Officer (DPO) &amp; Grievance Redressal
-              </h2>
-              <p className="mt-2 text-xs text-ink/75">
-                In compliance with the <strong>Digital Personal Data Protection (DPDP) Act 2023</strong> and the <strong>Information Technology (Intermediary Guidelines and Digital Media Ethics Code) Rules 2021</strong>, the details of our designated Grievance Officer are set forth below:
-              </p>
-            </div>
-
-            {/* Officer Details Box */}
-            <div className="grid gap-4 sm:grid-cols-2 rounded-2xl border border-secondary/20 bg-sand/40 p-6 text-xs">
-              <div className="space-y-1">
-                <span className="font-bold text-ink/50 uppercase tracking-wider text-[10px]">Appointed Officer</span>
-                <p className="font-display text-base font-extrabold text-secondary">Jenish Patel</p>
-                <p className="text-ink/70">Data Protection &amp; Compliance Lead</p>
-              </div>
-
-              <div className="space-y-1">
-                <span className="font-bold text-ink/50 uppercase tracking-wider text-[10px]">Direct Electronic Contact</span>
-                <p className="flex items-center gap-2 font-mono font-bold text-secondary text-sm">
-                  <Mail className="h-4 w-4 text-primary" />
-                  grievance@stickthebizz.in
-                </p>
-                <p className="text-ink/60">Monitored daily with priority escalation</p>
-              </div>
-
-              <div className="space-y-1 sm:col-span-2 pt-2 border-t border-border/60">
-                <span className="font-bold text-ink/50 uppercase tracking-wider text-[10px]">Registered Postal Address</span>
-                <p className="flex items-start gap-2 text-ink/80">
-                  <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                  <span>StickTheBizz Technologies Pvt Ltd, 4th Floor, Tech Hub Tower, Ring Road, Surat, Gujarat 395002, India.</span>
-                </p>
-              </div>
-            </div>
-
             {/* Resolution SLA */}
             <div>
               <h3 className="font-display text-base font-bold text-secondary flex items-center gap-2">

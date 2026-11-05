@@ -40,7 +40,7 @@ export default function RefundPage() {
               </h2>
               <p className="mt-2 text-xs font-medium text-ink/75 leading-relaxed">
                 We want every chai stall, kirana shop, bakery, and cafe owner in Bharat to feel 100% confident.
-                If you subscribe to the StickTheBizz <strong>₹749/month</strong> merchant plan and decide within your first 7 days that digital loyalty passes are not increasing your daily footfall, message our WhatsApp support for a <strong>100% full refund</strong> — no questions asked.
+                If you subscribe to the StickTheBizz <strong>₹749/month</strong> merchant plan and decide within your first 7 days that digital loyalty passes are not increasing your daily footfall, contact our merchant support for a <strong>100% full refund</strong> — no questions asked.
               </p>
             </div>
 
@@ -81,7 +81,7 @@ export default function RefundPage() {
               </p>
               <ul className="mt-2 space-y-1.5 list-disc pl-5 text-xs text-ink/75">
                 <li>
-                  <strong>Transit Damage:</strong> If your acrylic standee arrives cracked, scratched, or illegible from postal courier delivery, send a photo to our WhatsApp line within <strong>14 days of delivery</strong> for an immediate free express replacement.
+                  <strong>Transit Damage:</strong> If your acrylic standee arrives cracked, scratched, or illegible from postal courier delivery, email a photo to <span className="font-mono text-secondary">support@stickthebizz.in</span> within <strong>14 days of delivery</strong> for an immediate free express replacement.
                 </li>
                 <li>
                   <strong>Counter Accidents:</strong> If chai, grease, or counter wear damages your standee after months of use, active subscribers can order a replacement standee at manufacturing cost (₹149 including shipping).
@@ -116,7 +116,7 @@ export default function RefundPage() {
             <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-2xl bg-sand/60 p-6 border border-border">
               <div>
                 <h3 className="font-display font-bold text-secondary text-sm">Need help with a refund or billing question?</h3>
-                <p className="text-xs text-ink/70">Our merchant care team responds within 2 hours on WhatsApp.</p>
+                <p className="text-xs text-ink/70">Our dedicated merchant care team is ready to assist you.</p>
               </div>
               <Link
                 href="/contact"
