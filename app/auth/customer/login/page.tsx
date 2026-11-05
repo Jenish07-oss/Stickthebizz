@@ -301,11 +301,10 @@ export default function CustomerAuthPage() {
                   setAuthMode("login");
                   setErrorMessage(null);
                 }}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition ${
-                  authMode === "login"
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition ${authMode === "login"
                     ? "bg-secondary text-white shadow-sm"
                     : "text-ink/65 hover:text-secondary"
-                }`}
+                  }`}
               >
                 <LogIn className="h-4 w-4" />
                 <span>Returning Customer</span>
@@ -317,11 +316,10 @@ export default function CustomerAuthPage() {
                   setAuthMode("signup");
                   setErrorMessage(null);
                 }}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition ${
-                  authMode === "signup"
+                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold transition ${authMode === "signup"
                     ? "bg-secondary text-white shadow-sm"
                     : "text-ink/65 hover:text-secondary"
-                }`}
+                  }`}
               >
                 <UserPlus className="h-4 w-4" />
                 <span>New Pass Sign Up</span>
@@ -507,8 +505,8 @@ export default function CustomerAuthPage() {
                     {isResending
                       ? "Resending code..."
                       : resendCooldown > 0
-                      ? `Resend code in ${resendCooldown}s`
-                      : "Resend Verification Code"}
+                        ? `Resend code in ${resendCooldown}s`
+                        : "Resend Verification Code"}
                   </span>
                 </button>
 

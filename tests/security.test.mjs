@@ -217,11 +217,12 @@ runTest("app/owner/dashboard/page.tsx contains NO rawPhone in state", () => {
   assert.strictEqual(code.includes("rawPhone"), false, "app/owner/dashboard/page.tsx must not contain rawPhone");
 });
 
-runTest("Legal pages (/refund and /grievance) exist and contain DPDP notices", () => {
-  const refundCode = fs.readFileSync("app/refund/page.tsx", "utf8");
+runTest("Legal pages (/privacy and /grievance) exist and contain DPDP notices, and /refund is removed", () => {
+  assert.strictEqual(fs.existsSync("app/refund/page.tsx"), false, "/refund must be removed per user specification");
+  const privacyCode = fs.readFileSync("app/privacy/page.tsx", "utf8");
   const grievanceCode = fs.readFileSync("app/grievance/page.tsx", "utf8");
-  assert.strictEqual(refundCode.includes("7-Day"), true);
-  assert.strictEqual(grievanceCode.includes("DPDP Act 2023"), true);
+  assert.strictEqual(/DPDP/i.test(privacyCode), true);
+  assert.strictEqual(/DPDP/i.test(grievanceCode), true);
 });
 
 // ----------------------------------------------------
