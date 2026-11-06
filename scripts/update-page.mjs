@@ -74,3 +74,4 @@ if (!content.includes('<OfflineBanner />')) {
 
 fs.writeFileSync(filePath, content, 'utf8');
 console.log('Successfully updated app/page.tsx with interactive components');
+

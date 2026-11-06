@@ -1,4 +1,5 @@
 # dependencies
+node_modules/
 /node_modules
 /.pnp
 .pnp.js
@@ -6,16 +7,20 @@
 # testing
 /coverage
 
-# next.js
+# build outputs
+dist/
+/dist
+.next/
 /.next/
+out/
 /out/
-
-# production
+build/
 /build
 
 # misc
 .DS_Store
 *.pem
+.vscode/
 
 # debug
 npm-debug.log*
@@ -25,11 +30,11 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+*.env
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
 
 # pwa service worker
 /public/sw.js

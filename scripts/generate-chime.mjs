@@ -18,3 +18,4 @@ if (!fs.existsSync(soundsDir)) {
 
 fs.writeFileSync(path.join(soundsDir, 'chime.mp3'), mp3Bytes);
 console.log('Created public/sounds/chime.mp3');
+

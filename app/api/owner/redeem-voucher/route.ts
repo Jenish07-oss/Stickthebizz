@@ -52,3 +52,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: err.message || "Redemption failed" }, { status: 500 });
   }
 }
+

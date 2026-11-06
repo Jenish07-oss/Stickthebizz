@@ -1,0 +1,150 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #F5EBDD;
+  --color-primary: #F2765E;
+  --color-secondary: #315B8C;
+  --color-ink: #413333;
+  --color-surface: #FFFFFF;
+  --color-border: #E5D9C8;
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+
+  /* 1. Brand-Tinted Elevation System */
+  --shadow-coral-1: rgba(242, 118, 94, 0.08);
+  --shadow-coral-2: rgba(242, 118, 94, 0.15);
+  --shadow-coral-3: rgba(242, 118, 94, 0.25);
+  --shadow-coral-4: rgba(242, 118, 94, 0.35);
+  --shadow-ink-1:   rgba(65, 51, 51, 0.06);
+
+  /* 4. Motion Tokens */
+  --motion-fast:   120ms ease-out;
+  --motion-base:   200ms ease-out;
+  --motion-slow:   300ms ease-out;
+  --motion-spring: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-damp:   500ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* 5. Dark Brand Theme */
+  --brand-dark: #1A2A3A;
+  --brand-dark-text: #F5EBDD;
+  --brand-dark-muted: #D4C8B8;
+}
+
+/* Brand Elevation Utilities */
+.shadow-brand-sm   { box-shadow: var(--shadow-coral-1) 0 3px 6px, var(--shadow-ink-1) 0 1px 2px; }
+.shadow-brand-md   { box-shadow: var(--shadow-coral-2) 0 15px 35px, var(--shadow-ink-1) 0 8px 16px; }
+.shadow-brand-lg   { box-shadow: var(--shadow-coral-3) 0 30px 45px -20px, var(--shadow-ink-1) 0 18px 36px -18px; }
+.shadow-brand-xl   { box-shadow: var(--shadow-coral-4) 0 14px 21px -14px, var(--shadow-ink-1) 0 8px 17px -8px; }
+
+/* Display Typography */
+.text-display-hero { 
+  font-family: var(--font-plus-jakarta); 
+  font-weight: 300; 
+  font-size: clamp(2.5rem, 5vw, 4rem); 
+  line-height: 1.05; 
+  letter-spacing: -0.03em; 
+}
+
+/* Motion Classes */
+.motion-enter      { animation: fadeIn var(--motion-base), slideUp var(--motion-slow); }
+.motion-exit       { animation: fadeOut var(--motion-fast), slideDown var(--motion-base); }
+.motion-pop        { animation: popIn var(--motion-spring); }
+.motion-pulse      { animation: pulseSoft var(--motion-damp); }
+.motion-shake      { animation: shake var(--motion-fast); }
+.motion-slide-up   { animation: slideUp var(--motion-base); }
+.motion-slide-down { animation: slideDown var(--motion-base); }
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+@keyframes slideUp {
+  from { transform: translateY(8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes popIn {
+  0% { transform: scale(0.85); opacity: 0; }
+  70% { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes pulseSoft {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.9; }
+}
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { 
+    animation-duration: 0.01ms !important; 
+    transition-duration: 0.01ms !important; 
+  }
+}
+
+.section-dark { 
+  background: var(--brand-dark); 
+  color: var(--brand-dark-text); 
+  border-top: 1px solid rgba(245, 235, 221, 0.1); 
+}
+.section-dark h2 { color: var(--brand-dark-text); }
+.section-dark p  { color: var(--brand-dark-muted); }
+.section-dark .btn-primary { background: var(--color-primary); }
+
+html {
+  scroll-behavior: smooth;
+  background-color: #F5EBDD;
+  color: #413333;
+}
+
+body {
+  background-color: #F5EBDD;
+  color: #413333;
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+.grain {
+  background-image: radial-gradient(rgba(65, 51, 51, 0.07) 0.8px, transparent 0.8px);
+  background-size: 16px 16px;
+}
+
+:focus-visible {
+  outline: 2px solid #F2765E;
+  outline-offset: 2px;
+}
+
+/* Strict Single-Page Print Standee Isolation (User Rule 2) */
+@media print {
+  @page {
+    size: 5in 7in;
+    margin: 0;
+  }
+  html, body {
+    width: 5in !important;
+    height: 7in !important;
+    overflow: hidden !important;
+    background: #FFFFFF !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .no-print, header, footer, nav, .offline-banner {
+    display: none !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+}
+
