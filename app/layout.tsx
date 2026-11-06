@@ -5,6 +5,7 @@ import "./globals.css";
 import { StoreProvider } from "@/context/StoreContext";
 import { ToastContainer } from "@/components/ui/Toast";
 import ConsoleCleaner from "@/components/ConsoleCleaner";
+import { Analytics } from "@vercel/analytics/next";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -84,6 +85,7 @@ export default function RootLayout({
           {children}
         </StoreProvider>
         <ToastContainer />
+        <Analytics />
       </body>
     </html>
   );
