@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { Buffer } from "buffer";
 import { prisma } from "../config/db";
 import { env } from "../config/env";
 import { EmailService } from "./email.service";

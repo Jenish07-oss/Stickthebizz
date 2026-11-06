@@ -405,7 +405,7 @@ export async function verifyRedemptionPin(params: {
       };
     }
 
-    const visitsToBurn = approvedVisits.slice(0, required).map((v) => v.id);
+    const visitsToBurn = approvedVisits.slice(0, required).map((v: any) => v.id);
 
     // Burn stamps by updating status to REDEEMED
     await prisma.visit.updateMany({
@@ -463,7 +463,7 @@ export async function getPendingVisits(merchantId: string) {
     orderBy: { createdAt: "desc" },
   });
 
-  const masked = visits.map((v) => ({
+  const masked = visits.map((v: any) => ({
     id: v.id,
     customerId: v.customerId,
     merchantId: v.merchantId,
@@ -496,7 +496,7 @@ export async function getMerchantLedger(merchantId: string, limit: number = 50) 
     take: limit,
   });
 
-  const masked = visits.map((v) => ({
+  const masked = visits.map((v: any) => ({
     id: v.id,
     customerId: v.customerId,
     merchantId: v.merchantId,
