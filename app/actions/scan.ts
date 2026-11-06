@@ -334,6 +334,24 @@ export async function submitScan(
       console.warn("Broadcast new_scan error:", bcErr);
     }
 
+    // Realtime Broadcast to Customer - immediate scan confirmation
+    try {
+      const channelCustomer = db.channel(`customer:${customer.id}`);
+      await channelCustomer.send({
+        type: "broadcast",
+        event: "scan_submitted",
+        payload: {
+          visitId: insertedVisit?.id,
+          merchantId: validData.merchantId,
+          status: "pending",
+          timestamp: new Date().toISOString(),
+        },
+      });
+      await db.removeChannel(channelCustomer);
+    } catch (bcErr) {
+      console.warn("Broadcast scan_submitted error:", bcErr);
+    }
+
     const successResponse: SubmitScanResult = {
       success: true,
       locked: false,

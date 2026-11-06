@@ -1363,55 +1363,69 @@ export default function OwnerDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm text-ink/80">
                   <thead className="border-b border-border bg-sand/40 text-[11px] font-bold uppercase tracking-wider text-secondary">
-                    <tr>
-                      <th className="px-6 py-4">Customer Name</th>
-                      <th className="px-6 py-4">Masked Contact</th>
-                      <th className="px-6 py-4">Date (IST)</th>
-                      <th className="px-6 py-4">Bill Amount</th>
-                      <th className="px-6 py-4">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/60 font-semibold">
-                    {ledger.length > 0 ? (
-                      ledger.map((row) => (
-                        <tr key={row.id} className="hover:bg-sand/20 transition-colors">
-                          <td className="px-6 py-4 font-display font-bold text-secondary">
-                            {row.customerName}
-                          </td>
-                          <td className="px-6 py-4 font-mono text-xs text-ink/70">
-                            {row.contactMasked}
-                          </td>
-                          <td className="px-6 py-4 font-mono text-xs text-ink/70">
-                            {row.visitDate}
-                          </td>
-                          <td className="px-6 py-4 font-mono font-bold text-secondary">
-                            ₹{row.billAmount}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
-                                row.status === "APPROVED"
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : row.status === "REDEEMED"
-                                  ? "bg-secondary text-white"
-                                  : row.status === "PENDING"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-coral/15 text-primary"
-                              }`}
-                            >
-                              {row.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={5} className="px-6 py-8 text-center text-xs text-ink/50">
-                          No customer scans recorded yet today. Customers will appear here when they scan your standee!
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
+                                      <tr>
+                                        <th className="px-6 py-4">Customer Name</th>
+                                        <th className="px-6 py-4">Masked Contact</th>
+                                        <th className="px-6 py-4">Date (IST)</th>
+                                        <th className="px-6 py-4">Time (IST)</th>
+                                        <th className="px-6 py-4">Bill Amount</th>
+                                        <th className="px-6 py-4">Status</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border/60 font-semibold">
+                                      {ledger.length > 0 ? (
+                                        ledger.map((row) => {
+                                          const scanTime = row.createdAt
+                                            ? new Date(row.createdAt).toLocaleTimeString("en-IN", {
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                                timeZone: "Asia/Kolkata",
+                                                hour12: true,
+                                              })
+                                            : "--";
+                                          return (
+                                            <tr key={row.id} className="hover:bg-sand/20 transition-colors">
+                                              <td className="px-6 py-4 font-display font-bold text-secondary">
+                                                {row.customerName}
+                                              </td>
+                                              <td className="px-6 py-4 font-mono text-xs text-ink/70">
+                                                {row.contactMasked}
+                                              </td>
+                                              <td className="px-6 py-4 font-mono text-xs text-ink/70">
+                                                {row.visitDate}
+                                              </td>
+                                              <td className="px-6 py-4 font-mono text-xs text-primary font-semibold">
+                                                {scanTime}
+                                              </td>
+                                              <td className="px-6 py-4 font-mono font-bold text-secondary">
+                                                ₹{row.billAmount}
+                                              </td>
+                                              <td className="px-6 py-4">
+                                                <span
+                                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
+                                                    row.status === "APPROVED"
+                                                      ? "bg-emerald-100 text-emerald-800"
+                                                      : row.status === "REDEEMED"
+                                                      ? "bg-secondary text-white"
+                                                      : row.status === "PENDING"
+                                                      ? "bg-amber-100 text-amber-800"
+                                                      : "bg-coral/15 text-primary"
+                                                  }`}
+                                                >
+                                                  {row.status}
+                                                </span>
+                                              </td>
+                                            </tr>
+                                          );
+                                        })
+                                      ) : (
+                                        <tr>
+                                          <td colSpan={6} className="px-6 py-8 text-center text-xs text-ink/50">
+                                            No customer scans recorded yet today. Customers will appear here when they scan your standee!
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tbody>
                 </table>
               </div>
             </div>

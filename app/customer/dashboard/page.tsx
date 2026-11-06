@@ -612,41 +612,55 @@ export default function CustomerDashboardPage() {
                       <tr>
                         <th className="px-6 py-4">Store Name</th>
                         <th className="px-6 py-4">Date (IST)</th>
+                        <th className="px-6 py-4">Time (IST)</th>
                         <th className="px-6 py-4">Bill Amount</th>
                         <th className="px-6 py-4">Verification Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60 font-semibold">
                       {walletData?.history && walletData.history.length > 0 ? (
-                        walletData.history.map((record) => (
-                          <tr key={record.id} className="hover:bg-sand/20 transition-colors">
-                            <td className="px-6 py-4 font-display font-bold text-secondary">
-                              {record.merchantName}
-                            </td>
-                            <td className="px-6 py-4 font-mono text-xs text-ink/70">
-                              {record.visitDate}
-                            </td>
-                            <td className="px-6 py-4 font-mono font-bold text-secondary">
-                              ₹{record.billAmount}
-                            </td>
-                            <td className="px-6 py-4">
-                              <span
-                                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
-                                  record.status === "Approved"
-                                    ? "bg-emerald-100 text-emerald-800"
-                                    : record.status === "Redeemed"
-                                    ? "bg-secondary text-white"
-                                    : "bg-sand text-ink/75"
-                                }`}
-                              >
-                                {record.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
+                        walletData.history.map((record) => {
+                          const scanTime = record.createdAt
+                            ? new Date(record.createdAt).toLocaleTimeString("en-IN", {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                timeZone: "Asia/Kolkata",
+                                hour12: true,
+                              })
+                            : "--";
+                          return (
+                            <tr key={record.id} className="hover:bg-sand/20 transition-colors">
+                              <td className="px-6 py-4 font-display font-bold text-secondary">
+                                {record.merchantName}
+                              </td>
+                              <td className="px-6 py-4 font-mono text-xs text-ink/70">
+                                {record.visitDate}
+                              </td>
+                              <td className="px-6 py-4 font-mono text-xs text-primary font-semibold">
+                                {scanTime}
+                              </td>
+                              <td className="px-6 py-4 font-mono font-bold text-secondary">
+                                ₹{record.billAmount}
+                              </td>
+                              <td className="px-6 py-4">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-mono text-xs font-bold ${
+                                    record.status === "Approved"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : record.status === "Redeemed"
+                                      ? "bg-secondary text-white"
+                                      : "bg-sand text-ink/75"
+                                  }`}
+                                >
+                                  {record.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })
                       ) : (
                         <tr>
-                          <td colSpan={4} className="px-6 py-8 text-center text-xs text-ink/50">
+                          <td colSpan={5} className="px-6 py-8 text-center text-xs text-ink/50">
                             No visits recorded yet. Tap "Scan At Counter" on your next visit!
                           </td>
                         </tr>

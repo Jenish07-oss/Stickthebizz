@@ -322,6 +322,22 @@ export default function CustomerView({
           setShowConfetti(true);
           toast.success(`Enjoy your ${payload?.payload?.rewardTitle || "Reward"}!`);
         })
+        .on("broadcast", { event: "scan_submitted" }, (payload: any) => {
+          // Immediate feedback when scan is submitted - refresh status
+          if (merchant.id && custPhone) {
+            getCustomerMerchantStatus(merchant.id, custPhone).then((res) => {
+              if (res.visitsCount !== undefined) {
+                setVisitsCount(res.visitsCount);
+                if (res.visitsCount >= visitsRequired) {
+                  setShowConfetti(true);
+                }
+              }
+              if (res.isLockedToday !== undefined) {
+                setIsLockedToday(res.isLockedToday);
+              }
+            });
+          }
+        })
         .subscribe();
       channels.push(ch1);
     }
@@ -427,21 +443,22 @@ export default function CustomerView({
   };
 
   const handleSwitchNumber = () => {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("stb_customer_phone");
-      localStorage.removeItem("stb_customer_name");
-      localStorage.removeItem("stb_customer_email");
-      localStorage.removeItem("stb_customer_device_session");
-    }
-    setCustomer(null);
-    setVisitsCount(0);
-    setIsLockedToday(false);
-    setMobileInput("");
-    setNameInput("");
-    setChangeNumberModal(false);
-  };
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("stb_customer_phone");
+        localStorage.removeItem("stb_customer_name");
+        localStorage.removeItem("stb_customer_email");
+        localStorage.removeItem("stb_customer_device_session");
+      }
+      setCustomer(null);
+      setVisitsCount(0);
+      setIsLockedToday(false);
+      setMobileInput("");
+      setNameInput("");
+      setChangeNumberModal(false);
+    };
 
-  return (
+    
+    return (
     <div className="flex min-h-screen flex-col bg-sand overflow-x-hidden">
       <ConfettiEffect active={showConfetti} onComplete={() => setShowConfetti(false)} />
       <Navbar />
@@ -563,146 +580,99 @@ export default function CustomerView({
               )}
 
               {/* USER STATUS / ACTION SECTION */}
-              <div className="mt-5">
-                {customer ? (
-                  // Identified Customer View
-                  <div>
-                    <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/60 px-3 py-2 text-xs border border-border">
-                      <div className="flex items-center gap-2">
-                        <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
-                          <CheckCircle2 className="h-4 w-4" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
-                          <span className="font-extrabold text-secondary text-xs">
-                            {customer.fullName || customer.displayPhone || `+91 ${customer.phone}`}
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setChangeNumberModal(true)}
-                        className="text-[11px] font-bold text-primary hover:underline"
-                      >
-                        Switch Account
-                      </button>
-                    </div>
+                            <div className="mt-5">
+                              {customer ? (
+                                // Identified Customer View - Already logged in, can punch directly
+                                <div>
+                                  <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/60 px-3 py-2 text-xs border border-border">
+                                    <div className="flex items-center gap-2">
+                                      <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                      </div>
+                                      <div>
+                                        <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
+                                        <span className="font-extrabold text-secondary text-xs">
+                                          {customer.fullName || customer.displayPhone || `+91 ${customer.phone}`}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setChangeNumberModal(true)}
+                                      className="text-[11px] font-bold text-primary hover:underline"
+                                    >
+                                      Switch Account
+                                    </button>
+                                  </div>
 
-                    {isLockedToday ? (
-                      <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
-                        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
-                          <Lock className="h-4 w-4 text-warning" />
-                          <span>Today&apos;s visit verified!</span>
-                        </div>
-                        <p className="mt-1 text-[11px] text-ink/75">
-                          Next stamp unlocks at <strong>12:00 AM IST</strong>
-                        </p>
-                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
-                          <Clock className="h-3 w-3 text-primary animate-pulse" />
-                          <span>{countdownStr || "Unlocks at midnight"}</span>
-                        </div>
-                        <button
-                          disabled
-                          className="mt-3 flex min-h-[46px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-xs font-bold text-ink/40"
-                        >
-                          Counter Stamp Claimed Today
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={() => handleClaimStamp()}
-                        className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2 disabled:opacity-70"
-                      >
-                        <QrCode className="h-4 w-4" />
-                        <span>{isSubmitting ? "Verifying Scan..." : "Punch Today's Stamp (+1 Visit)"}</span>
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  // New Customer Sign Up Form (As requested: ask new users to sign up to claim pass)
-                  <form onSubmit={handleClaimStamp} className="space-y-3.5 rounded-2xl bg-sand/30 p-5 border border-border">
-                    <div className="text-center">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-[10px] font-extrabold tracking-wider text-primary">
-                        <Sparkles className="h-3 w-3" />
-                        NEW CUSTOMER SIGN UP
-                      </span>
-                      <h2 className="mt-2 font-display text-base font-extrabold text-secondary">
-                        Sign Up &amp; Claim Your Loyalty Pass
-                      </h2>
-                      <p className="text-[11px] text-ink/70 mt-0.5 leading-snug">
-                        Create your official digital card in 10 seconds. No app download needed.
-                      </p>
-                    </div>
+                                  {isLockedToday ? (
+                                    <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
+                                      <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-ink">
+                                        <Lock className="h-4 w-4 text-warning" />
+                                        <span>Today&apos;s visit verified!</span>
+                                      </div>
+                                      <p className="mt-1 text-[11px] text-ink/75">
+                                        Next stamp unlocks at <strong>12:00 AM IST</strong>
+                                      </p>
+                                      <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 font-mono text-xs font-extrabold text-secondary shadow-sm">
+                                        <Clock className="h-3 w-3 text-primary animate-pulse" />
+                                        <span>{countdownStr || "Unlocks at midnight"}</span>
+                                      </div>
+                                      <button
+                                        disabled
+                                        className="mt-3 flex min-h-[46px] w-full cursor-not-allowed items-center justify-center rounded-xl bg-border text-xs font-bold text-ink/40"
+                                      >
+                                        Counter Stamp Claimed Today
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={isSubmitting}
+                                      onClick={() => handleClaimStamp()}
+                                      className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary focus-visible:outline focus-visible:outline-2 disabled:opacity-70"
+                                    >
+                                      <QrCode className="h-4 w-4" />
+                                      <span>{isSubmitting ? "Verifying Scan..." : "Punch Today's Stamp (+1 Visit)"}</span>
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                // NOT LOGGED IN - Must create account FIRST via /auth/customer/login
+                                <div className="space-y-3.5 rounded-2xl bg-sand/30 p-5 border border-border">
+                                  <div className="text-center">
+                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/15 px-3 py-1 font-mono text-[10px] font-extrabold tracking-wider text-primary">
+                                      <ShieldCheck className="h-3 w-3" />
+                                      ACCOUNT REQUIRED
+                                    </span>
+                                    <h2 className="mt-2 font-display text-base font-extrabold text-secondary">
+                                      Log In to Collect Stamps
+                                    </h2>
+                                    <p className="text-[11px] text-ink/70 mt-0.5 leading-snug">
+                                      For security & anti-fraud, please create your verified account first.
+                                      Then scan this QR again to punch your stamp instantly.
+                                    </p>
+                                  </div>
 
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink/70">
-                        10-Digit Mobile Number
-                      </label>
-                      <div className="relative mt-1">
-                        <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-bold text-ink/50">
-                          +91
-                        </span>
-                        <input
-                          type="tel"
-                          required
-                          maxLength={10}
-                          value={mobileInput}
-                          onChange={(e) => setMobileInput(e.target.value.replace(/\D/g, ""))}
-                          placeholder="98765 43210"
-                          className="w-full rounded-xl border border-border bg-white py-2.5 pl-12 pr-3 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none"
-                        />
-                      </div>
-                    </div>
+                                  <div className="space-y-3">
+                                    <Link
+                                      href={`/auth/customer/login?redirect=/s/${merchant.slug}`}
+                                      className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-card transition hover:bg-secondary"
+                                    >
+                                      <QrCode className="h-4 w-4" />
+                                      <span>Log In / Sign Up via Email OTP</span>
+                                    </Link>
 
-                    <div>
-                      <label className="block text-[11px] font-bold uppercase tracking-wider text-ink/70">
-                        Your Full Name
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={nameInput}
-                        onChange={(e) => setNameInput(e.target.value)}
-                        placeholder="e.g. Rahul Patel"
-                        className="mt-1 w-full rounded-xl border border-border bg-white py-2.5 px-3 text-sm font-semibold text-secondary placeholder:text-ink/35 focus:border-primary focus:outline-none"
-                      />
-                    </div>
+                                    <p className="text-center text-[11px] text-ink/60">
+                                      Create your verified account to collect stamps and unlock rewards.
+                                    </p>
+                                  </div>
 
-                    <div className="flex items-start gap-2 pt-1">
-                      <input
-                        id="consent-check"
-                        type="checkbox"
-                        checked={consentChecked}
-                        onChange={(e) => setConsentChecked(e.target.checked)}
-                        className="mt-0.5 h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary"
-                      />
-                      <label htmlFor="consent-check" className="text-[10px] leading-relaxed text-ink/70">
-                        I agree to create my verified digital pass with <strong>{merchant.name}</strong> under the DPDP Act 2023.
-                      </label>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting || mobileInput.length < 10 || !nameInput.trim() || !consentChecked}
-                      className="flex min-h-[46px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-sm font-bold text-white shadow-sm transition hover:bg-secondary disabled:opacity-50"
-                    >
-                      <Sparkles className="h-4 w-4" />
-                      <span>{isSubmitting ? "Creating Pass..." : "Sign Up & Punch Stamp (+1 Visit)"}</span>
-                    </button>
-
-                    <div className="mt-3 text-center text-xs text-ink/70 pt-2.5 border-t border-border/60">
-                      <span>Already have an account? </span>
-                      <Link
-                        href={`/auth/customer/login?redirect=/s/${merchant.slug}`}
-                        className="font-bold text-primary hover:underline"
-                      >
-                        Log In to Auto-Punch
-                      </Link>
-                    </div>
-                  </form>
-                )}
+                                  <div className="mt-3 text-center text-xs text-ink/70 pt-2.5 border-t border-border/60">
+                                    <p>Your data is protected under DPDP Act 2023. No spam, ever.</p>
+                                  </div>
+                                </div>
+                              )}
 
                 {/* Feedback & Error Alerts */}
                 {feedbackMessage && (
@@ -750,35 +720,38 @@ export default function CustomerView({
         </div>
       </main>
 
-      {/* Switch Number Confirmation Modal */}
+      {/* Switch Number Modal */}
       {changeNumberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
-          <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float text-center">
-            <h3 className="font-display text-lg font-extrabold text-secondary">
-              Switch Mobile Number?
-            </h3>
-            <p className="mt-2 text-xs text-ink/70 leading-relaxed">
-              This will log you out of this pass on this device. You can log back in anytime with your mobile number.
-            </p>
-            <div className="mt-5 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setChangeNumberModal(false)}
-                className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSwitchNumber}
-                className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90"
-              >
-                Yes, Switch
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+          <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float">
+            {/* Switch Account Modal (for logged-in customers) */}
+            <div className="text-center">
+                      <h3 className="font-display text-lg font-extrabold text-secondary">
+                        Switch Mobile Number?
+                      </h3>
+                      <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+                        This will log you out of this pass on this device. You can log back in anytime with your mobile number.
+                      </p>
+                      <div className="mt-5 flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setChangeNumberModal(false)}
+                          className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSwitchNumber}
+                          className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90"
+                        >
+                          Yes, Switch
+                        </button>
+                      </div>
+                    </div>
+                </div>
+              </div>
+            )}
 
       {/* VERIFIED CUSTOMER REVIEW MODAL */}
       <ReviewModal
