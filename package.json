@@ -1,50 +1,13 @@
 {
-  "name": "stickthebizz",
-  "version": "0.1.0",
+  "name": "stickthebizz-monorepo",
+  "version": "2.0.0",
   "private": true,
+  "description": "StickTheBizz Retail Loyalty SaaS — Decoupled Monorepo (Fastify Backend + Next.js Frontend)",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "test:promo:BETA100": "node tests/checklist.test.mjs promo:BETA100",
-    "test:promo:FREE100": "node tests/checklist.test.mjs promo:FREE100",
-    "test:promo:TEST1": "node tests/checklist.test.mjs promo:TEST1",
-    "test:ws:connection": "node tests/checklist.test.mjs ws:connection",
-    "test:approve:1tap": "node tests/checklist.test.mjs approve:1tap",
-    "test:print:standee": "node tests/checklist.test.mjs print:standee",
-    "test:pass:demo-cafe": "node tests/checklist.test.mjs pass:demo-cafe",
-    "test:dashboard:cust": "node tests/checklist.test.mjs dashboard:cust",
-    "test:interactive:stamp": "node tests/checklist.test.mjs interactive:stamp",
-    "test:preset:selector": "node tests/checklist.test.mjs preset:selector",
-    "test:roi:calculator": "node tests/checklist.test.mjs roi:calculator",
-    "test:cron:daily-reset": "node tests/checklist.test.mjs cron:daily-reset",
-    "test:mobile:chrome-android": "node tests/checklist.test.mjs mobile:chrome-android",
-    "test:mobile:safari-ios": "node tests/checklist.test.mjs mobile:safari-ios",
-    "test:network:slow-3g": "node tests/checklist.test.mjs network:slow-3g",
-    "test:checklist": "node tests/checklist.test.mjs all"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.12.7",
-    "@supabase/supabase-js": "^2.118.0",
-    "@vercel/analytics": "^2.0.1",
-    "jsqr": "^1.4.0",
-    "lucide-react": "^1.16.0",
-    "next": "^14.2.24",
-    "next-pwa": "^5.6.0",
-    "qrcode.react": "^4.2.0",
-    "razorpay": "^2.9.8",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zod": "^4.6.7"
-  },
-  "devDependencies": {
-    "@types/node": "^20.14.0",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.19",
-    "postcss": "^8.4.38",
-    "tailwindcss": "^3.4.4",
-    "typescript": "^5.5.0"
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "test:backend": "npx tsx backend/tests/phase2.test.ts"
   }
 }
