@@ -330,7 +330,12 @@ export default function CustomerView({
     playScanChime();
 
     try {
-      const res = await submitScanAction(targetPhone, merchant.id, merchant.minSpend, targetName);
+      const res = await api.scans.punch({
+        merchantId: merchant.id,
+        customerPhone: targetPhone,
+        customerName: targetName,
+        billAmount: merchant.minSpend,
+      });
 
       if (res.locked) {
         setIsLockedToday(true);
@@ -698,9 +703,14 @@ export default function CustomerView({
                           localStorage.setItem("stb_customer_phone", clean);
                         }
                         setChangeNumberModal(false);
-                        const { syncCustomerAccountAction } = await import("@/app/actions/customer");
-                        await syncCustomerAccountAction({ phone: clean, email: customer?.email || undefined });
-                        submitScanAction(clean, merchant.id || "", merchant.minSpend, customer?.fullName || nameInput || "").then((res) => {
+                        try {
+                          await api.customers.sync({ phone: clean, email: customer?.email || undefined });
+                          const res = await api.scans.punch({
+                            merchantId: merchant.id || "",
+                            customerPhone: clean,
+                            customerName: customer?.fullName || nameInput || "",
+                            billAmount: merchant.minSpend,
+                          });
                           if (res.success) {
                             setVisitsCount((prev) => prev + 1);
                             setIsLockedToday(true);
@@ -708,7 +718,9 @@ export default function CustomerView({
                           } else {
                             setFeedbackMessage(res.message);
                           }
-                        });
+                        } catch (err: any) {
+                          setFeedbackMessage(err.message || "Failed to link mobile");
+                        }
                       }
                     }}
                     disabled={mobileInput.replace(/\D/g, "").length !== 10}

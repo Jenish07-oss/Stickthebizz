@@ -191,18 +191,20 @@ export default function CustomerAuthPage() {
 
     setIsSubmitting(true);
     try {
-      const res = await loginCustomer({
+      const res = await api.auth.verifyCustomerOtp({
         email: cleanEmail,
         code: token,
         phone: cleanPhone || undefined,
         fullName: fullName.trim() || undefined,
       });
 
-      if (!res.success) {
+      if (!res.success || !res.token) {
         setErrorMessage(res.message || "Invalid or expired verification code.");
         setIsSubmitting(false);
         return;
       }
+
+      loginCustomer(res.token, res.user, res.customer);
 
       if (typeof window !== "undefined") {
         localStorage.setItem("stb_customer_email", cleanEmail);

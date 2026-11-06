@@ -154,8 +154,11 @@ export function useTerminalSocket(options: UseTerminalSocketOptions = {}) {
     }
   }, []);
 
+  const wsStatus: "ONLINE" | "RECONNECTING" | "OFFLINE" = isConnected ? "ONLINE" : (retryCountRef.current > 3 ? "OFFLINE" : "RECONNECTING");
+
   return {
     isConnected,
+    wsStatus,
     send,
   };
 }

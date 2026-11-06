@@ -130,15 +130,15 @@ export async function apiClient<T = any>(
 
 export const api = {
   auth: {
-    requestCustomerOtp: (phone: string) =>
+    requestCustomerOtp: (email: string) =>
       apiClient("/api/v1/auth/customer/otp/request", {
         method: "POST",
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ email }),
       }),
-    verifyCustomerOtp: (phone: string, otp: string) =>
-      apiClient("/api/v1/auth/customer/otp/verify", {
+    verifyCustomerOtp: (data: { email: string; code: string; phone?: string; fullName?: string }) =>
+      apiClient<{ success: boolean; token?: string; user?: any; customer?: any; message?: string }>("/api/v1/auth/customer/otp/verify", {
         method: "POST",
-        body: JSON.stringify({ phone, otp }),
+        body: JSON.stringify(data),
       }),
     ownerRegister: (data: { email: string; password?: string; fullName: string; phone?: string; shopName?: string }) =>
       apiClient("/api/v1/auth/owner/register", {
@@ -223,13 +223,15 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ code, planId }),
       }),
-    createOrder: (data: { planId: string; promoCode?: string; shopName: string; email: string; mobile: string }) =>
-      apiClient("/api/v1/subscriptions/create-order", {
+    createOrder: (planOrData: string | { planId: string; promoCode?: string; shopName?: string; email?: string; mobile?: string }, promoCode?: string) => {
+      const payload = typeof planOrData === "string" ? { planId: planOrData, promoCode } : planOrData;
+      return apiClient<any>("/api/v1/subscriptions/create-order", {
         method: "POST",
-        body: JSON.stringify(data),
-      }),
-    activate: (data: { orderId?: string; paymentId?: string; signature?: string; planId: string; promoCode?: string; shopName: string; ownerName: string; category?: string; mobile: string; email: string }) =>
-      apiClient("/api/v1/subscriptions/activate", {
+        body: JSON.stringify(payload),
+      });
+    },
+    activate: (data: { orderId?: string; paymentId?: string; signature?: string; planId: string; promoCode?: string; shopName?: string; ownerName?: string; category?: string; mobile?: string; email?: string }) =>
+      apiClient<any>("/api/v1/subscriptions/activate", {
         method: "POST",
         body: JSON.stringify(data),
       }),

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Lock, ArrowRight, Store, Eye, EyeOff } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
+import { api } from "@/lib/api/client";
 
 export default function OwnerLoginPage() {
   const router = useRouter();
@@ -29,8 +30,9 @@ export default function OwnerLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await loginMerchant(email.trim().toLowerCase(), password);
-      if (res && res.success) {
+      const res = await api.auth.ownerLogin({ email: email.trim().toLowerCase(), password });
+      if (res && res.token && res.user) {
+        loginMerchant(res.token, res.user, res.merchant);
         window.location.href = "/owner/dashboard";
       } else {
         setErrorMessage(res?.message || "Invalid email or password. Please try again.");
