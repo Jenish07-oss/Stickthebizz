@@ -20,9 +20,10 @@ export default function StampGrid({
   // Determine grid column layout based on total count
   const getGridColsClass = () => {
     if (totalVisits === 7) return "grid-cols-4 sm:grid-cols-7";
+    if (totalVisits === 5) return "grid-cols-5";
     if (totalVisits === 15) return "grid-cols-5";
     if (totalVisits === 20) return "grid-cols-5";
-    return "grid-cols-5"; // Default 10 visits: 2 rows of 5
+    return "grid-cols-4 sm:grid-cols-5"; // Default 10 visits: 4 on mobile for comfort, 5 on desktop
   };
 
   const stamps = Array.from({ length: totalVisits }, (_, i) => i + 1);
@@ -40,9 +41,12 @@ export default function StampGrid({
             return (
               <div
                 key={visitNumber}
-                className={`group relative flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-b from-white to-sand/40 border-2 border-emerald-500/60 shadow-sm transition-all duration-300 hover:scale-105 ${
-                  isJustStamped ? "animate-stamp-pop scale-110 ring-4 ring-primary/40" : ""
+                className={`group relative flex aspect-square items-center justify-center rounded-xl bg-gradient-to-b from-white to-sand/40 border-2 border-emerald-500/60 shadow-brand-sm transition-all duration-300 hover:scale-105 ${
+                  isJustStamped ? "motion-pop ring-4 ring-primary/40 shadow-brand-md" : ""
                 }`}
+                style={{
+                  boxShadow: "inset 0 0 0 1px rgba(34, 197, 94, 0.25), 0 2px 6px rgba(22, 163, 74, 0.12)",
+                }}
                 title={`Visit #${visitNumber} Completed`}
               >
                 <div className="flex items-center justify-center p-1">
@@ -59,15 +63,15 @@ export default function StampGrid({
             return (
               <div
                 key={visitNumber}
-                className={`relative flex aspect-square flex-col items-center justify-center rounded-2xl border-2 border-dashed p-1 text-center transition-all ${
+                className={`relative flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed p-1 text-center transition-all ${
                   isNextUp
-                    ? "border-primary bg-primary/10 text-primary animate-flame-pulse shadow-sm"
+                    ? "border-primary bg-primary/10 text-primary shadow-brand-sm motion-pulse"
                     : "border-secondary/40 bg-sand/30 text-secondary"
                 }`}
                 title={`Final visit unlocks ${rewardName}`}
               >
                 <GiftBoxIcon size={22} className="animate-bounce" />
-                <span className="mt-0.5 text-[9px] font-extrabold uppercase leading-none tracking-tight text-primary">
+                <span className="mt-1 inline-flex items-center justify-center px-1.5 py-0.5 rounded-full bg-primary/10 text-primary text-[8px] font-extrabold uppercase leading-none tracking-tight">
                   FREE
                 </span>
                 <span className="absolute bottom-0.5 right-1 font-mono text-[8px] font-bold opacity-60">
@@ -81,10 +85,10 @@ export default function StampGrid({
           return (
             <div
               key={visitNumber}
-              className={`relative flex aspect-square items-center justify-center rounded-2xl border-2 border-dashed text-xs font-bold transition-all shadow-inner ${
+              className={`relative flex aspect-square items-center justify-center rounded-xl border-2 border-dashed text-xs font-bold transition-all shadow-inner ${
                 isNextUp
-                  ? "border-primary/80 bg-primary/5 text-primary ring-2 ring-primary/20"
-                  : "border-ink/20 bg-white/60 text-ink/40"
+                  ? "border-primary/80 bg-primary/5 text-primary ring-2 ring-primary/20 motion-pulse"
+                  : "border-ink/15 bg-white/70 text-ink/40"
               }`}
               title={`Visit #${visitNumber}`}
             >

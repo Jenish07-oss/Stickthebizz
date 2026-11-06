@@ -236,11 +236,11 @@ export default function Navbar() {
 
           {/* Right: Actions (Desktop) */}
           <div className="hidden items-center gap-2 sm:gap-3 xl:gap-4 md:flex shrink-0">
-            {/* Direct Camera QR Scan Button */}
+            {/* Direct Camera QR Scan Button — Primary Ghost */}
             <button
               type="button"
               onClick={() => setScannerOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3.5 py-2 text-xs font-extrabold text-primary hover:bg-primary hover:text-white transition shadow-xs active:scale-95"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-transparent px-3.5 py-2 text-xs font-extrabold text-primary hover:bg-primary/10 transition shadow-brand-sm active:scale-95"
               title="Open camera to scan counter QR standee"
             >
               <Camera className="h-4 w-4" />
@@ -394,11 +394,11 @@ export default function Navbar() {
 
           {/* Mobile Right Bar: Direct Camera Button + Hamburger Toggle */}
           <div className="flex items-center gap-2 md:hidden">
-            {/* Phone Direct Scan Button */}
+            {/* Phone Direct Scan Button — Primary Solid */}
             <button
               type="button"
               onClick={() => setScannerOpen(true)}
-              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-primary text-white px-3 py-1.5 text-xs font-bold shadow-xs active:scale-95 transition hover:bg-secondary"
+              className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-primary text-white px-3 py-1.5 text-xs font-bold shadow-brand-sm active:scale-95 transition hover:bg-primary/90"
               aria-label="Scan Counter QR"
             >
               <Camera className="h-3.5 w-3.5" />
@@ -420,14 +420,14 @@ export default function Navbar() {
         {mobileMenuOpen && (
           <div className="md:hidden border-b border-border bg-white px-6 py-6 shadow-xl transform-gpu transition-opacity duration-150">
             <div className="flex flex-col space-y-4 text-base font-bold text-ink/85">
-              {/* Prominent Direct Camera Scanner CTA in Mobile Drawer */}
+              {/* Prominent Direct Camera Scanner CTA in Mobile Drawer — Primary Solid */}
               <button
                 type="button"
                 onClick={() => {
                   setMobileMenuOpen(false);
                   setScannerOpen(true);
                 }}
-                className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-sm"
+                className="flex items-center justify-center gap-2 rounded-xl bg-primary py-3 text-sm font-bold text-white shadow-brand-sm transition hover:bg-primary/90 active:scale-95"
               >
                 <Camera className="h-4 w-4" />
                 <span>📷 Open Camera Scanner</span>

@@ -79,9 +79,9 @@ export default function PricingPage() {
           {/* Pricing Cards Comparison Grid */}
           <div className="mt-12 grid gap-8 lg:grid-cols-2 max-w-5xl mx-auto">
             {/* 1. Monthly Plan */}
-            <div className={`relative rounded-[2.5rem] p-8 sm:p-10 flex flex-col justify-between transition-all border-2 ${
+            <div className={`relative rounded-2xl p-8 sm:p-10 flex flex-col justify-between transition-all border-2 ${
               billingCycle === "monthly"
-                ? "border-primary bg-white shadow-float ring-2 ring-primary/20"
+                ? "border-primary bg-white shadow-brand-md ring-2 ring-primary/20"
                 : "border-border bg-white/70"
             }`}>
               <div>
@@ -131,7 +131,7 @@ export default function PricingPage() {
               <div className="mt-8 pt-6 border-t border-border">
                 <Link
                   href="/auth/owner/register?plan=monthly"
-                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-secondary text-sm font-bold text-white shadow-sm transition hover:bg-secondary/90"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-secondary text-sm font-bold text-white shadow-brand-sm transition-all hover:bg-secondary/90 active:scale-95"
                 >
                   <span>Choose Monthly Plan (₹749)</span>
                   <ArrowRight className="h-4 w-4" />
@@ -143,13 +143,13 @@ export default function PricingPage() {
             </div>
 
             {/* 2. Yearly Plan (20% OFF) */}
-            <div className={`relative rounded-[2.5rem] p-8 sm:p-10 flex flex-col justify-between text-white transition-all border-2 ${
+            <div className={`relative rounded-2xl p-8 sm:p-10 flex flex-col justify-between text-white transition-all border-2 ${
               billingCycle === "yearly"
-                ? "border-primary bg-secondary shadow-float ring-2 ring-primary/30"
-                : "border-secondary bg-secondary/90"
+                ? "border-primary bg-[#1A2A3A] shadow-brand-lg ring-2 ring-primary/30"
+                : "border-border bg-[#1A2A3A]/90"
             }`}>
               {/* Highlight ribbon */}
-              <div className="absolute top-0 right-0 rounded-bl-2xl bg-primary px-4 py-1.5 font-mono text-xs font-extrabold uppercase tracking-wider text-white">
+              <div className="absolute top-0 right-0 rounded-bl-xl bg-primary px-4 py-1.5 font-mono text-xs font-extrabold uppercase tracking-wider text-white">
                 BEST VALUE • SAVE 20%
               </div>
 
@@ -203,7 +203,7 @@ export default function PricingPage() {
               <div className="mt-8 pt-6 border-t border-white/15">
                 <Link
                   href="/auth/owner/register?plan=yearly"
-                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-card transition hover:bg-primary/90 hover:scale-[1.01]"
+                  className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full bg-primary text-sm font-bold text-white shadow-brand-md transition-all hover:bg-primary/90 hover:scale-[1.01] active:scale-95"
                 >
                   <span>Choose Annual Plan (₹7,190 • Save 20%)</span>
                   <ArrowRight className="h-4 w-4" />
@@ -216,9 +216,9 @@ export default function PricingPage() {
           </div>
 
           {/* Redeem Code Guarantee Banner */}
-          <div className="mt-12 max-w-3xl mx-auto rounded-3xl bg-white p-6 border border-border shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="mt-12 max-w-3xl mx-auto rounded-2xl bg-white p-6 border border-border shadow-brand-sm flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
             <div className="flex items-center gap-3">
-              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary">
+              <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
                 <Tag className="h-5 w-5" />
               </div>
               <div>
@@ -232,7 +232,7 @@ export default function PricingPage() {
             </div>
             <Link
               href="/auth/owner/register"
-              className="shrink-0 rounded-xl bg-sand px-4 py-2 text-xs font-bold text-secondary border border-border hover:bg-white"
+              className="shrink-0 rounded-xl bg-sand px-4 py-2 text-xs font-bold text-secondary border border-border hover:bg-white active:scale-95 transition-all shadow-brand-sm"
             >
               Enter Redeem Code →
             </Link>

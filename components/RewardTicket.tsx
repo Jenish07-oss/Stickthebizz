@@ -25,7 +25,7 @@ export default function RewardTicket({
   const expiry = ticket.expiryDate || "Valid for 14 days";
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-primary bg-white p-6 shadow-float transition-all">
+    <div className="relative overflow-hidden rounded-2xl border-2 border-dashed border-primary bg-white p-6 shadow-brand-lg motion-pop transition-all">
       {/* Ticket Side Cutout Notches */}
       <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-r-2 border-dashed border-primary bg-sand" />
       <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border-l-2 border-dashed border-primary bg-sand" />

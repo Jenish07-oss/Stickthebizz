@@ -76,11 +76,11 @@ export function ToastContainer() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className={`pointer-events-auto flex items-center justify-between gap-3 rounded-2xl p-4 shadow-float transition-all animate-in slide-in-from-bottom-3 duration-200 border ${
+          className={`pointer-events-auto flex items-center justify-between gap-3 rounded-xl p-4 shadow-brand-md motion-slide-up transition-all border ${
             t.type === "success"
               ? "bg-white text-secondary border-emerald-500/30 ring-1 ring-emerald-500/10"
               : t.type === "error"
-              ? "bg-white text-secondary border-coral/30 ring-1 ring-coral/10"
+              ? "bg-white text-secondary border-coral/30 ring-1 ring-coral/10 motion-shake"
               : "bg-white text-secondary border-border"
           }`}
         >

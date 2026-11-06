@@ -8,7 +8,7 @@ import ConsoleCleaner from "@/components/ConsoleCleaner";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
+  weight: ["300", "500", "600", "700", "800"],
   variable: "--font-plus-jakarta",
   display: "swap",
 });

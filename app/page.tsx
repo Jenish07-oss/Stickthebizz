@@ -844,7 +844,7 @@ export default function HomePage() {
               </h2>
             </div>
 
-            <div className="mt-10 overflow-hidden rounded-[2.5rem] border-2 border-primary bg-secondary text-white shadow-float md:grid md:grid-cols-2">
+            <div className="mt-10 overflow-hidden rounded-2xl border-2 border-primary/40 bg-[#1A2A3A] text-white shadow-brand-xl md:grid md:grid-cols-2">
               <div className="p-8 sm:p-12 flex flex-col justify-between">
                 <div>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-coral/20 border border-coral/40 px-3 py-1 font-mono text-xs font-bold text-coral">
@@ -867,7 +867,7 @@ export default function HomePage() {
                   <Link
                     href="/auth/owner/register"
                     replace={false}
-                    className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90"
+                    className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-primary px-7 text-sm font-bold text-white shadow-brand-sm transition hover:bg-primary/90 active:scale-95"
                   >
                     <span>Register My Shop Counter</span>
                     <ArrowRight className="h-4 w-4" />

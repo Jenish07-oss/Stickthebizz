@@ -21,6 +21,9 @@ const config: Config = {
         border: "#E5D9C8",
         success: "#16A34A",
         warning: "#F59E0B",
+        "brand-dark": "#1A2A3A",
+        "brand-dark-text": "#F5EBDD",
+        "brand-dark-muted": "#D4C8B8",
       },
       fontFamily: {
         sans: ["var(--font-plus-jakarta)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
@@ -32,6 +35,10 @@ const config: Config = {
         card: "0 10px 30px rgba(65, 51, 51, 0.08)",
         phone: "0 25px 50px rgba(49, 91, 140, 0.22)",
         flame: "0 0 20px rgba(242, 118, 94, 0.55)",
+        "brand-sm": "var(--shadow-coral-1) 0 3px 6px, var(--shadow-ink-1) 0 1px 2px",
+        "brand-md": "var(--shadow-coral-2) 0 15px 35px, var(--shadow-ink-1) 0 8px 16px",
+        "brand-lg": "var(--shadow-coral-3) 0 30px 45px -20px, var(--shadow-ink-1) 0 18px 36px -18px",
+        "brand-xl": "var(--shadow-coral-4) 0 14px 21px -14px, var(--shadow-ink-1) 0 8px 17px -8px",
       },
       keyframes: {
         blob: {
