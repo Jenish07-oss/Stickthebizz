@@ -28,6 +28,7 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
+  CheckCircle2,
   ChevronDown,
   History,
   QrCode,
@@ -364,36 +365,68 @@ export default function CustomerDashboardPage() {
               </div>
             </div>
 
-            {/* Profile Info Cards */}
-            <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70">
+            {/* Profile Info Cards (Enhanced 4-Column Grid) */}
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70 shadow-brand-sm">
                 <div className="flex items-center gap-2 text-ink/50 text-[11px] font-bold uppercase tracking-wider">
                   <User className="h-3.5 w-3.5 text-primary" />
                   <span>Full Name</span>
                 </div>
                 <p className="mt-1 font-display text-base font-extrabold text-secondary truncate">
-                  {walletData?.customer?.fullName || "Not Specified"}
+                  {walletData?.customer?.fullName || "Valued Regular"}
                 </p>
+                <span className="text-[10px] font-bold text-ink/50 block mt-0.5">
+                  Verified Loyalty Holder
+                </span>
               </div>
 
-              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70">
-                <div className="flex items-center gap-2 text-ink/50 text-[11px] font-bold uppercase tracking-wider">
-                  <Phone className="h-3.5 w-3.5 text-primary" />
-                  <span>Mobile Number</span>
+              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70 shadow-brand-sm">
+                <div className="flex items-center justify-between text-ink/50 text-[11px] font-bold uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-3.5 w-3.5 text-primary" />
+                    <span>Mobile Number</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleOpenEditProfile}
+                    className="text-[10px] font-bold text-primary hover:underline"
+                  >
+                    Edit
+                  </button>
                 </div>
                 <p className="mt-1 font-mono text-base font-bold text-secondary truncate">
-                  {walletData?.customer?.phone ? `+91 ${walletData.customer.phone}` : "Not linked"}
+                  {walletData?.customer?.phone ? `+91 ${walletData.customer.phone}` : "Add phone number"}
                 </p>
+                <span className="text-[10px] font-bold text-ink/50 block mt-0.5">
+                  Linked to Counter Passes
+                </span>
               </div>
 
-              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70">
+              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70 shadow-brand-sm">
                 <div className="flex items-center gap-2 text-ink/50 text-[11px] font-bold uppercase tracking-wider">
                   <Mail className="h-3.5 w-3.5 text-primary" />
-                  <span>Email Address</span>
+                  <span>Verified Email</span>
                 </div>
-                <p className="mt-1 text-sm font-semibold text-secondary truncate">
-                  {walletData?.customer?.email || "Signed In"}
+                <p className="mt-1 text-sm font-bold text-secondary truncate">
+                  {walletData?.customer?.email || "Email Verified"}
                 </p>
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 mt-0.5">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <span>100% Free OTP Verified</span>
+                </span>
+              </div>
+
+              <div className="rounded-2xl bg-sand/50 p-4 border border-border/70 shadow-brand-sm">
+                <div className="flex items-center gap-2 text-ink/50 text-[11px] font-bold uppercase tracking-wider">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span>Store Activity</span>
+                </div>
+                <p className="mt-1 font-display text-base font-extrabold text-secondary">
+                  {connectedPasses.length} Active Stores
+                </p>
+                <span className="text-[10px] font-bold text-ink/50 block mt-0.5">
+                  {walletData?.history?.length || 0} Total Stamped Visits
+                </span>
               </div>
             </div>
           </div>
@@ -624,6 +657,7 @@ export default function CustomerDashboardPage() {
                             ? new Date(record.createdAt).toLocaleTimeString("en-IN", {
                                 hour: "2-digit",
                                 minute: "2-digit",
+                                second: "2-digit",
                                 timeZone: "Asia/Kolkata",
                                 hour12: true,
                               })

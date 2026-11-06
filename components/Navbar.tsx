@@ -103,17 +103,18 @@ export default function Navbar() {
           }
         }
 
-        // Check if customer phone is stored locally
+        // Check if customer phone or email is stored locally
         if (typeof window !== "undefined") {
           const savedPhone = localStorage.getItem("stb_customer_phone");
-          if (savedPhone && savedPhone.replace(/\D/g, "").length === 10) {
+          const savedEmail = localStorage.getItem("stb_customer_email");
+          if ((savedPhone && savedPhone.replace(/\D/g, "").length === 10) || savedEmail) {
             const savedName = localStorage.getItem("stb_customer_name") || "Customer Pass";
             if (mounted) {
               setAuthProfile({
                 isLoading: false,
                 userType: "customer",
                 name: savedName,
-                phone: savedPhone,
+                phone: savedPhone || undefined,
               });
               return;
             }
@@ -181,12 +182,12 @@ export default function Navbar() {
             <Logo href="/" size="md" />
           </div>
 
-          {/* Center: Desktop Navigation Links */}
-          <div className="hidden items-center gap-4 lg:gap-6 text-xs lg:text-sm font-semibold text-ink/80 xl:flex">
+          {/* Center: Desktop Navigation Links (Larger font & icons on PC) */}
+          <div className="hidden items-center gap-4 lg:gap-6 xl:gap-8 text-xs lg:text-sm xl:text-[15px] font-bold text-ink/80 xl:flex">
             <Link
               href="/how-it-works"
               className={`whitespace-nowrap transition-colors hover:text-secondary ${
-                isHowItWorks ? "text-primary font-bold" : ""
+                isHowItWorks ? "text-primary font-extrabold" : ""
               }`}
             >
               How It Works
@@ -202,7 +203,7 @@ export default function Navbar() {
             <Link
               href="/pricing"
               className={`whitespace-nowrap transition-colors hover:text-secondary ${
-                isPricing ? "text-primary font-bold" : ""
+                isPricing ? "text-primary font-extrabold" : ""
               }`}
             >
               Pricing
@@ -218,7 +219,7 @@ export default function Navbar() {
             <Link
               href="/about"
               className={`whitespace-nowrap transition-colors hover:text-secondary ${
-                isAbout ? "text-primary font-bold" : ""
+                isAbout ? "text-primary font-extrabold" : ""
               }`}
             >
               About
@@ -227,7 +228,7 @@ export default function Navbar() {
             <Link
               href="/contact"
               className={`whitespace-nowrap transition-colors hover:text-secondary ${
-                isContact ? "text-primary font-bold" : ""
+                isContact ? "text-primary font-extrabold" : ""
               }`}
             >
               Contact
@@ -235,74 +236,66 @@ export default function Navbar() {
           </div>
 
           {/* Right: Actions (Desktop) */}
-          <div className="hidden items-center gap-2 sm:gap-3 xl:gap-4 md:flex shrink-0">
+          <div className="hidden items-center gap-2.5 sm:gap-3.5 xl:gap-5 md:flex shrink-0">
             {/* Direct Camera QR Scan Button — Primary Ghost */}
             <button
               type="button"
               onClick={() => setScannerOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-transparent px-3.5 py-2 text-xs font-extrabold text-primary hover:bg-primary/10 transition shadow-brand-sm active:scale-95"
+              className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-transparent px-4 py-2 text-xs lg:text-sm font-extrabold text-primary hover:bg-primary/10 transition shadow-brand-sm active:scale-95"
               title="Open camera to scan counter QR standee"
             >
-              <Camera className="h-4 w-4" />
+              <Camera className="h-4 w-4 lg:h-5 lg:w-5" />
               <span>Scan Standee</span>
             </button>
 
             {/* DYNAMIC USER PROFILE & LOGOUT DROPDOWN */}
             {authProfile.userType === "owner" ? (
-              // SHOP OWNER LOGGED IN
+              // SHOP OWNER LOGGED IN — Strictly 2 clean options: Dashboard & Profile
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-secondary/90"
+                  className="flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary px-4 py-2 text-xs lg:text-sm font-bold text-white shadow-sm transition hover:bg-secondary/90"
                 >
-                  <Store className="h-3.5 w-3.5 text-amber-300" />
-                  <span className="max-w-[130px] truncate">{authProfile.name}</span>
-                  <ChevronDown className="h-3 w-3 opacity-80" />
+                  <Store className="h-4 w-4 lg:h-5 lg:w-5 text-amber-300" />
+                  <span className="max-w-[140px] truncate">{authProfile.name}</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-80" />
                 </button>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150 z-50">
+                  <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-border bg-white p-2.5 shadow-xl animate-in fade-in zoom-in-95 duration-150 z-50">
                     <div className="px-3 py-2 border-b border-border/70">
-                      <p className="text-[10px] font-bold uppercase text-ink/50 tracking-wider">Shop Owner Terminal</p>
+                      <p className="text-[10px] font-bold uppercase text-ink/50 tracking-wider">Shop Owner Account</p>
                       <p className="font-display font-extrabold text-secondary text-sm truncate">{authProfile.name}</p>
                     </div>
 
-                    <div className="py-1 space-y-0.5 text-xs font-bold text-ink/80">
+                    <div className="py-1.5 space-y-1 text-xs lg:text-sm font-bold text-ink/80">
                       <Link
                         href="/owner/dashboard"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-sand transition"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-sand transition"
                       >
                         <LayoutDashboard className="h-4 w-4 text-primary" />
-                        <span>Live Counter Queue</span>
+                        <span>Terminal Dashboard</span>
                       </Link>
                       <Link
-                        href="/owner/dashboard#ledger"
+                        href="/owner/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-sand transition"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-sand transition"
                       >
-                        <History className="h-4 w-4 text-secondary" />
-                        <span>Customer Visit Ledger</span>
-                      </Link>
-                      <Link
-                        href="/owner/dashboard#qr"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-sand transition"
-                      >
-                        <QrCode className="h-4 w-4 text-emerald-600" />
-                        <span>Print Standee QR Kit</span>
+                        <Store className="h-4 w-4 text-secondary" />
+                        <span>Profile &amp; Subscription</span>
                       </Link>
                     </div>
 
-                    <div className="pt-1 mt-1 border-t border-border/70">
+                    <div className="pt-1.5 mt-1 border-t border-border/70">
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           handleLogout();
                         }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Log Out Terminal</span>
@@ -312,20 +305,20 @@ export default function Navbar() {
                 )}
               </div>
             ) : authProfile.userType === "customer" ? (
-              // CUSTOMER LOGGED IN
+              // CUSTOMER LOGGED IN — Clean customer profile dropdown
               <div className="relative" ref={dropdownRef}>
                 <button
                   type="button"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3.5 py-1.5 text-xs font-bold text-primary shadow-xs transition hover:bg-primary hover:text-white"
+                  className="flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-2 text-xs lg:text-sm font-bold text-primary shadow-xs transition hover:bg-primary hover:text-white"
                 >
-                  <User className="h-3.5 w-3.5" />
-                  <span className="max-w-[120px] truncate">{authProfile.name}</span>
-                  <ChevronDown className="h-3 w-3 opacity-80" />
+                  <User className="h-4 w-4 lg:h-5 lg:w-5" />
+                  <span className="max-w-[130px] truncate">{authProfile.name}</span>
+                  <ChevronDown className="h-3.5 w-3.5 opacity-80" />
                 </button>
 
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-border bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150 z-50">
+                  <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-border bg-white p-2.5 shadow-xl animate-in fade-in zoom-in-95 duration-150 z-50">
                     <div className="px-3 py-2 border-b border-border/70">
                       <p className="text-[10px] font-bold uppercase text-ink/50 tracking-wider">Verified Customer</p>
                       <p className="font-display font-extrabold text-secondary text-sm truncate">{authProfile.name}</p>
@@ -334,14 +327,14 @@ export default function Navbar() {
                       )}
                     </div>
 
-                    <div className="py-1 space-y-0.5 text-xs font-bold text-ink/80">
+                    <div className="py-1.5 space-y-1 text-xs lg:text-sm font-bold text-ink/80">
                       <Link
                         href="/customer/dashboard"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2.5 rounded-xl px-3 py-2 hover:bg-sand transition"
+                        className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-sand transition"
                       >
                         <Sparkles className="h-4 w-4 text-primary" />
-                        <span>My Digital Passes</span>
+                        <span>My Profile &amp; Passes</span>
                       </Link>
                       <button
                         type="button"
@@ -349,21 +342,21 @@ export default function Navbar() {
                           setProfileDropdownOpen(false);
                           setScannerOpen(true);
                         }}
-                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left hover:bg-sand transition"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-sand transition font-bold"
                       >
                         <Camera className="h-4 w-4 text-emerald-600" />
-                        <span>Punch Stamp at Counter</span>
+                        <span>Scan Counter Standee</span>
                       </button>
                     </div>
 
-                    <div className="pt-1 mt-1 border-t border-border/70">
+                    <div className="pt-1.5 mt-1 border-t border-border/70">
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           handleLogout();
                         }}
-                        className="flex w-full items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition"
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition"
                       >
                         <LogOut className="h-4 w-4" />
                         <span>Log Out</span>
@@ -373,7 +366,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              // GUEST NAVIGATION
+              // GUEST NAVIGATION (No customer session or merchant session)
               <>
                 <Link
                   href="/customer/dashboard"
@@ -384,7 +377,7 @@ export default function Navbar() {
 
                 <Link
                   href="/auth/owner/login"
-                  className="whitespace-nowrap inline-flex items-center justify-center rounded-full bg-[#F2765E] hover:bg-[#F2765E]/90 text-white font-medium text-xs lg:text-sm px-4 lg:px-5 py-2 lg:py-2.5 transition shadow-sm active:scale-95"
+                  className="whitespace-nowrap inline-flex items-center justify-center rounded-full bg-[#F2765E] hover:bg-[#F2765E]/90 text-white font-bold text-xs lg:text-sm px-4 lg:px-5 py-2 lg:py-2.5 transition shadow-sm active:scale-95"
                 >
                   Merchant Login
                 </Link>
@@ -503,12 +496,12 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/owner/dashboard#ledger"
+                      href="/owner/profile"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center justify-center gap-2 rounded-xl bg-sand py-2.5 text-xs font-bold text-secondary border border-border"
                     >
-                      <History className="h-4 w-4" />
-                      <span>Customer Visit Ledger</span>
+                      <Store className="h-4 w-4 text-primary" />
+                      <span>Shop Profile &amp; Subscription</span>
                     </Link>
 
                     <button

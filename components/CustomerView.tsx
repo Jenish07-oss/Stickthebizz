@@ -83,8 +83,8 @@ export default function CustomerView({
   const validityDays = Number(merchant.validityDays) || 30;
 
   // Real Database State
-  const [customer, setCustomer] = useState<{ id?: string; phone: string; displayPhone?: string; fullName?: string | null } | null>(
-    initialCustomer ? { id: initialCustomer.id, phone: initialCustomer.phone, fullName: initialCustomer.fullName } : null
+  const [customer, setCustomer] = useState<{ id?: string; phone: string; displayPhone?: string; fullName?: string | null; email?: string | null } | null>(
+    initialCustomer ? { id: initialCustomer.id, phone: initialCustomer.phone, fullName: initialCustomer.fullName, email: initialCustomer.email } : null
   );
   const [visitsCount, setVisitsCount] = useState<number>(initialStatus?.visitsCount || 0);
   const [isLockedToday, setIsLockedToday] = useState(initialStatus?.isLockedToday || false);
@@ -199,14 +199,20 @@ export default function CustomerView({
                 const { data } = await supabase.from("customers").select("id, phone, full_name").eq("auth_id", user.id).maybeSingle();
                 cRow = data;
               }
-              if (cRow?.phone && cRow.phone.replace(/\D/g, "").length === 10) {
-                savedPhone = cRow.phone.replace(/\D/g, "");
-                setCustomer({ id: cRow.id, phone: savedPhone, fullName: cRow.full_name || userName });
+              if (cRow) {
+                savedPhone = (cRow.phone || userPhone || "").replace(/\D/g, "");
+                setCustomer({
+                  id: cRow.id,
+                  phone: savedPhone,
+                  fullName: cRow.full_name || userName,
+                  email: userEmail,
+                });
                 if (typeof window !== "undefined") {
-                  localStorage.setItem("stb_customer_phone", savedPhone);
+                  if (savedPhone) localStorage.setItem("stb_customer_phone", savedPhone);
                   if (cRow.full_name || userName) {
                     localStorage.setItem("stb_customer_name", cRow.full_name || userName);
                   }
+                  if (userEmail) localStorage.setItem("stb_customer_email", userEmail);
                 }
               }
             }
@@ -217,21 +223,24 @@ export default function CustomerView({
 
         if (merchant.id) {
           const res = await getCustomerMerchantStatus(merchant.id, savedPhone);
-          if (res.customer && res.customer.phone && res.customer.phone.replace(/\D/g, "").length === 10) {
-            const validPhone = res.customer.phone.replace(/\D/g, "");
-            const custObj = { ...res.customer, phone: validPhone };
+          if (res.customer) {
+            const validPhone = (res.customer.phone || savedPhone || "").replace(/\D/g, "");
+            const custObj = {
+              ...res.customer,
+              phone: validPhone,
+              fullName: res.customer.fullName || (typeof window !== "undefined" ? localStorage.getItem("stb_customer_name") : "") || "Loyal Customer",
+            };
             setCustomer(custObj);
             setVisitsCount(res.visitsCount || 0);
             setIsLockedToday(res.isLockedToday);
             if (typeof window !== "undefined") {
-              localStorage.setItem("stb_customer_phone", validPhone);
-              if (res.customer.fullName) {
-                localStorage.setItem("stb_customer_name", res.customer.fullName);
-              }
+              if (validPhone) localStorage.setItem("stb_customer_phone", validPhone);
+              if (custObj.fullName) localStorage.setItem("stb_customer_name", custObj.fullName);
+              if (res.customer.email) localStorage.setItem("stb_customer_email", res.customer.email);
             }
 
             // Direct auto-punch for existing/returning account on QR scan
-            if (!autoPunchedRef.current && !res.isLockedToday && (res.visitsCount || 0) < visitsRequired) {
+            if (!autoPunchedRef.current && !res.isLockedToday && (res.visitsCount || 0) < visitsRequired && validPhone.length === 10) {
               autoPunchedRef.current = true;
               setIsSubmitting(true);
               setFeedbackMessage("⚡ Verified account recognized! Punching today's stamp...");
@@ -580,30 +589,36 @@ export default function CustomerView({
               )}
 
               {/* USER STATUS / ACTION SECTION */}
-                            <div className="mt-5">
-                              {customer ? (
-                                // Identified Customer View - Already logged in, can punch directly
-                                <div>
-                                  <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/60 px-3 py-2 text-xs border border-border">
-                                    <div className="flex items-center gap-2">
-                                      <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
-                                        <CheckCircle2 className="h-4 w-4" />
-                                      </div>
-                                      <div>
-                                        <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
-                                        <span className="font-extrabold text-secondary text-xs">
-                                          {customer.fullName || customer.displayPhone || `+91 ${customer.phone}`}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <button
-                                      type="button"
-                                      onClick={() => setChangeNumberModal(true)}
-                                      className="text-[11px] font-bold text-primary hover:underline"
-                                    >
-                                      Switch Account
-                                    </button>
-                                  </div>
+              <div className="mt-5">
+                {loadingStatus ? (
+                  <div className="rounded-2xl border border-border bg-sand/40 p-6 text-center">
+                    <div className="mx-auto mb-2 h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <p className="text-xs font-bold text-secondary">Checking verified pass status...</p>
+                    <p className="mt-0.5 text-[10px] text-ink/50">Restoring your stamps &amp; visit streak...</p>
+                  </div>
+                ) : customer ? (
+                  // Identified Customer View - Already logged in, can punch directly
+                  <div>
+                    <div className="mb-3 flex items-center justify-between rounded-xl bg-sand/60 px-3 py-2 text-xs border border-border">
+                      <div className="flex items-center gap-2">
+                        <div className="grid h-7 w-7 place-items-center rounded-lg bg-emerald-100 text-emerald-700">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-ink/50">Verified Customer</p>
+                          <span className="font-extrabold text-secondary text-xs">
+                            {customer.fullName || customer.displayPhone || (customer.phone ? `+91 ${customer.phone}` : (customer.email || "Loyal Customer"))}
+                          </span>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setChangeNumberModal(true)}
+                        className="text-[11px] font-bold text-primary hover:underline"
+                      >
+                        Switch Account
+                      </button>
+                    </div>
 
                                   {isLockedToday ? (
                                     <div className="rounded-2xl border border-warning/40 bg-warning/10 p-4 text-center">
@@ -720,38 +735,107 @@ export default function CustomerView({
         </div>
       </main>
 
-      {/* Switch Number Modal */}
+      {/* Switch / Link Mobile Number Modal */}
       {changeNumberModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4">
           <div className="w-full max-w-sm rounded-[2rem] border border-border bg-white p-6 shadow-float">
-            {/* Switch Account Modal (for logged-in customers) */}
-            <div className="text-center">
-                      <h3 className="font-display text-lg font-extrabold text-secondary">
-                        Switch Mobile Number?
-                      </h3>
-                      <p className="mt-2 text-xs text-ink/70 leading-relaxed">
-                        This will log you out of this pass on this device. You can log back in anytime with your mobile number.
-                      </p>
-                      <div className="mt-5 flex gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setChangeNumberModal(false)}
-                          className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSwitchNumber}
-                          className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90"
-                        >
-                          Yes, Switch
-                        </button>
-                      </div>
-                    </div>
+            {!customer?.phone ? (
+              // Link Phone Number form for email-verified customers
+              <div>
+                <h3 className="font-display text-lg font-extrabold text-secondary">
+                  Link Your Mobile Number
+                </h3>
+                <p className="mt-1 text-xs text-ink/70 leading-relaxed">
+                  Enter your 10-digit mobile number to link your counter pass and punch your stamp.
+                </p>
+                <div className="mt-4">
+                  <label className="block text-[11px] font-bold uppercase text-ink/60">
+                    Mobile Number (+91)
+                  </label>
+                  <div className="relative mt-1">
+                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-xs font-mono font-bold text-secondary">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      maxLength={10}
+                      autoFocus
+                      placeholder="98200 12345"
+                      value={mobileInput}
+                      onChange={(e) => setMobileInput(e.target.value.replace(/\D/g, ""))}
+                      className="w-full rounded-xl border border-border p-2.5 pl-12 font-mono text-sm font-bold text-secondary focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="mt-5 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setChangeNumberModal(false)}
+                    className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const clean = mobileInput.replace(/\D/g, "");
+                      if (clean.length === 10) {
+                        setCustomer((prev) => (prev ? { ...prev, phone: clean } : { phone: clean, fullName: nameInput }));
+                        if (typeof window !== "undefined") {
+                          localStorage.setItem("stb_customer_phone", clean);
+                        }
+                        setChangeNumberModal(false);
+                        const { syncCustomerAccountAction } = await import("@/app/actions/customer");
+                        await syncCustomerAccountAction({ phone: clean, email: customer?.email || undefined });
+                        submitScanAction(clean, merchant.id || "", merchant.minSpend, customer?.fullName || nameInput || "").then((res) => {
+                          if (res.success) {
+                            setVisitsCount((prev) => prev + 1);
+                            setIsLockedToday(true);
+                            setFeedbackMessage("✓ Stamp punched! Mobile linked to your pass.");
+                          } else {
+                            setFeedbackMessage(res.message);
+                          }
+                        });
+                      }
+                    }}
+                    disabled={mobileInput.replace(/\D/g, "").length !== 10}
+                    className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90 disabled:opacity-50"
+                  >
+                    Save &amp; Punch
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Switch Account Modal (for logged-in customers with existing phone)
+              <div className="text-center">
+                <h3 className="font-display text-lg font-extrabold text-secondary">
+                  Switch Account / Phone?
+                </h3>
+                <p className="mt-2 text-xs text-ink/70 leading-relaxed">
+                  Currently signed in as <strong className="text-secondary">{customer.fullName || `+91 ${customer.phone}`}</strong>.
+                  Switching will allow you to log in with a different pass.
+                </p>
+                <div className="mt-5 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setChangeNumberModal(false)}
+                    className="flex-1 min-h-[44px] rounded-xl border border-border text-xs font-bold text-ink/70 hover:bg-sand"
+                  >
+                    Keep Account
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSwitchNumber}
+                    className="flex-1 min-h-[44px] rounded-xl bg-primary text-xs font-bold text-white hover:bg-primary/90"
+                  >
+                    Log Out &amp; Switch
+                  </button>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
 
       {/* VERIFIED CUSTOMER REVIEW MODAL */}
       <ReviewModal

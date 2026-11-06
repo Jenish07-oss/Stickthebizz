@@ -220,12 +220,21 @@ export default function OwnerDashboardPage() {
           if (mounted) {
             const initialQueue: LivePendingScan[] = (pending || []).map((v: any) => {
               knownVisitIdsRef.current.add(v.id);
+              const exactTime = v.created_at
+                ? new Date(v.created_at).toLocaleTimeString("en-IN", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    timeZone: "Asia/Kolkata",
+                    hour12: true,
+                  })
+                : "Just now";
               return {
                 id: v.id,
                 customerName: v.customers?.full_name || "Diner / Shopper",
                 customerMasked: v.customers?.phone || "Customer Check-in",
                 amount: Number(v.bill_amount) || m.min_spend,
-                formattedTime: "Just now",
+                formattedTime: exactTime,
                 status: processedStatusMapRef.current.get(v.id) || v.status,
               };
             });
@@ -330,7 +339,21 @@ export default function OwnerDashboardPage() {
                 customerName: item.customers?.full_name || "Customer Check-in",
                 customerMasked: item.customers?.phone || "Customer Check-in",
                 amount: Number(item.bill_amount) || merchant.min_spend,
-                formattedTime: "Just now",
+                formattedTime: item.created_at
+                  ? new Date(item.created_at).toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      timeZone: "Asia/Kolkata",
+                      hour12: true,
+                    })
+                  : new Date().toLocaleTimeString("en-IN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                      timeZone: "Asia/Kolkata",
+                      hour12: true,
+                    }),
                 status: item.status,
               }));
               setPendingQueue(updatedQueue);
@@ -990,6 +1013,14 @@ export default function OwnerDashboardPage() {
                   </span>
                 </span>
 
+                <Link
+                  href="/owner/profile"
+                  className="inline-flex items-center gap-1.5 rounded-full border border-secondary/30 bg-secondary px-4 py-2 text-xs font-bold text-white shadow-brand-sm hover:bg-secondary/90 transition active:scale-95"
+                >
+                  <Store className="h-3.5 w-3.5 text-amber-300" />
+                  <span>Store Profile &amp; Plan →</span>
+                </Link>
+
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -1082,8 +1113,11 @@ export default function OwnerDashboardPage() {
                             <span className="rounded bg-sand px-2 py-0.5 font-mono text-xs font-bold text-ink/80">
                               Bill ₹{item.amount}
                             </span>
+                            <span className="text-[11px] font-mono font-bold text-primary bg-primary/10 px-2 py-0.5 rounded">
+                              🕒 {item.formattedTime} IST
+                            </span>
                             <span className="text-[11px] text-ink/50">
-                              {item.formattedTime} • Counter Camera Scan
+                              • Counter Camera Scan
                             </span>
                           </div>
                         </div>
@@ -1379,6 +1413,7 @@ export default function OwnerDashboardPage() {
                                             ? new Date(row.createdAt).toLocaleTimeString("en-IN", {
                                                 hour: "2-digit",
                                                 minute: "2-digit",
+                                                second: "2-digit",
                                                 timeZone: "Asia/Kolkata",
                                                 hour12: true,
                                               })

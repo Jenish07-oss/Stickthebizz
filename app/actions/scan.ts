@@ -881,12 +881,33 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
       return { customer: null, visitsCount: 0, isLockedToday: false };
     }
 
+    // Collect all linked customer IDs for this user to guarantee zero lost stamps across auth migrations
+    const customerIds = [customer.id];
+    if (customer.phone) {
+      const { data: phoneSiblings } = await db
+        .from("customers")
+        .select("id")
+        .eq("phone", customer.phone);
+      (phoneSiblings || []).forEach((s) => {
+        if (!customerIds.includes(s.id)) customerIds.push(s.id);
+      });
+    }
+    if (customer.email) {
+      const { data: emailSiblings } = await db
+        .from("customers")
+        .select("id")
+        .eq("email", customer.email);
+      (emailSiblings || []).forEach((s) => {
+        if (!customerIds.includes(s.id)) customerIds.push(s.id);
+      });
+    }
+
     // 1. Check total APPROVED visits for this customer at this merchant
     const { count: visitsCount } = await db
       .from("visits")
       .select("id", { count: "exact", head: true })
       .eq("merchant_id", merchantId)
-      .eq("customer_id", customer.id)
+      .in("customer_id", customerIds)
       .in("status", ["APPROVED", "PENDING"]);
 
     // 2. Check if a visit was recorded today in IST
@@ -895,7 +916,7 @@ export async function getCustomerMerchantStatus(merchantId: string, customerPhon
       .from("visits")
       .select("id, status")
       .eq("merchant_id", merchantId)
-      .eq("customer_id", customer.id)
+      .in("customer_id", customerIds)
       .eq("visit_date_ist", todayIST)
       .maybeSingle();
 

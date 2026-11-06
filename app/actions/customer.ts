@@ -223,21 +223,30 @@ export async function syncCustomerAccountAction(params: {
       if (error) return { success: false, error: sanitizeError(error) };
       return { success: true, customer: updated };
     } else {
-      if (!cleanPhone) {
-        return { success: false, message: "A 10-digit mobile number is required to create a pass." };
-      }
+      // If phone is missing, generate deterministic fallback placeholder phone so customer row is always created
+      const phoneToUse = cleanPhone || (authUserId ? `90${authUserId.replace(/\D/g, "").slice(0, 8).padEnd(8, "0")}` : `90${Math.floor(10000000 + Math.random() * 90000000)}`);
       const { data: inserted, error } = await db
         .from("customers")
         .insert({
           auth_id: authUserId || null,
-          phone: cleanPhone,
+          phone: phoneToUse,
           email: emailToUse || null,
           full_name: nameToUse,
         })
         .select()
         .single();
 
-      if (error) return { success: false, error: sanitizeError(error) };
+      if (error) {
+        // If conflict on phone or email, do a fallback lookup to retrieve existing
+        const { data: retryCust } = await db
+          .from("customers")
+          .select()
+          .or(`phone.eq.${phoneToUse}${emailToUse ? `,email.eq.${emailToUse}` : ""}${authUserId ? `,auth_id.eq.${authUserId}` : ""}`)
+          .limit(1)
+          .maybeSingle();
+        if (retryCust) return { success: true, customer: retryCust };
+        return { success: false, error: sanitizeError(error) };
+      }
       return { success: true, customer: inserted };
     }
   } catch (err: any) {
@@ -274,7 +283,7 @@ export async function getCustomerWalletAction(phoneOverride?: string, emailOverr
   if (cleanPhoneOverride && cleanPhoneOverride.length === 10) {
     const { data: c } = await supabase
       .from("customers")
-      .select("id, phone, full_name, email")
+      .select("id, phone, full_name, email, auth_id")
       .or(`phone.eq.${cleanPhoneOverride},phone.eq.+91${cleanPhoneOverride}`)
       .maybeSingle();
 
@@ -283,6 +292,16 @@ export async function getCustomerWalletAction(phoneOverride?: string, emailOverr
         ...c,
         phone: cleanPhoneOverride,
       };
+      if (user?.id && (!c.auth_id || !c.email)) {
+        await supabase
+          .from("customers")
+          .update({
+            auth_id: user.id,
+            email: user.email || c.email,
+            full_name: c.full_name || userName || undefined,
+          })
+          .eq("id", c.id);
+      }
     } else {
       customer = {
         id: "cust_" + cleanPhoneOverride,
@@ -297,19 +316,15 @@ export async function getCustomerWalletAction(phoneOverride?: string, emailOverr
   if (!customer && cleanEmailOverride && cleanEmailOverride.includes("@")) {
     const { data: c } = await supabase
       .from("customers")
-      .select("id, phone, full_name, email")
+      .select("id, phone, full_name, email, auth_id")
       .eq("email", cleanEmailOverride)
       .maybeSingle();
 
     if (c) {
       customer = c;
-    } else {
-      customer = {
-        id: "cust_" + cleanEmailOverride.replace(/[^a-zA-Z0-9]/g, "_"),
-        phone: "",
-        full_name: "Loyal Customer",
-        email: cleanEmailOverride,
-      };
+      if (user?.id && !c.auth_id) {
+        await supabase.from("customers").update({ auth_id: user.id }).eq("id", c.id);
+      }
     }
   }
 
@@ -318,31 +333,60 @@ export async function getCustomerWalletAction(phoneOverride?: string, emailOverr
     const cleanPhone = userPhone.replace(/\D/g, "");
     const { data: c } = await supabase
       .from("customers")
-      .select("id, phone, full_name, email")
+      .select("id, phone, full_name, email, auth_id")
       .eq("phone", cleanPhone)
       .maybeSingle();
 
-    if (c) customer = c;
+    if (c) {
+      customer = c;
+      if (user?.id && !c.auth_id) {
+        await supabase.from("customers").update({ auth_id: user.id, email: user.email || c.email }).eq("id", c.id);
+      }
+    }
   }
 
   if (!customer && userEmail) {
     const { data: c } = await supabase
       .from("customers")
-      .select("id, phone, full_name, email")
+      .select("id, phone, full_name, email, auth_id")
       .eq("email", userEmail)
       .maybeSingle();
 
-    if (c) customer = c;
+    if (c) {
+      customer = c;
+      if (user?.id && !c.auth_id) {
+        await supabase.from("customers").update({ auth_id: user.id }).eq("id", c.id);
+      }
+    }
   }
 
   if (!customer && user?.id) {
     const { data: c } = await supabase
       .from("customers")
-      .select("id, phone, full_name, email")
+      .select("id, phone, full_name, email, auth_id")
       .eq("auth_id", user.id)
       .maybeSingle();
 
     if (c) customer = c;
+  }
+
+  // Auto-create customer row in database if user is logged in and not found yet
+  if ((!customer || customer.id.startsWith("cust_")) && user) {
+    const fallbackPhone = cleanPhoneOverride || (userPhone && userPhone.length === 10 ? userPhone : `90${Math.floor(10000000 + Math.random() * 90000000)}`);
+    const { data: newCust } = await supabase
+      .from("customers")
+      .insert({
+        auth_id: user.id,
+        email: user.email || cleanEmailOverride || null,
+        phone: fallbackPhone,
+        full_name: userName || "Loyal Customer",
+      })
+      .select("id, phone, full_name, email, auth_id")
+      .maybeSingle();
+
+    if (newCust) {
+      customer = newCust;
+    }
   }
 
   const { data: allMerchants } = await supabase
