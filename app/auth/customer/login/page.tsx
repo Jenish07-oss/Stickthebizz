@@ -308,10 +308,10 @@ export default function CustomerAuthPage() {
 
       // Sync customer profile with database (safe non-blocking)
       try {
-        if (cleanPhone) {
+        if (cleanPhone || cleanEmail) {
           const syncRes = await syncCustomerAccountAction({
             fullName: fullName.trim() || undefined,
-            phone: cleanPhone,
+            phone: cleanPhone || undefined,
             email: cleanEmail || undefined,
           });
           if (syncRes.customer?.phone && typeof window !== "undefined") {
