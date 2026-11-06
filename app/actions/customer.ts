@@ -245,7 +245,7 @@ export async function syncCustomerAccountAction(params: {
   }
 }
 
-export async function getCustomerWalletAction(phoneOverride?: string): Promise<CustomerWalletData> {
+export async function getCustomerWalletAction(phoneOverride?: string, emailOverride?: string): Promise<CustomerWalletData> {
   const authSupabase = await createClient();
   const supabase = createUnauthenticatedClient();
 
@@ -254,8 +254,9 @@ export async function getCustomerWalletAction(phoneOverride?: string): Promise<C
   } = await authSupabase.auth.getUser();
 
   const cleanPhoneOverride = (phoneOverride || "").replace(/\D/g, "");
+  const cleanEmailOverride = (emailOverride || "").trim().toLowerCase();
 
-  if (!user && (!cleanPhoneOverride || cleanPhoneOverride.length !== 10)) {
+  if (!user && (!cleanPhoneOverride || cleanPhoneOverride.length !== 10) && (!cleanEmailOverride || !cleanEmailOverride.includes("@"))) {
     return {
       customer: null,
       passes: [],
@@ -264,7 +265,7 @@ export async function getCustomerWalletAction(phoneOverride?: string): Promise<C
   }
 
   const userPhone = (user?.phone || user?.user_metadata?.phone || "").replace(/\D/g, "");
-  const userEmail = user?.email || "";
+  const userEmail = user?.email || cleanEmailOverride || "";
   const userName = user?.user_metadata?.full_name || null;
 
   let customer: any = null;
@@ -287,12 +288,32 @@ export async function getCustomerWalletAction(phoneOverride?: string): Promise<C
         id: "cust_" + cleanPhoneOverride,
         phone: cleanPhoneOverride,
         full_name: "Loyal Customer",
-        email: null,
+        email: cleanEmailOverride || null,
       };
     }
   }
 
-  // 2. Check user phone from Supabase session
+  // 2. Check emailOverride from verified device if phone not set
+  if (!customer && cleanEmailOverride && cleanEmailOverride.includes("@")) {
+    const { data: c } = await supabase
+      .from("customers")
+      .select("id, phone, full_name, email")
+      .eq("email", cleanEmailOverride)
+      .maybeSingle();
+
+    if (c) {
+      customer = c;
+    } else {
+      customer = {
+        id: "cust_" + cleanEmailOverride.replace(/[^a-zA-Z0-9]/g, "_"),
+        phone: "",
+        full_name: "Loyal Customer",
+        email: cleanEmailOverride,
+      };
+    }
+  }
+
+  // 3. Check user phone from Supabase session
   if (!customer && userPhone) {
     const cleanPhone = userPhone.replace(/\D/g, "");
     const { data: c } = await supabase

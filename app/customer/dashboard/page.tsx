@@ -76,7 +76,9 @@ export default function CustomerDashboardPage() {
     async function loadWallet() {
       try {
         const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
+        const storedEmail = typeof window !== "undefined" ? localStorage.getItem("stb_customer_email") : null;
         const cleanStored = (storedPhone || "").replace(/\D/g, "");
+        const cleanEmail = (storedEmail || "").trim().toLowerCase();
 
         // 1. Check client session
         const { data: { session } } = await supabase.auth.getSession();
@@ -86,22 +88,30 @@ export default function CustomerDashboardPage() {
           user = data.user;
         }
 
-        // If local storage has a phone number but user account doesn't have it synced yet
-        if (cleanStored.length === 10) {
-          await syncCustomerAccountAction({ phone: cleanStored });
+        // If local storage has phone or email, sync with customer account
+        if (cleanStored.length === 10 || (cleanEmail && cleanEmail.includes("@"))) {
+          await syncCustomerAccountAction({
+            phone: cleanStored.length === 10 ? cleanStored : undefined,
+            email: cleanEmail || undefined,
+          });
         }
 
-        // 2. Fetch server-verified customer wallet using session or verified device phone
-        const data = await getCustomerWalletAction(cleanStored || undefined);
+        // 2. Fetch server-verified customer wallet using session or verified device credentials
+        const data = await getCustomerWalletAction(cleanStored || undefined, cleanEmail || undefined);
 
         // 3. Only redirect if genuinely unauthenticated on BOTH device and server
-        if (!user && !data?.customer && cleanStored.length !== 10) {
+        if (!user && !data?.customer && cleanStored.length !== 10 && (!cleanEmail || !cleanEmail.includes("@"))) {
           router.replace("/auth/customer/login");
           return;
         }
 
-        if (data?.customer && cleanStored.length === 10) {
-          data.customer.phone = cleanStored;
+        if (data?.customer) {
+          if (cleanStored.length === 10) {
+            data.customer.phone = cleanStored;
+          }
+          if (cleanEmail) {
+            data.customer.email = cleanEmail;
+          }
           if (!data.customer.fullName && typeof window !== "undefined") {
             const savedName = localStorage.getItem("stb_customer_name");
             if (savedName) data.customer.fullName = savedName;

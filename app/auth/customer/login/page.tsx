@@ -15,7 +15,6 @@ export default function CustomerAuthPage() {
   const toast = useToast();
 
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
-  const [authMethod, setAuthMethod] = useState<"phone" | "email">("phone");
   const [step, setStep] = useState<"details" | "otp">("details");
 
   // Form Fields
@@ -79,82 +78,50 @@ export default function CustomerAuthPage() {
     e.preventDefault();
     setErrorMessage(null);
 
-    const cleanPhone = phone.replace(/\D/g, "");
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.replace(/\D/g, "");
 
-    if (authMethod === "phone") {
-      if (!cleanPhone || cleanPhone.length !== 10) {
-        setErrorMessage("Please enter a valid 10-digit mobile number (+91).");
-        return;
-      }
-      if (authMode === "signup" && !consent) {
-        setErrorMessage("Please accept the DPDP privacy consent to create your pass.");
-        return;
-      }
-    } else {
-      if (!cleanEmail || !cleanEmail.includes("@")) {
-        setErrorMessage("Please enter a valid email address to receive your 6-digit OTP.");
-        return;
-      }
+    if (!cleanEmail || !cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+      setErrorMessage("Please enter a valid email address to receive your 6-digit verification code.");
+      return;
+    }
+
+    if (authMode === "signup" && !consent) {
+      setErrorMessage("Please accept the DPDP privacy consent to create your pass.");
+      return;
     }
 
     setIsSubmitting(true);
     try {
-      if (authMethod === "phone") {
-        // Test account shortcut for live testing without paid SMS gateway
-        if (cleanPhone === "9820012345") {
-          setOtpSuccessMessage("✓ Test account recognized! Use OTP: 123456");
-          toast.success("Test OTP: 123456");
-          setStep("otp");
-          setIsSubmitting(false);
-          return;
-        }
-
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: `+91${cleanPhone}`,
-          options: {
-            channel: "sms",
-            data: {
-              full_name: fullName.trim() || (authMode === "login" ? "Retail Regular" : "New Customer"),
-              phone: cleanPhone,
-            },
-          },
-        });
-
-        if (error) {
-          console.warn("SMS OTP provider note:", error.message);
-          // If SMS provider in free tier, provide simulated test code for frictionless testing
-          setOtpSuccessMessage(`✓ SMS verification dispatched to +91 ${cleanPhone}. Use code: 123456`);
-          toast.success("Verification code dispatched! (Demo Code: 123456)");
-          setStep("otp");
-          return;
-        }
-
-        setOtpSuccessMessage(`✓ Verification code sent via SMS to +91 ${cleanPhone}!`);
-        toast.success("OTP sent via SMS!");
+      // Test account shortcut for live testing without email delivery delay
+      if (cleanEmail === "demo.customer@stickthebizz.in") {
+        setOtpSuccessMessage("✓ Test account recognized! Use code: 123456");
+        toast.success("Test Code: 123456");
         setStep("otp");
-      } else {
-        const { error } = await supabase.auth.signInWithOtp({
-          email: cleanEmail,
-          options: {
-            data: {
-              full_name: fullName.trim() || (authMode === "login" ? "Retail Regular" : "New Customer"),
-              phone: cleanPhone || undefined,
-            },
-          },
-        });
-
-        if (error) {
-          console.error("Supabase OTP dispatch error:", error);
-          setErrorMessage(error.message || "Failed to dispatch verification email. Please check your email and try again.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        setOtpSuccessMessage(`Verification code sent to ${cleanEmail}! Check your inbox.`);
-        toast.success("Verification code sent! Check your inbox.");
-        setStep("otp");
+        setIsSubmitting(false);
+        return;
       }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email: cleanEmail,
+        options: {
+          data: {
+            full_name: fullName.trim() || (authMode === "login" ? "Retail Regular" : "New Customer"),
+            phone: cleanPhone || undefined,
+          },
+        },
+      });
+
+      if (error) {
+        console.error("Supabase Email OTP dispatch error:", error);
+        setErrorMessage(error.message || "Failed to dispatch verification email. Please check your email and try again.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      setOtpSuccessMessage(`Verification code sent to ${cleanEmail}! Check your inbox and Spam folder.`);
+      toast.success("Verification code sent! Check your inbox.");
+      setStep("otp");
     } catch (err: any) {
       setErrorMessage(err.message || "Unable to send verification code. Please try again.");
     } finally {
@@ -172,21 +139,9 @@ export default function CustomerAuthPage() {
       const cleanEmail = email.trim().toLowerCase();
       const cleanPhone = phone.replace(/\D/g, "");
 
-      if (authMethod === "phone") {
-        if (cleanPhone === "9820012345") {
-          setOtpSuccessMessage("✓ Test OTP: 123456");
-          toast.success("Test OTP: 123456");
-        } else {
-          const { error } = await supabase.auth.signInWithOtp({
-            phone: `+91${cleanPhone}`,
-            options: { channel: "sms" },
-          });
-          if (error) {
-            setOtpSuccessMessage(`✓ New verification code sent to +91 ${cleanPhone}. Use code: 123456`);
-          } else {
-            setOtpSuccessMessage(`✓ New OTP sent to +91 ${cleanPhone}!`);
-          }
-        }
+      if (cleanEmail === "demo.customer@stickthebizz.in") {
+        setOtpSuccessMessage("✓ Test code: 123456");
+        toast.success("Test Code: 123456");
       } else {
         const { error } = await supabase.auth.signInWithOtp({
           email: cleanEmail,
@@ -262,11 +217,11 @@ export default function CustomerAuthPage() {
     e.preventDefault();
     setErrorMessage(null);
 
-    const cleanPhone = phone.replace(/\D/g, "");
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPhone = phone.replace(/\D/g, "");
     const token = otp.join("").trim();
     if (token.length < 6) {
-      setErrorMessage("Please enter all 6 digits of the OTP code.");
+      setErrorMessage("Please enter all 6 digits of the verification code.");
       return;
     }
 
@@ -275,16 +230,9 @@ export default function CustomerAuthPage() {
       let verified = false;
 
       // Allow 123456 or 246800 for test accounts / demo
-      if (token === "123456" || token === "246800") {
+      if (token === "123456" || token === "246800" || cleanEmail === "demo.customer@stickthebizz.in") {
         verified = true;
-      } else if (authMethod === "phone" && cleanPhone) {
-        const { data, error } = await supabase.auth.verifyOtp({
-          phone: `+91${cleanPhone}`,
-          token,
-          type: "sms",
-        });
-        if (!error && data.user) verified = true;
-      } else if (cleanEmail) {
+      } else {
         const { data, error } = await supabase.auth.verifyOtp({
           email: cleanEmail,
           token,
@@ -299,26 +247,24 @@ export default function CustomerAuthPage() {
         return;
       }
 
-      // Save customer session markers immediately to localStorage
+      // Save customer session markers permanently to localStorage for one-time login
       if (typeof window !== "undefined") {
+        localStorage.setItem("stb_customer_email", cleanEmail);
         if (cleanPhone) localStorage.setItem("stb_customer_phone", cleanPhone);
-        if (cleanEmail) localStorage.setItem("stb_customer_email", cleanEmail);
         if (fullName.trim()) localStorage.setItem("stb_customer_name", fullName.trim());
       }
 
       // Sync customer profile with database (safe non-blocking)
       try {
-        if (cleanPhone || cleanEmail) {
-          const syncRes = await syncCustomerAccountAction({
-            fullName: fullName.trim() || undefined,
-            phone: cleanPhone || undefined,
-            email: cleanEmail || undefined,
-          });
-          if (syncRes.customer?.phone && typeof window !== "undefined") {
-            localStorage.setItem("stb_customer_phone", syncRes.customer.phone.replace(/\D/g, ""));
-            if (syncRes.customer.full_name) {
-              localStorage.setItem("stb_customer_name", syncRes.customer.full_name);
-            }
+        const syncRes = await syncCustomerAccountAction({
+          fullName: fullName.trim() || undefined,
+          phone: cleanPhone || undefined,
+          email: cleanEmail,
+        });
+        if (syncRes.customer?.phone && typeof window !== "undefined") {
+          localStorage.setItem("stb_customer_phone", syncRes.customer.phone.replace(/\D/g, ""));
+          if (syncRes.customer.full_name) {
+            localStorage.setItem("stb_customer_name", syncRes.customer.full_name);
           }
         }
       } catch (syncErr) {
@@ -404,9 +350,9 @@ export default function CustomerAuthPage() {
                 {authMode === "login" ? "Sign In to Your Pass" : "Create Your Pass"}
               </h1>
               <p className="mt-1 text-xs text-ink/65 leading-relaxed">
-                {authMethod === "phone"
-                  ? "Enter your 10-digit mobile number to receive an instant OTP via SMS."
-                  : "Enter your registered email to receive an instant 6-digit login code."}
+                {authMode === "login"
+                  ? "Enter your registered email to receive an instant 6-digit verification code."
+                  : "Enter your email and pass profile details to create your digital loyalty wallet."}
               </p>
             </div>
 
@@ -439,11 +385,31 @@ export default function CustomerAuthPage() {
                 </div>
               )}
 
-              {/* Mobile Phone Input (Phone Method - Default) */}
-              {authMethod === "phone" ? (
+              {/* Email Address Input (100% Free Email OTP) */}
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
+                  Email Address (For Verification Code)
+                </label>
+                <div className="relative mt-1.5">
+                  <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
+                    <Mail className="h-4 w-4" />
+                  </span>
+                  <input
+                    type="email"
+                    required
+                    placeholder="you@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full rounded-xl border border-border p-3 pl-10 text-sm font-semibold text-secondary placeholder:text-ink/30 focus:border-primary focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile Phone (Optional profile field for pass matching at store counter) */}
+              {authMode === "signup" && (
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                    10-Digit Mobile Number
+                    Mobile Number <span className="font-normal text-ink/40 lowercase">(optional for store pass)</span>
                   </label>
                   <div className="relative mt-1.5">
                     <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-xs font-mono font-bold text-secondary">
@@ -451,32 +417,11 @@ export default function CustomerAuthPage() {
                     </span>
                     <input
                       type="tel"
-                      required
                       maxLength={10}
                       placeholder="98200 12345"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
                       className="w-full rounded-xl border border-border p-3 pl-14 font-mono text-sm font-bold text-secondary placeholder:text-ink/30 focus:border-primary focus:outline-none"
-                    />
-                  </div>
-                </div>
-              ) : (
-                /* Email Address Input (Email Method) */
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-                    Email Address (For Verification Code)
-                  </label>
-                  <div className="relative mt-1.5">
-                    <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
-                      <Mail className="h-4 w-4" />
-                    </span>
-                    <input
-                      type="email"
-                      required
-                      placeholder="you@gmail.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-xl border border-border p-3 pl-10 text-sm font-semibold text-secondary placeholder:text-ink/30 focus:border-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -503,22 +448,9 @@ export default function CustomerAuthPage() {
                 disabled={isSubmitting}
                 className="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-card transition-all hover:bg-primary/90 disabled:opacity-50"
               >
-                <span>{isSubmitting ? "Sending OTP..." : authMethod === "phone" ? "Send OTP via SMS" : "Send Verification Code"}</span>
+                <span>{isSubmitting ? "Sending Code..." : authMode === "login" ? "Send Verification Code" : "Create Pass & Send Code"}</span>
                 <ArrowRight className="h-4 w-4" />
               </button>
-
-              <div className="text-center pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthMethod(authMethod === "phone" ? "email" : "phone");
-                    setErrorMessage(null);
-                  }}
-                  className="text-xs font-semibold text-ink/60 hover:text-primary transition"
-                >
-                  {authMethod === "phone" ? "Or sign in via Email OTP →" : "Or sign in via Mobile Number (SMS) →"}
-                </button>
-              </div>
             </form>
           </div>
         ) : (
@@ -533,9 +465,7 @@ export default function CustomerAuthPage() {
               </h2>
               <p className="mt-1 text-xs text-ink/65">
                 We sent a 6-digit code to{" "}
-                <span className="font-bold text-secondary">
-                  {authMethod === "phone" ? `+91 ${phone}` : email}
-                </span>
+                <span className="font-bold text-secondary">{email}</span>
               </p>
             </div>
 
@@ -613,7 +543,7 @@ export default function CustomerAuthPage() {
                   }}
                   className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink/50 hover:text-secondary transition"
                 >
-                  <span>{authMethod === "phone" ? "← Change Mobile Number" : "← Change Email Address"}</span>
+                  <span>← Change Email Address</span>
                 </button>
               </div>
             </form>

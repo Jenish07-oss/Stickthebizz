@@ -1,15 +1,16 @@
 <svg width="400" height="400" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
   <!-- Centered Icon -->
-  <g transform="translate(130, 80)">
+  <g transform="translate(133, 75) scale(1.12)">
     <!-- Coral Squircle -->
-    <rect x="0" y="8" width="134" height="134" rx="42" fill="#EE634A"/>
+    <rect x="10" y="14" width="96" height="96" rx="28" fill="#EE634A"/>
     <!-- Navy Stamp Hole Badge with White Ring -->
-    <circle cx="126" cy="14" r="16" fill="#102B4C" stroke="#FFFFFF" stroke-width="6"/>
-    <!-- "sb" Monogram -->
-    <text x="67" y="93" text-anchor="middle" fill="#FFFFFF" font-family="Plus Jakarta Sans, Inter, system-ui, sans-serif" font-weight="900" font-size="62" letter-spacing="-2px">sb</text>
+    <circle cx="96" cy="18" r="11" fill="#102B4C" stroke="#FFFFFF" stroke-width="4"/>
+    <!-- "sb" Monogram Vector Paths -->
+    <path d="M 40 60 C 33.5 60 29.5 63.5 29.5 68.5 C 29.5 73.5 33.5 75.8 39 77 C 44 78 46.5 79.2 46.5 82 C 46.5 84.8 43.5 86.5 39 86.5 C 34.5 86.5 31.2 84.2 30.2 80.5 L 24 82.5 C 25.8 88.5 31.5 92 39 92 C 48 92 53.5 87.5 53.5 81.2 C 53.5 74.8 49 72.2 43 71 C 38 69.8 36.2 68.8 36.2 66.5 C 36.2 64.2 38.5 62.8 42 62.8 C 45.8 62.8 48.5 64.5 49.8 67.5 L 55.5 65 C 53.5 61.5 47.8 60 40 60 Z" fill="#FFFFFF"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M 60 41 L 67 41 L 67 63.2 C 69.5 61.2 73.2 60 77.5 60 C 86.2 60 92 66.5 92 76 C 92 85.5 86.2 92 77.5 92 C 73.2 92 69.5 90.8 67 88.8 L 67 92 L 60 92 Z M 67 76 C 67 81.5 70.8 85.5 76 85.5 C 81.2 85.5 85 81.5 85 76 C 85 70.5 81.2 66.5 76 66.5 C 70.8 66.5 67 70.5 67 76 Z" fill="#FFFFFF"/>
   </g>
   <!-- Wordmark -->
-  <text x="200" y="300" text-anchor="middle" font-family="Plus Jakarta Sans, Inter, system-ui, sans-serif" font-weight="900" font-size="44" letter-spacing="-1px">
+  <text x="200" y="300" text-anchor="middle" font-family="'Plus Jakarta Sans', Inter, -apple-system, sans-serif" font-weight="900" font-size="44" letter-spacing="-1px">
     <tspan fill="#102B4C">stickthe</tspan><tspan fill="#EE634A">bizz</tspan>
   </text>
 </svg>

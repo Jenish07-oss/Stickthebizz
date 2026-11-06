@@ -186,7 +186,8 @@ export default function CounterQR({
       <svg width="24" height="24" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
         <rect x="10" y="14" width="96" height="96" rx="30" fill="#EE634A"/>
         <circle cx="96" cy="18" r="11" fill="#102B4C" stroke="#FFFFFF" stroke-width="4"/>
-        <text x="57" y="75" text-anchor="middle" fill="#FFFFFF" font-family="Plus Jakarta Sans, Inter, system-ui, -apple-system, sans-serif" font-weight="900" font-size="44" letter-spacing="-1.5px">sb</text>
+        <path d="M 40 60 C 33.5 60 29.5 63.5 29.5 68.5 C 29.5 73.5 33.5 75.8 39 77 C 44 78 46.5 79.2 46.5 82 C 46.5 84.8 43.5 86.5 39 86.5 C 34.5 86.5 31.2 84.2 30.2 80.5 L 24 82.5 C 25.8 88.5 31.5 92 39 92 C 48 92 53.5 87.5 53.5 81.2 C 53.5 74.8 49 72.2 43 71 C 38 69.8 36.2 68.8 36.2 66.5 C 36.2 64.2 38.5 62.8 42 62.8 C 45.8 62.8 48.5 64.5 49.8 67.5 L 55.5 65 C 53.5 61.5 47.8 60 40 60 Z" fill="#FFFFFF"/>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M 60 41 L 67 41 L 67 63.2 C 69.5 61.2 73.2 60 77.5 60 C 86.2 60 92 66.5 92 76 C 92 85.5 86.2 92 77.5 92 C 73.2 92 69.5 90.8 67 88.8 L 67 92 L 60 92 Z M 67 76 C 67 81.5 70.8 85.5 76 85.5 C 81.2 85.5 85 81.5 85 76 C 85 70.5 81.2 66.5 76 66.5 C 70.8 66.5 67 70.5 67 76 Z" fill="#FFFFFF"/>
       </svg>
       <span class="footer-text"><span style="color: #102B4C; font-weight: 800;">stickthe</span><span style="color: #EE634A; font-weight: 800;">bizz</span><span style="color: #555555; font-weight: 700;">.in</span></span>
     </div>
@@ -495,8 +496,8 @@ export default function CounterQR({
           </p>
 
           <div style={{ borderTop: "2px solid #E5E7EB", paddingTop: "16px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-            <LogoIcon size={20} />
-            <span style={{ fontFamily: "sans-serif", fontSize: "14px", fontWeight: "800" }}>
+            <LogoIcon size={24} />
+            <span style={{ fontFamily: "sans-serif", fontSize: "15px", fontWeight: "800" }}>
               <span style={{ color: "#102B4C" }}>stickthe</span>
               <span style={{ color: "#EE634A" }}>bizz</span>
               <span style={{ color: "#555555" }}>.in</span>
