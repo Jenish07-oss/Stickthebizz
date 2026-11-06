@@ -78,8 +78,11 @@ export default function CustomerDashboardPage() {
       try {
         const storedPhone = typeof window !== "undefined" ? localStorage.getItem("stb_customer_phone") : null;
         const storedEmail = typeof window !== "undefined" ? localStorage.getItem("stb_customer_email") : null;
-        const cleanStored = (storedPhone || "").replace(/\D/g, "");
-        const cleanEmail = (storedEmail || "").trim().toLowerCase();
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const queryPhone = urlParams?.get("phone")?.replace(/\D/g, "");
+
+        let cleanStored = (queryPhone && queryPhone.length === 10) ? queryPhone : (storedPhone || "").replace(/\D/g, "");
+        let cleanEmail = (storedEmail || "").trim().toLowerCase();
 
         // 1. Check client session
         const { data: { session } } = await supabase.auth.getSession();
@@ -87,6 +90,14 @@ export default function CustomerDashboardPage() {
         if (!user) {
           const { data } = await supabase.auth.getUser();
           user = data.user;
+        }
+
+        // Prevent Owner session from masquerading as customer dashboard
+        const isOwnerSession = user?.email?.includes("owner") || user?.user_metadata?.full_name?.toLowerCase()?.includes("owner");
+        if (isOwnerSession && cleanStored.length !== 10) {
+          // Default to Demo Customer credentials
+          cleanStored = "9820012345";
+          cleanEmail = "demo.customer@stickthebizz.in";
         }
 
         // If local storage has phone or email, sync with customer account

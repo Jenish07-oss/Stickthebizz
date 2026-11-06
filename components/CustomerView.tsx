@@ -157,7 +157,19 @@ export default function CustomerView({
         }
 
         let savedPhone = "";
-        if (typeof window !== "undefined") {
+        const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+        const queryPhone = urlParams?.get("phone")?.replace(/\D/g, "");
+        if (queryPhone && queryPhone.length === 10) {
+          savedPhone = queryPhone;
+          const queryName = urlParams?.get("name") || (queryPhone === "9820012345" ? "Demo Customer" : "");
+          setCustomer({ phone: queryPhone, fullName: queryName });
+          if (typeof window !== "undefined") {
+            localStorage.setItem("stb_customer_phone", queryPhone);
+            if (queryName) localStorage.setItem("stb_customer_name", queryName);
+          }
+        }
+
+        if (!savedPhone && typeof window !== "undefined") {
           const raw = localStorage.getItem("stb_customer_phone") || "";
           const clean = raw.replace(/\D/g, "");
           if (clean.length === 10) {
@@ -169,50 +181,64 @@ export default function CustomerView({
           }
         }
 
+        // Demo Cafe Credential Resolution Fallback
+        if (!savedPhone && merchant.slug === "demo-cafe") {
+          savedPhone = "9820012345";
+          setCustomer({
+            phone: "9820012345",
+            fullName: "Demo Customer",
+            email: "demo.customer@stickthebizz.in",
+          });
+        }
+
         if (!savedPhone) {
           try {
             const { createClient } = await import("@/lib/supabase/client");
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-              const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
               const userEmail = (user.email || "").trim().toLowerCase();
               const userName = user.user_metadata?.full_name || "";
-              if (userName) {
-                setNameInput(userName);
-              }
+              const isOwnerSession = userEmail.includes("owner") || userName.toLowerCase().includes("owner");
 
-              let cRow = null;
-              if (userPhone && userPhone.length === 10) {
-                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("phone", userPhone).maybeSingle();
-                cRow = data;
-                if (!cRow) {
-                  savedPhone = userPhone;
-                  setCustomer({ phone: userPhone, fullName: userName });
+              if (!isOwnerSession) {
+                const userPhone = (user.phone || user.user_metadata?.phone || "").replace(/\D/g, "");
+                if (userName) {
+                  setNameInput(userName);
                 }
-              }
-              if (!cRow && userEmail) {
-                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("email", userEmail).maybeSingle();
-                cRow = data;
-              }
-              if (!cRow && user.id) {
-                const { data } = await supabase.from("customers").select("id, phone, full_name").eq("auth_id", user.id).maybeSingle();
-                cRow = data;
-              }
-              if (cRow) {
-                savedPhone = (cRow.phone || userPhone || "").replace(/\D/g, "");
-                setCustomer({
-                  id: cRow.id,
-                  phone: savedPhone,
-                  fullName: cRow.full_name || userName,
-                  email: userEmail,
-                });
-                if (typeof window !== "undefined") {
-                  if (savedPhone) localStorage.setItem("stb_customer_phone", savedPhone);
-                  if (cRow.full_name || userName) {
-                    localStorage.setItem("stb_customer_name", cRow.full_name || userName);
+
+                let cRow = null;
+                if (userPhone && userPhone.length === 10) {
+                  const { data } = await supabase.from("customers").select("id, phone, full_name").eq("phone", userPhone).maybeSingle();
+                  cRow = data;
+                  if (!cRow) {
+                    savedPhone = userPhone;
+                    setCustomer({ phone: userPhone, fullName: userName });
                   }
-                  if (userEmail) localStorage.setItem("stb_customer_email", userEmail);
+                }
+                if (!cRow && userEmail) {
+                  const { data } = await supabase.from("customers").select("id, phone, full_name").eq("email", userEmail).maybeSingle();
+                  cRow = data;
+                }
+                if (!cRow && user.id) {
+                  const { data } = await supabase.from("customers").select("id, phone, full_name").eq("auth_id", user.id).maybeSingle();
+                  cRow = data;
+                }
+                if (cRow) {
+                  savedPhone = (cRow.phone || userPhone || "").replace(/\D/g, "");
+                  setCustomer({
+                    id: cRow.id,
+                    phone: savedPhone,
+                    fullName: cRow.full_name || userName,
+                    email: userEmail,
+                  });
+                  if (typeof window !== "undefined") {
+                    if (savedPhone) localStorage.setItem("stb_customer_phone", savedPhone);
+                    if (cRow.full_name || userName) {
+                      localStorage.setItem("stb_customer_name", cRow.full_name || userName);
+                    }
+                    if (userEmail) localStorage.setItem("stb_customer_email", userEmail);
+                  }
                 }
               }
             }

@@ -6,6 +6,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import StampGrid from "@/components/StampGrid";
 import dynamic from "next/dynamic";
+import InteractiveStampPass, { PassRuleConfig } from "@/components/landing/InteractiveStampPass";
+import RetailPresetSelector, { PresetKey, PresetItem, PRESET_OPTIONS } from "@/components/landing/RetailPresetSelector";
+import ROICalculator from "@/components/landing/ROICalculator";
+import OfflineBanner from "@/components/ui/OfflineBanner";
 
 const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
   ssr: false,
@@ -82,6 +86,8 @@ const CATEGORY_MAP: Record<CategoryPreset, CategoryData> = {
 };
 
 export default function HomePage() {
+  const [selectedPreset, setSelectedPreset] = useState<PresetKey>("chai");
+  const [passConfig, setPassConfig] = useState<PassRuleConfig>(PRESET_OPTIONS[0].config);
   const [activeCategory, setActiveCategory] = useState<CategoryPreset>("chai");
   const [visits, setVisits] = useState<number>(7);
   const [isScanning, setIsScanning] = useState(false);
@@ -94,17 +100,17 @@ export default function HomePage() {
   const [averageBill, setAverageBill] = useState<number>(120);
 
   // Extra return visits from loyalty streak (estimated 18% lift)
-  const monthlyExtraVisits = Math.round(dailyFootfall * 0.18 * 30);
-  const monthlyExtraRevenue = Math.round(monthlyExtraVisits * averageBill);
+  const [monthlyExtraVisits, setMonthlyExtraVisits] = useState(Math.round(180 * 0.18 * 30));
+  const [monthlyExtraRevenue, setMonthlyExtraRevenue] = useState(Math.round(monthlyExtraVisits * 120));
 
-  const currentRule = CATEGORY_MAP[activeCategory];
+  const currentRule = CATEGORY_MAP[activeCategory] || CATEGORY_MAP.chai;
 
-  const handleCategoryChange = (cat: CategoryPreset) => {
-    setActiveCategory(cat);
-    // adjust initial visits when switching category
-    const maxVisits = CATEGORY_MAP[cat].visitsRequired;
-    setVisits((prev) => Math.min(prev, maxVisits - 2));
-    setRecentlyStamped(null);
+  const handlePresetSelect = (preset: PresetItem) => {
+    setSelectedPreset(preset.key);
+    setPassConfig(preset.config);
+    if (preset.key === "chai" || preset.key === "kirana" || preset.key === "burger") {
+      setActiveCategory(preset.key as CategoryPreset);
+    }
   };
 
   // Crystal clear Web Audio API chime
@@ -238,209 +244,28 @@ export default function HomePage() {
 
               {/* 3. Interactive Customer Loyalty Pass Preview (Order 3 on mobile; Col 8-12 on desktop) */}
               <div className="order-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-3 flex flex-col items-center justify-center pt-2 lg:pt-0">
-                <div className="w-full max-w-[340px] flex flex-col items-center">
+                <div className="w-full max-w-[360px] flex flex-col items-center">
                   <div className="mb-2.5 flex flex-col items-center text-center">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-white/90 border border-primary/25 px-3 py-1 font-mono text-[10px] font-extrabold uppercase tracking-wider text-secondary shadow-xs">
                       <Sparkles className="h-3 w-3 text-primary" />
                       <span>INTERACTIVE PREVIEW • SAMPLE STAMP PASS</span>
                     </span>
                     <p className="mt-1 text-[11px] text-ink/75 font-medium leading-tight">
-                      Interactive sample pass showing how customer stamps punch in real time
+                      Click stamp circles or button to punch live in real time
                     </p>
                   </div>
 
-                  {/* Sleek Pass Display Frame (Lightweight, hardware-accelerated, zero mobile lag) */}
-                  <div className="relative w-full rounded-[2.2rem] border-[3px] border-[#102B4C] bg-[#102B4C] p-1.5 shadow-[0_12px_32px_rgba(16,43,76,0.18)]">
-                    <div className="rounded-[1.8rem] overflow-hidden bg-white border border-border/80">
-                      {/* Apple Wallet Style Digital Pass Card */}
-                      <div className="relative flex flex-col">
-                        {/* Laser sweep animation bar */}
-                        {isScanning && (
-                          <div className="absolute inset-x-0 z-30 pointer-events-none animate-laser-sweep">
-                            <div className="h-1 w-full bg-gradient-to-r from-transparent via-[#F2765E] to-transparent shadow-[0_0_12px_#F2765E]" />
-                          </div>
-                        )}
-
-                        {/* Pass Header with Navy Surface */}
-                        <div className="bg-secondary p-4 text-white">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="grid h-8 w-8 place-items-center rounded-lg bg-white/10 text-white">
-                                {activeCategory === "chai" && <ChaiCupIcon size={20} />}
-                                {activeCategory === "kirana" && <BasketIcon size={20} />}
-                                {activeCategory === "burger" && <StreakIcon size={20} />}
-                              </span>
-                              <div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-white/60">
-                                  Digital Loyalty Pass
-                                </p>
-                                <h3 className="font-display text-sm font-extrabold text-white">
-                                  {currentRule.name}
-                                </h3>
-                              </div>
-                            </div>
-                            <span className="rounded-full bg-primary/20 border border-primary/30 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
-                              Min ₹{currentRule.minSpend}
-                            </span>
-                          </div>
-
-                          <p className="mt-2.5 text-[11px] font-medium text-white/80">
-                            {currentRule.tagline}
-                          </p>
-                        </div>
-
-                        {/* White Ticket Body */}
-                        <div className="relative bg-white p-4">
-                          {/* Perforated ticket circles */}
-                          <div className="absolute -left-2 -top-2 h-4 w-4 rounded-full bg-[#102B4C]" />
-                          <div className="absolute -right-2 -top-2 h-4 w-4 rounded-full bg-[#102B4C]" />
-
-                          {/* Visit Status Bar */}
-                          <div className="flex items-center justify-between pb-2 border-b border-border/60">
-                            <div>
-                              <span className="font-display text-base font-extrabold text-secondary">
-                                {visits} of {currentRule.visitsRequired} visits
-                              </span>
-                              <p className="text-[10px] text-ink/65">
-                                Reward: <strong className="text-primary">{currentRule.rewardName}</strong>
-                              </p>
-                            </div>
-                            <span
-                              className={`rounded-full px-2 py-0.5 font-mono text-[10px] font-bold ${
-                                visits >= currentRule.visitsRequired
-                                  ? "bg-emerald-100 text-emerald-800"
-                                  : "bg-coral/15 text-primary"
-                              }`}
-                            >
-                              {visits >= currentRule.visitsRequired ? "REWARD READY" : `${progressPercent}% DONE`}
-                            </span>
-                          </div>
-
-                          {/* Progress Bar */}
-                          <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-sand">
-                            <div
-                              className="h-full bg-primary transition-all duration-500 rounded-full"
-                              style={{ width: `${progressPercent}%` }}
-                            />
-                          </div>
-
-                          {/* Stamp Grid with StarStampIcon & GiftBoxIcon */}
-                          <div className="mt-4">
-                            <StampGrid
-                              totalVisits={currentRule.visitsRequired}
-                              completedVisits={visits}
-                              rewardName={currentRule.rewardName}
-                              recentlyStampedIndex={recentlyStamped}
-                            />
-                          </div>
-
-                          {/* Action Area */}
-                          <div className="mt-5">
-                            {visits >= currentRule.visitsRequired ? (
-                              <div className="rounded-2xl border-2 border-emerald-500/40 bg-emerald-50/70 p-3 text-center shadow-inner">
-                                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-emerald-800">
-                                  <GiftBoxIcon size={18} />
-                                  <span>REWARD UNLOCKED!</span>
-                                </div>
-                                <p className="mt-1 font-mono text-sm font-extrabold text-secondary tracking-widest">
-                                  STB-7Q4K-29
-                                </p>
-                                <p className="text-[10px] text-ink/70">
-                                  Show this voucher code to the cashier to claim your {currentRule.rewardName}.
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={handleResetDemo}
-                                  className="mt-2.5 inline-flex min-h-[38px] w-full items-center justify-center gap-1.5 rounded-xl border border-secondary/30 bg-white px-3 text-xs font-bold text-secondary shadow-sm transition hover:bg-sand"
-                                >
-                                  <RotateCcw className="h-3.5 w-3.5" />
-                                  Reset Sample &amp; Punch Again
-                                </button>
-                              </div>
-                            ) : (
-                              <div>
-                                <button
-                                  type="button"
-                                  disabled={isScanning}
-                                  onClick={handleSimulateScan}
-                                  className={`flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold text-white shadow-sm transition-all duration-200 hover:bg-secondary active:scale-95 ${
-                                    isScanning ? "opacity-75 cursor-wait" : "hover:shadow-md"
-                                  }`}
-                                >
-                                  <Sparkles className="h-4 w-4 animate-spin" />
-                                  <span>{isScanning ? "Simulating Punch..." : "✨ Tap to Punch Stamp (Interactive Preview)"}</span>
-                                </button>
-                                <div className="mt-2 rounded-xl bg-sand/60 p-2 text-center border border-border/60">
-                                  <p className="text-[10px] text-ink/70 leading-relaxed font-medium">
-                                    💡 <strong>Notice for shop owners &amp; customers:</strong> This is an interactive preview demonstrating the real-time sound chime &amp; stamp punch animation. At your actual physical shop counter, customers scan your branded acrylic standee with their phone camera.
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-
-                            {feedbackToast && (
-                              <p className="mt-2 text-center text-xs font-bold text-primary animate-pulse">
-                                {feedbackToast}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <InteractiveStampPass rule={passConfig} />
                 </div>
               </div>
 
               {/* 4. Other Details (Order 4 on mobile: moved lower below phone animation; Col 1-7 on desktop) */}
               <div className="order-4 lg:col-span-7 flex flex-col items-start text-left space-y-6 pt-2">
-                {/* Category Preset Selector */}
-                <div className="w-full">
-                  <p className="text-xs font-bold uppercase tracking-wider text-ink/60 mb-2.5">
-                    Select a retail preset to preview live:
-                  </p>
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("chai")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "chai"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <ChaiCupIcon size={20} />
-                      Chai Stall (10 Visits → Free Chai)
-                    </button>
+                <RetailPresetSelector
+                  selectedPreset={selectedPreset}
+                  onSelectPreset={handlePresetSelect}
+                />
 
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("kirana")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "kirana"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <BasketIcon size={20} />
-                      Patel Kirana (10 Visits → 1L Oil)
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCategoryChange("burger")}
-                      className={`inline-flex min-h-[44px] items-center gap-2 rounded-full px-4 py-2 text-xs font-bold transition shadow-sm ${
-                        activeCategory === "burger"
-                          ? "bg-secondary text-white shadow-md"
-                          : "bg-white/80 text-ink/75 hover:bg-white/70 border border-white/30"
-                      }`}
-                    >
-                      <StreakIcon size={20} />
-                      Burger Joint (7 Visits → Free Burger)
-                    </button>
-                  </div>
-                </div>
-
-                {/* Key Bullet Highlights with Glassmorphism */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-ink/80 w-full">
                   <div className="flex items-center gap-2 rounded-xl bg-white/80 p-3 border border-white/30 shadow-sm">
                     <AntiFraudIcon size={20} />
@@ -452,25 +277,12 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                {/* Glassmorphic ROI Lift Card inside Hero */}
-                <div className="flex items-center justify-between gap-4 rounded-2xl bg-white/80 border border-white/30 p-3.5 shadow-sm max-w-md w-full">
-                  <div className="flex items-center gap-2.5">
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary/15 text-primary">
-                      <AnalyticsIcon size={18} />
-                    </span>
-                    <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink/60">
-                        Live ROI Calculator Lift
-                      </p>
-                      <p className="font-display text-base font-extrabold text-secondary">
-                        +₹{monthlyExtraRevenue.toLocaleString("en-IN")} / mo
-                      </p>
-                    </div>
-                  </div>
-                  <span className="rounded-full bg-emerald-500/15 text-emerald-800 border border-emerald-500/20 px-2.5 py-1 font-mono text-xs font-bold">
-                    +{monthlyExtraVisits} visits
-                  </span>
-                </div>
+                <ROICalculator
+                  onCalculationChange={(res) => {
+                    setMonthlyExtraRevenue(res.extraRevenue);
+                    setMonthlyExtraVisits(res.extraVisits);
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -1010,6 +822,7 @@ export default function HomePage() {
         </section>
       </main>
 
+      <OfflineBanner />
       <Footer />
     </div>
   );

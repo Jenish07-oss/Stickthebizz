@@ -79,6 +79,13 @@ function OwnerRegisterForm() {
         window.location.hostname === "127.0.0.1" ||
         window.location.hostname.endsWith(".local")
       );
+
+      // Auto-restore saved promo from localStorage or URL parameter
+      const urlPromo = new URLSearchParams(window.location.search).get("promo");
+      const savedPromo = urlPromo || localStorage.getItem("stb_applied_promo");
+      if (savedPromo) {
+        handleApplyPromo(savedPromo);
+      }
     }
   }, []);
 
@@ -132,13 +139,27 @@ function OwnerRegisterForm() {
       if (res.success && res.code) {
         setAppliedPromo(res.code);
         setPromoInput(res.code);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("stb_applied_promo", res.code);
+        }
+
+        let feedbackText = `✅ Promo applied — ₹${res.pricing?.discountAmount || 0} OFF`;
+        if (res.code === "BETA100" || res.code === "FREE100" || res.code === "FOUNDERPASS" || res.is100PercentOff) {
+          feedbackText = "✅ Promo applied — 100% OFF";
+        } else if (res.code === "TEST1" || res.code === "RUPEE1") {
+          feedbackText = "✅ Test mode — ₹1 checkout";
+        }
+
         setPromoMessage({
           success: true,
-          text: `✓ Code "${res.code}" applied: ${res.description}`,
+          text: feedbackText,
         });
-        toast.success(`Promo "${res.code}" applied!`);
+        toast.success(feedbackText);
       } else {
         setAppliedPromo(null);
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("stb_applied_promo");
+        }
         setPromoMessage({
           success: false,
           text: res.message || "Invalid redeem code.",
@@ -156,6 +177,9 @@ function OwnerRegisterForm() {
     setAppliedPromo(null);
     setPromoInput("");
     setPromoMessage(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("stb_applied_promo");
+    }
   };
 
   // Main Submit & Payment Flow
@@ -550,7 +574,7 @@ function OwnerRegisterForm() {
                   {isSubmitting
                     ? "Processing Subscription..."
                     : pricing.isFreeActivation
-                    ? "✓ Activate Free Counter Subscription (₹0)"
+                    ? "Activate Free Plan"
                     : `Proceed to Pay ₹${pricing.finalAmount.toLocaleString("en-IN")} via Razorpay`}
                 </span>
                 <ArrowRight className="h-4 w-4" />

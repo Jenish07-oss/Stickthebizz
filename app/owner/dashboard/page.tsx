@@ -94,6 +94,7 @@ export default function OwnerDashboardPage() {
   // Live WebSocket Queue
   const [pendingQueue, setPendingQueue] = useState<LivePendingScan[]>([]);
   const [ledger, setLedger] = useState<LedgerRecord[]>([]);
+  const [wsStatus, setWsStatus] = useState<"ONLINE" | "RECONNECTING" | "OFFLINE">("ONLINE");
 
   // 4-Digit Voucher PIN Verification
   const [pinInput, setPinInput] = useState("");
@@ -376,7 +377,40 @@ export default function OwnerDashboardPage() {
           }
         }
       )
-      .subscribe();
+      .on("broadcast", { event: "checkin.new" }, async () => {
+        playApprovalBell();
+        const { visits: freshPending } = await getPendingVisits(merchant.id);
+        if (freshPending) {
+          const activePending = freshPending.filter(
+            (item: any) => !processedVisitIdsRef.current.has(item.id)
+          );
+          setPendingQueue(activePending.map((item: any) => ({
+            id: item.id,
+            customerName: item.customers?.full_name || "Customer Check-in",
+            customerMasked: item.customers?.phone || "Customer Check-in",
+            amount: Number(item.bill_amount) || merchant.min_spend,
+            formattedTime: "Just now",
+            status: item.status,
+          })));
+        }
+      })
+      .on("broadcast", { event: "checkin.approved" }, (payload: any) => {
+        const id = payload?.payload?.visitId || payload?.payload?.id;
+        if (id) setPendingQueue((prev) => prev.filter((q) => q.id !== id));
+      })
+      .on("broadcast", { event: "checkin.rejected" }, (payload: any) => {
+        const id = payload?.payload?.visitId || payload?.payload?.id;
+        if (id) setPendingQueue((prev) => prev.filter((q) => q.id !== id));
+      })
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setWsStatus("ONLINE");
+        } else if (status === "TIMED_OUT" || status === "CHANNEL_ERROR") {
+          setWsStatus("RECONNECTING");
+        } else if (status === "CLOSED") {
+          setWsStatus("OFFLINE");
+        }
+      });
 
     // 3. Resilient Polling Fallback (Polls pending queue every 3.5 seconds)
     // Guarantees real-time check-in stream updates even if WebSocket drops or publication is delayed
@@ -993,9 +1027,25 @@ export default function OwnerDashboardPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-200 shadow-xs">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Terminal Online
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold border shadow-xs ${
+                  wsStatus === "ONLINE"
+                    ? "bg-emerald-50 text-emerald-800 border-emerald-200"
+                    : wsStatus === "RECONNECTING"
+                    ? "bg-amber-50 text-amber-800 border-amber-200"
+                    : "bg-gray-100 text-gray-700 border-gray-300"
+                }`}>
+                  <span className={`h-2 w-2 rounded-full ${
+                    wsStatus === "ONLINE"
+                      ? "bg-emerald-500 animate-pulse"
+                      : wsStatus === "RECONNECTING"
+                      ? "bg-amber-500 animate-ping"
+                      : "bg-gray-400"
+                  }`} />
+                  {wsStatus === "ONLINE"
+                    ? "🟢 Terminal Online"
+                    : wsStatus === "RECONNECTING"
+                    ? "🔴 Reconnecting..."
+                    : "⚪ Offline"}
                 </span>
 
                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold border ${
