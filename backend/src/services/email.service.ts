@@ -1,21 +1,77 @@
 import { resend } from "../config/resend";
 import { env } from "../config/env";
 
+/**
+ * Redacts email for secure logging (e.g., jo***@domain.com)
+ */
+export function redactEmail(email: string): string {
+  const parts = email.split("@");
+  if (parts.length !== 2) return "***";
+  const [local, domain] = parts;
+  const maskedLocal = local.length <= 2 ? `${local[0] || ""}***` : `${local.slice(0, 2)}***`;
+  return `${maskedLocal}@${domain}`;
+}
+
+/**
+ * Normalizes comma-separated email allowlist into an exact lookup set
+ */
+export function getParsedAllowlist(rawAllowlist: string): Set<string> {
+  if (!rawAllowlist || !rawAllowlist.trim()) {
+    return new Set<string>();
+  }
+  return new Set(
+    rawAllowlist
+      .split(",")
+      .map((addr) => addr.trim().toLowerCase())
+      .filter((addr) => addr.length > 0)
+  );
+}
+
+export interface EmailSendResult {
+  success: boolean;
+  id?: string;
+  blockedByAllowlist?: boolean;
+  simulated?: boolean;
+  message?: string;
+}
+
 export class EmailService {
   /**
    * Dispatches branded 6-digit OTP verification email via Resend
    */
-  static async sendOtpEmail(toEmail: string, otpCode: string): Promise<{ success: boolean; id?: string }> {
+  static async sendOtpEmail(toEmail: string, otpCode: string): Promise<EmailSendResult> {
     const cleanEmail = toEmail.trim().toLowerCase();
+    const isProduction = env.APP_ENV === "production";
 
-    // If Resend API key is not set (e.g. fresh local dev), log for testing
-    if (!resend || !env.RESEND_API_KEY) {
-      console.log(`\n======================================================`);
-      console.log(`📩 [DEV EMAIL SIMULATION] To: ${cleanEmail}`);
-      console.log(`🔑 Verification Code: ${otpCode}`);
-      console.log(`⏳ Valid for 5 minutes (IST)`);
-      console.log(`======================================================\n`);
-      return { success: true, id: "simulated-dev-id" };
+    // Non-production recipient authorization gate
+    if (!isProduction) {
+      // 1. Simulation mode (no Resend API key configured or client null)
+      if (!resend || !env.RESEND_API_KEY) {
+        console.log(`\n======================================================`);
+        console.log(`📩 [DEV EMAIL SIMULATION] Simulated OTP dispatch to: ${redactEmail(cleanEmail)}`);
+        console.log(`ℹ️ Delivery bypassed: no RESEND_API_KEY configured for ${env.APP_ENV}`);
+        console.log(`⏳ Valid for 5 minutes (IST) (OTP code suppressed for security)`);
+        console.log(`======================================================\n`);
+        return { success: true, simulated: true, id: "simulated-dev-id" };
+      }
+
+      // 2. Active Resend client in non-production: Recipient Allowlist Verification
+      const allowedSet = getParsedAllowlist(env.NON_PRODUCTION_EMAIL_ALLOWLIST);
+      if (!allowedSet.has(cleanEmail)) {
+        console.warn(
+          `⚠️ [SECURITY] Blocked non-production email to ${redactEmail(cleanEmail)}: recipient not authorized in NON_PRODUCTION_EMAIL_ALLOWLIST.`
+        );
+        return {
+          success: false,
+          blockedByAllowlist: true,
+          message: "Recipient email address is not authorized in this non-production environment.",
+        };
+      }
+    }
+
+    if (!resend) {
+      console.error("Resend client is unavailable for email delivery.");
+      return { success: false, message: "Email delivery service unavailable." };
     }
 
     const htmlContent = `
@@ -98,14 +154,14 @@ export class EmailService {
       });
 
       if (response.error) {
-        console.error("Resend delivery error:", response.error);
-        return { success: false };
+        console.error("Resend delivery error:", response.error.message || "Email provider rejected delivery");
+        return { success: false, message: response.error.message || "Email delivery failed" };
       }
 
       return { success: true, id: response.data?.id };
-    } catch (err) {
-      console.error("Failed to send OTP email:", err);
-      return { success: false };
+    } catch (err: any) {
+      console.error("Failed to send OTP email:", err?.message || "Delivery exception");
+      return { success: false, message: "Unexpected delivery exception" };
     }
   }
 }

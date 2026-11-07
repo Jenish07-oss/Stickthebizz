@@ -4,6 +4,10 @@ import { OtpService } from "./otp.service";
 import { signAccessToken, signRefreshToken, verifyRefreshToken } from "../utils/jwt";
 import { cleanPhone, isValidIndianPhone } from "../utils/sanitize";
 
+// Precomputed 10-round bcrypt hash used to equalize comparison timing when an account is not found,
+// mitigating timing attacks and account enumeration without incurring dynamic hashing overhead.
+const DUMMY_BCRYPT_HASH = "$2a$10$GciXex.rv1FNu7A2Mpb4F.PpPN632rcFkXXnFZEYq1c7ZSHd85pcC";
+
 export interface AuthResponse {
   user: {
     id: string;
@@ -25,6 +29,106 @@ export interface AuthResponse {
   } | null;
   accessToken: string;
   refreshToken: string;
+}
+
+interface LoginAttemptTracker {
+  failedAttempts: number;
+  firstFailedAt: number;
+  lockedUntil: number | null;
+}
+
+/**
+ * In-memory per-account login failure rate limiter.
+ * Limits failed login attempts to 5 per 15 minutes per normalized email address.
+ * Note: As an in-memory limiter, this state is process-local and does not persist across restarts.
+ */
+export class AccountThrottleService {
+  private static attempts = new Map<string, LoginAttemptTracker>();
+  private static readonly MAX_ATTEMPTS = 5;
+  private static readonly WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+
+  static isThrottled(email: string): { throttled: boolean; remainingSeconds?: number } {
+    const record = this.attempts.get(email);
+    if (!record) return { throttled: false };
+
+    const now = Date.now();
+
+    if (record.lockedUntil) {
+      if (now >= record.lockedUntil) {
+        this.attempts.delete(email);
+        return { throttled: false };
+      }
+      const remainingSeconds = Math.ceil((record.lockedUntil - now) / 1000);
+      return { throttled: true, remainingSeconds };
+    }
+
+    if (now - record.firstFailedAt > this.WINDOW_MS) {
+      this.attempts.delete(email);
+      return { throttled: false };
+    }
+
+    return { throttled: false };
+  }
+
+  /**
+   * Prunes memory safely when tracking entries exceed 5,000.
+   * STRICT INVARIANT: Active lockouts (lockedUntil > now) are NEVER evicted,
+   * preserving active brute-force protections.
+   * Only expired entries and old unlocked single-attempt entries are pruned.
+   */
+  private static prune(now: number): void {
+    if (this.attempts.size <= 5000) return;
+
+    // Pass 1: Remove all expired entries
+    for (const [key, val] of this.attempts.entries()) {
+      if (val.lockedUntil) {
+        if (now >= val.lockedUntil) {
+          this.attempts.delete(key);
+        }
+      } else if (now - val.firstFailedAt > this.WINDOW_MS) {
+        this.attempts.delete(key);
+      }
+    }
+
+    // Pass 2: If still above capacity, evict oldest unlocked records, preserving active lockouts
+    if (this.attempts.size > 5000) {
+      for (const [key, val] of this.attempts.entries()) {
+        if (!val.lockedUntil) {
+          this.attempts.delete(key);
+          if (this.attempts.size <= 5000) break;
+        }
+      }
+    }
+  }
+
+  static recordFailure(email: string): void {
+    const now = Date.now();
+    const record = this.attempts.get(email);
+
+    this.prune(now);
+
+    if (!record || now - record.firstFailedAt > this.WINDOW_MS) {
+      this.attempts.set(email, {
+        failedAttempts: 1,
+        firstFailedAt: now,
+        lockedUntil: null,
+      });
+      return;
+    }
+
+    record.failedAttempts += 1;
+    if (record.failedAttempts >= this.MAX_ATTEMPTS) {
+      record.lockedUntil = now + this.WINDOW_MS;
+    }
+  }
+
+  static recordSuccess(email: string): void {
+    this.attempts.delete(email);
+  }
+
+  static reset(): void {
+    this.attempts.clear();
+  }
 }
 
 export class AuthService {
@@ -256,7 +360,7 @@ export class AuthService {
   }
 
   /**
-   * Shop Owner Login with Email & Password or 4-digit PIN
+   * Shop Owner Login with Email & Password
    */
   static async loginMerchant(
     email: string,
@@ -266,6 +370,15 @@ export class AuthService {
   ): Promise<{ success: boolean; data?: AuthResponse; message?: string }> {
     const cleanEmail = email.trim().toLowerCase();
 
+    // 1. In-memory per-account failure throttle check (5 failed attempts per 15 min)
+    const throttleCheck = AccountThrottleService.isThrottled(cleanEmail);
+    if (throttleCheck.throttled) {
+      return {
+        success: false,
+        message: "Too many failed login attempts for this account. Please try again in 15 minutes.",
+      };
+    }
+
     const user = await prisma.user.findUnique({
       where: { email: cleanEmail },
       include: {
@@ -273,28 +386,22 @@ export class AuthService {
       },
     });
 
-    if (!user || user.role !== "MERCHANT") {
-      return { success: false, message: "Invalid merchant email or password." };
+    if (!user || user.role !== "MERCHANT" || !user.passwordHash) {
+      // Execute dummy bcrypt comparison to equalize timing and mitigate account enumeration
+      await bcrypt.compare(secret, DUMMY_BCRYPT_HASH);
+      AccountThrottleService.recordFailure(cleanEmail);
+      return { success: false, message: "Invalid email or password." };
     }
 
-    let isValid = false;
-
-    // Check password
-    if (user.passwordHash) {
-      isValid = await bcrypt.compare(secret, user.passwordHash);
-    }
-
-    // Check merchant terminal PIN as alternative PIN login
-    if (!isValid && user.merchants.length > 0 && secret.length === 4) {
-      const matchingMerchant = user.merchants.find((m) => m.redemptionPin === secret);
-      if (matchingMerchant) {
-        isValid = true;
-      }
-    }
+    const isValid = await bcrypt.compare(secret, user.passwordHash);
 
     if (!isValid) {
-      return { success: false, message: "Incorrect password or cashier PIN." };
+      AccountThrottleService.recordFailure(cleanEmail);
+      return { success: false, message: "Invalid email or password." };
     }
+
+    // Successful login: clear failure tracker for this account
+    AccountThrottleService.recordSuccess(cleanEmail);
 
     const tokenPayload = {
       userId: user.id,
