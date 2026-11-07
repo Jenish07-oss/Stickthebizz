@@ -131,7 +131,7 @@ export async function getCustomerWallet(params: {
   const passes: CustomerStorePass[] = merchants.map((m) => {
     const mVisits = merchantVisitsMap.get(m.id) || [];
     const approvedVisits = mVisits.filter(
-      (v) => v.status === "APPROVED" || v.status === "REDEEMED"
+      (v) => v.status === "APPROVED"
     );
 
     const visitsCount = approvedVisits.length;

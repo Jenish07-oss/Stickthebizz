@@ -8,6 +8,6 @@
     "dev:frontend": "npm --prefix frontend run dev",
     "build:backend": "npm --prefix backend run build",
     "build:frontend": "npm --prefix frontend run build",
-    "test:backend": "npx tsx backend/tests/phase2.test.ts"
+    "test:backend": "npx tsx --env-file=backend/.env backend/tests/phase2.test.ts && npx tsx backend/tests/wallet.test.ts"
   }
 }

@@ -606,3 +606,4 @@ When working on this repository, all future AI assistants MUST follow these stri
    - Backend Build: `npm run build:backend`
    - Frontend Build: `npm run build:frontend`
    - Regression Tests: `npm run test:backend`
+

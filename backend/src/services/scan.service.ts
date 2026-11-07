@@ -386,57 +386,99 @@ export async function verifyRedemptionPin(params: {
       return { success: false, message: "Customer account not found for this phone number." };
     }
 
-    const approvedVisits = await prisma.visit.findMany({
-      where: {
-        merchantId: merchant.id,
-        customerId: customer.id,
-        status: "APPROVED",
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    const totalApproved = approvedVisits.length;
     const required = merchant.visitsRequired || 10;
 
-    if (totalApproved < required) {
-      return {
-        success: false,
-        message: `Customer has ${totalApproved} approved stamps, but ${required} are required for this reward.`,
-      };
+    try {
+      const txResult = await prisma.$transaction(async (tx) => {
+        // 1. Fetch eligible visits that are CURRENTLY "APPROVED", oldest first
+        const approvedVisits = await tx.visit.findMany({
+          where: {
+            merchantId: merchant.id,
+            customerId: customer.id,
+            status: "APPROVED",
+          },
+          orderBy: { createdAt: "asc" },
+        });
+
+        const totalApproved = approvedVisits.length;
+
+        if (totalApproved < required) {
+          return {
+            success: false as const,
+            message: `Customer has ${totalApproved} approved stamps, but ${required} are required for this reward.`,
+            remainingSurplus: totalApproved,
+          };
+        }
+
+        const visitsToBurn = approvedVisits.slice(0, required).map((v: any) => v.id);
+
+        // 2. Atomic Conditional Update:
+        // Must include `status: "APPROVED"` to ensure no concurrent transaction already redeemed them.
+        const updateResult = await tx.visit.updateMany({
+          where: {
+            id: { in: visitsToBurn },
+            status: "APPROVED",
+          },
+          data: {
+            status: "REDEEMED",
+          },
+        });
+
+        // 3. Strict Concurrency Check:
+        // If the number of updated rows does not exactly match `required`,
+        // a concurrent request has already burned one or more of these stamps.
+        if (updateResult.count !== required) {
+          throw new Error("CONCURRENT_REDEMPTION_CONFLICT");
+        }
+
+        // 4. Create immutable Redemption audit ledger entry
+        await tx.redemption.create({
+          data: {
+            merchantId: merchant.id,
+            customerId: customer.id,
+            rewardName: merchant.rewardName,
+            stampsBurned: required,
+          },
+        });
+
+        const surplus = totalApproved - required;
+
+        return {
+          success: true as const,
+          remainingSurplus: surplus,
+        };
+      });
+
+      if (!txResult.success) {
+        return {
+          success: false,
+          message: txResult.message,
+        };
+      }
+
+      remainingSurplus = txResult.remainingSurplus;
+
+      // 5. Realtime broadcasts (dispatched strictly after transaction commit)
+      broadcastToCustomer(customer.id, "reward_burned", {
+        rewardTitle: merchant.rewardName,
+        shopName: merchant.name,
+        remainingSurplus,
+        timestamp: new Date().toISOString(),
+      });
+
+      broadcastToMerchant(merchant.id, "ledger_updated", {
+        action: "redeemed",
+        timestamp: new Date().toISOString(),
+      });
+    } catch (err: any) {
+      if (err.message === "CONCURRENT_REDEMPTION_CONFLICT" || err.code === "P2034") {
+        return {
+          success: false,
+          message: "Redemption conflict: stamps were already consumed by a concurrent request. Please refresh.",
+        };
+      }
+      throw err;
     }
-
-    const visitsToBurn = approvedVisits.slice(0, required).map((v: any) => v.id);
-
-    // Burn stamps by updating status to REDEEMED
-    await prisma.visit.updateMany({
-      where: { id: { in: visitsToBurn } },
-      data: { status: "REDEEMED" },
-    });
-
-    remainingSurplus = totalApproved - required;
-
-    // Record Redemption
-    await prisma.redemption.create({
-      data: {
-        merchantId: merchant.id,
-        customerId: customer.id,
-        rewardName: merchant.rewardName,
-        stampsBurned: required,
-      },
-    });
-
-    // Realtime broadcast to customer
-    broadcastToCustomer(customer.id, "reward_burned", {
-      rewardTitle: merchant.rewardName,
-      shopName: merchant.name,
-      remainingSurplus,
-      timestamp: new Date().toISOString(),
-    });
-
-    broadcastToMerchant(merchant.id, "ledger_updated", {
-      action: "redeemed",
-      timestamp: new Date().toISOString(),
-    });
   }
 
   return {
