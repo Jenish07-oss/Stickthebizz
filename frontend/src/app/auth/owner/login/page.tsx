@@ -10,7 +10,7 @@ import { api } from "@/lib/api/client";
 
 export default function OwnerLoginPage() {
   const router = useRouter();
-  const { user, loginMerchant } = useAuth();
+  const { user, login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -30,12 +30,32 @@ export default function OwnerLoginPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await api.auth.ownerLogin({ email: email.trim().toLowerCase(), password });
-      if (res && res.token && res.user) {
-        loginMerchant(res.token, res.user, res.merchant);
-        window.location.href = "/owner/dashboard";
+      const res = await api.auth.ownerLogin({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+
+      const token =
+        res?.data?.accessToken ||
+        res?.data?.token ||
+        res?.accessToken ||
+        res?.token;
+      const userData = res?.data?.user || res?.user;
+      const merchantData = res?.data?.merchant || res?.merchant;
+
+      if (token && userData) {
+        // 1. Await atomic token, memory & React state dispatch
+        await login(token, userData, merchantData);
+
+        // 2. Invalidate Next.js client router cache so fresh state is applied immediately
+        router.refresh();
+
+        // 3. Instant client-side redirect without page refresh
+        router.replace("/owner/dashboard");
       } else {
-        setErrorMessage(res?.message || "Invalid email or password. Please try again.");
+        setErrorMessage(
+          res?.message || "Invalid email or password. Please try again."
+        );
       }
     } catch (err: any) {
       setErrorMessage(err.message || "Failed to log in.");
@@ -95,10 +115,10 @@ export default function OwnerLoginPage() {
             </div>
           </div>
 
-          {/* Password */}
+          {/* Password or PIN */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider text-ink/70">
-              Password
+              Password or 4-Digit Cashier PIN
             </label>
             <div className="relative mt-1.5">
               <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-ink/40">
@@ -147,4 +167,3 @@ export default function OwnerLoginPage() {
     </div>
   );
 }
-

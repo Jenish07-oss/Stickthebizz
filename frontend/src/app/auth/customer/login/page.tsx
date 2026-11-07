@@ -198,13 +198,17 @@ export default function CustomerAuthPage() {
         fullName: fullName.trim() || undefined,
       });
 
-      if (!res.success || !res.token) {
+      const receivedToken = res.token || res.data?.accessToken || res.data?.token;
+      const userData = res.user || res.data?.user;
+      const customerData = res.customer || res.data?.customer;
+
+      if (!res.success || !receivedToken || !userData) {
         setErrorMessage(res.message || "Invalid or expired verification code.");
         setIsSubmitting(false);
         return;
       }
 
-      loginCustomer(res.token, res.user, res.customer);
+      await loginCustomer(receivedToken, userData, customerData);
 
       if (typeof window !== "undefined") {
         localStorage.setItem("stb_customer_email", cleanEmail);
@@ -217,6 +221,7 @@ export default function CustomerAuthPage() {
           ? new URLSearchParams(window.location.search).get("redirect")
           : null;
       toast.success("Login verified! Welcome to your Loyalty Pass.");
+      router.refresh();
       router.replace(redirectUrl || "/customer/dashboard");
     } catch (err: any) {
       setErrorMessage(err.message || "Verification failed. Please retry.");

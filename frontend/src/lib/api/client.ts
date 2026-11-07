@@ -1,4 +1,10 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+/**
+ * StickTheBizz Unified API Client
+ * Optimized for decoupled cross-domain authentication (Vercel <-> Render)
+ */
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "https://stickthebizz.onrender.com";
 
 let inMemoryToken: string | null = null;
 let isRefreshing = false;
@@ -18,9 +24,20 @@ export function setAccessToken(token: string | null) {
 export function getAccessToken(): string | null {
   if (inMemoryToken) return inMemoryToken;
   if (typeof window !== "undefined") {
-    return localStorage.getItem("stb_access_token");
+    const stored = localStorage.getItem("stb_access_token");
+    if (stored) {
+      inMemoryToken = stored;
+      return stored;
+    }
   }
   return null;
+}
+
+export function clearAccessToken() {
+  inMemoryToken = null;
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("stb_access_token");
+  }
 }
 
 export interface ApiResponse<T = any> {
@@ -32,7 +49,10 @@ export interface ApiResponse<T = any> {
 }
 
 /**
- * Unified fetch wrapper with auto cookie credentials, Bearer header, and 401 token refresh retry.
+ * Universal Fetch Client with:
+ * 1. credentials: "include" for cross-origin HTTP-only cookies
+ * 2. In-memory token & localStorage fallback Authorization Bearer header
+ * 3. Automatic 401 token refresh queue & request replay
  */
 export async function apiClient<T = any>(
   endpoint: string,
@@ -55,12 +75,12 @@ export async function apiClient<T = any>(
   const config: RequestInit = {
     ...options,
     headers,
-    credentials: "include", // Required for HTTP-only refresh cookies across domains
+    credentials: "include", // Essential for cross-site cookie exchange
   };
 
   let response = await fetch(url, config);
 
-  // If 401 and not already refreshing or calling refresh/login endpoint
+  // If 401 Unauthorized, attempt automatic token refresh (skip for login/refresh routes)
   if (
     response.status === 401 &&
     !endpoint.includes("/auth/refresh") &&
@@ -78,26 +98,34 @@ export async function apiClient<T = any>(
 
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
-          const newToken = refreshData.accessToken || refreshData.token;
+          const newToken =
+            refreshData?.accessToken ||
+            refreshData?.data?.accessToken ||
+            refreshData?.token;
+
           setAccessToken(newToken);
           refreshQueue.forEach((cb) => cb(newToken));
           refreshQueue = [];
 
-          // Retry initial request with new token
-          headers.set("Authorization", `Bearer ${newToken}`);
+          // Retry the original failed request with the new token
+          if (newToken) {
+            headers.set("Authorization", `Bearer ${newToken}`);
+          }
           response = await fetch(url, { ...config, headers });
         } else {
-          setAccessToken(null);
+          clearAccessToken();
           refreshQueue.forEach((cb) => cb(null));
           refreshQueue = [];
         }
       } catch {
-        setAccessToken(null);
+        clearAccessToken();
+        refreshQueue.forEach((cb) => cb(null));
+        refreshQueue = [];
       } finally {
         isRefreshing = false;
       }
     } else {
-      // Wait for ongoing refresh to complete
+      // Queue incoming parallel requests while refresh is pending
       const newToken = await new Promise<string | null>((resolve) => {
         refreshQueue.push(resolve);
       });
@@ -114,7 +142,8 @@ export async function apiClient<T = any>(
   const data = isJson ? await response.json() : await response.text();
 
   if (!response.ok) {
-    const errorMsg = data?.error || data?.message || `HTTP ${response.status} Request failed`;
+    const errorMsg =
+      data?.error || data?.message || `HTTP ${response.status} Request failed`;
     const err = new Error(errorMsg);
     (err as any).status = response.status;
     (err as any).data = data;
@@ -125,7 +154,7 @@ export async function apiClient<T = any>(
 }
 
 // -------------------------------------------------------------
-// Typed API SDK Namespaces
+// Typed API Endpoints
 // -------------------------------------------------------------
 
 export const api = {
@@ -135,27 +164,53 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email }),
       }),
-    verifyCustomerOtp: (data: { email: string; code: string; phone?: string; fullName?: string }) =>
-      apiClient<{ success: boolean; token?: string; user?: any; customer?: any; message?: string }>("/api/v1/auth/customer/otp/verify", {
+    verifyCustomerOtp: (data: {
+      email: string;
+      code: string;
+      phone?: string;
+      fullName?: string;
+    }) =>
+      apiClient<{
+        success: boolean;
+        token?: string;
+        data?: any;
+        user?: any;
+        customer?: any;
+        message?: string;
+      }>("/api/v1/auth/customer/otp/verify", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    ownerRegister: (data: { email: string; password?: string; fullName: string; phone?: string; shopName?: string }) =>
-      apiClient("/api/v1/auth/owner/register", {
+    ownerRegister: (data: {
+      email: string;
+      password?: string;
+      fullName: string;
+      phone?: string;
+      shopName?: string;
+    }) =>
+      apiClient<any>("/api/v1/auth/owner/register", {
         method: "POST",
         body: JSON.stringify(data),
       }),
     ownerLogin: (data: { email: string; password?: string; pin?: string }) =>
-      apiClient("/api/v1/auth/owner/login", {
+      apiClient<any>("/api/v1/auth/owner/login", {
         method: "POST",
         body: JSON.stringify(data),
       }),
-    getMe: () => apiClient("/api/v1/auth/me"),
-    logout: () => apiClient("/api/v1/auth/logout", { method: "POST" }),
-    refresh: () => apiClient("/api/v1/auth/refresh", { method: "POST" }),
+    getMe: () => apiClient<any>("/api/v1/auth/me"),
+    me: () => apiClient<any>("/api/v1/auth/me"),
+    logout: () => apiClient<any>("/api/v1/auth/logout", { method: "POST" }),
+    refresh: () => apiClient<any>("/api/v1/auth/refresh", { method: "POST" }),
   },
   scans: {
-    punch: (data: { customerPhone: string; merchantId: string; billAmount?: number; customerName?: string; scannedQrToken?: string; idempotencyKey?: string }) =>
+    punch: (data: {
+      customerPhone: string;
+      merchantId: string;
+      billAmount?: number;
+      customerName?: string;
+      scannedQrToken?: string;
+      idempotencyKey?: string;
+    }) =>
       apiClient("/api/v1/scans/punch", {
         method: "POST",
         body: JSON.stringify(data),
@@ -176,7 +231,11 @@ export const api = {
         body: JSON.stringify({ merchantId, pin, customerPhone }),
       }),
     status: (merchantId: string, phone?: string) =>
-      apiClient(`/api/v1/scans/status?merchantId=${merchantId}${phone ? `&customerPhone=${encodeURIComponent(phone)}` : ""}`),
+      apiClient(
+        `/api/v1/scans/status?merchantId=${merchantId}${
+          phone ? `&customerPhone=${encodeURIComponent(phone)}` : ""
+        }`
+      ),
     pending: (merchantId: string) =>
       apiClient(`/api/v1/scans/pending?merchantId=${merchantId}`),
     ledger: (merchantId: string, limit: number = 50) =>
@@ -184,7 +243,15 @@ export const api = {
   },
   customers: {
     wallet: (phone?: string, email?: string) =>
-      apiClient(`/api/v1/customers/wallet${phone ? `?phone=${encodeURIComponent(phone)}` : email ? `?email=${encodeURIComponent(email)}` : ""}`),
+      apiClient(
+        `/api/v1/customers/wallet${
+          phone
+            ? `?phone=${encodeURIComponent(phone)}`
+            : email
+            ? `?email=${encodeURIComponent(email)}`
+            : ""
+        }`
+      ),
     updateProfile: (fullName: string, phone: string) =>
       apiClient("/api/v1/customers/profile", {
         method: "PATCH",
@@ -196,12 +263,23 @@ export const api = {
         body: JSON.stringify(data),
       }),
     exportData: () => apiClient("/api/v1/customers/export"),
-    deleteAccount: () => apiClient("/api/v1/customers/profile", { method: "DELETE" }),
+    deleteAccount: () =>
+      apiClient("/api/v1/customers/profile", { method: "DELETE" }),
   },
   merchants: {
     me: () => apiClient("/api/v1/merchant/me"),
-    bySlug: (slug: string) => apiClient(`/api/v1/merchant/slug/${encodeURIComponent(slug)}`),
-    updateRules: (data: { merchantId: string; name?: string; category?: string; minSpend?: number; visitsRequired?: number; rewardName?: string; validityDays?: number; redemptionPin?: string }) =>
+    bySlug: (slug: string) =>
+      apiClient(`/api/v1/merchant/slug/${encodeURIComponent(slug)}`),
+    updateRules: (data: {
+      merchantId: string;
+      name?: string;
+      category?: string;
+      minSpend?: number;
+      visitsRequired?: number;
+      rewardName?: string;
+      validityDays?: number;
+      redemptionPin?: string;
+    }) =>
       apiClient("/api/v1/merchant/rules", {
         method: "PATCH",
         body: JSON.stringify(data),
@@ -223,14 +301,39 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ code, planId }),
       }),
-    createOrder: (planOrData: string | { planId: string; promoCode?: string; shopName?: string; email?: string; mobile?: string }, promoCode?: string) => {
-      const payload = typeof planOrData === "string" ? { planId: planOrData, promoCode } : planOrData;
+    createOrder: (
+      planOrData:
+        | string
+        | {
+            planId: string;
+            promoCode?: string;
+            shopName?: string;
+            email?: string;
+            mobile?: string;
+          },
+      promoCode?: string
+    ) => {
+      const payload =
+        typeof planOrData === "string"
+          ? { planId: planOrData, promoCode }
+          : planOrData;
       return apiClient<any>("/api/v1/subscriptions/create-order", {
         method: "POST",
         body: JSON.stringify(payload),
       });
     },
-    activate: (data: { orderId?: string; paymentId?: string; signature?: string; planId: string; promoCode?: string; shopName?: string; ownerName?: string; category?: string; mobile?: string; email?: string }) =>
+    activate: (data: {
+      orderId?: string;
+      paymentId?: string;
+      signature?: string;
+      planId: string;
+      promoCode?: string;
+      shopName?: string;
+      ownerName?: string;
+      category?: string;
+      mobile?: string;
+      email?: string;
+    }) =>
       apiClient<any>("/api/v1/subscriptions/activate", {
         method: "POST",
         body: JSON.stringify(data),
@@ -239,4 +342,3 @@ export const api = {
       apiClient(`/api/v1/subscriptions/status/${merchantId}`),
   },
 };
-
