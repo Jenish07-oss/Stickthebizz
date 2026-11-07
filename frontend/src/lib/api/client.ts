@@ -3,8 +3,9 @@
  * Optimized for decoupled cross-domain authentication (Vercel <-> Render)
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "https://stickthebizz.onrender.com";
+import { frontendEnv } from "../config/env";
+
+export const API_BASE_URL = frontendEnv.API_BASE_URL;
 
 let inMemoryToken: string | null = null;
 let isRefreshing = false;
