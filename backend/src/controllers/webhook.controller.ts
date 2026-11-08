@@ -6,21 +6,43 @@ import { verifyRazorpayWebhookSignature } from "../config/razorpay.js";
  * Handles incoming Razorpay webhook events using raw body verification.
  */
 export async function razorpayWebhookHandler(req: FastifyRequest, reply: FastifyReply) {
-  const signature = req.headers["x-razorpay-signature"] as string;
+  const signature = req.headers["x-razorpay-signature"];
 
-  // Use fastify-raw-body to get raw buffer / string
-  const rawBody = (req as any).rawBody || JSON.stringify(req.body);
+  // 1. Mandatory signature header presence check (VULN-01 fail-closed)
+  if (!signature || typeof signature !== "string" || !signature.trim()) {
+    req.log.warn("❌ Rejected Razorpay webhook: missing or empty 'x-razorpay-signature' header");
+    return reply.status(400).send({ error: "Missing or invalid webhook signature" });
+  }
 
-  if (signature) {
-    const isValid = verifyRazorpayWebhookSignature(rawBody, signature);
-    if (!isValid) {
-      req.log.warn("❌ Invalid Razorpay webhook signature");
-      return reply.status(400).send({ error: "Invalid signature" });
-    }
+  // 2. Raw request body retrieval (fastify-raw-body plugin field)
+  const rawBody = (req as any).rawBody;
+  if (!rawBody || (typeof rawBody !== "string" && !Buffer.isBuffer(rawBody))) {
+    req.log.error("❌ Rejected Razorpay webhook: raw body unavailable for signature verification");
+    return reply.status(400).send({ error: "Missing raw request body for signature verification" });
+  }
+
+  // 3. HMAC-SHA256 signature verification against dedicated RAZORPAY_WEBHOOK_SECRET
+  const isValid = verifyRazorpayWebhookSignature(rawBody, signature.trim());
+  if (!isValid) {
+    req.log.warn("❌ Rejected Razorpay webhook: invalid signature or unconfigured webhook secret");
+    return reply.status(400).send({ error: "Invalid signature" });
   }
 
   try {
-    const event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+    let event: any;
+    if (typeof req.body === "string") {
+      event = JSON.parse(req.body);
+    } else if (req.body && typeof req.body === "object") {
+      event = req.body;
+    } else if (typeof rawBody === "string") {
+      event = JSON.parse(rawBody);
+    } else if (Buffer.isBuffer(rawBody)) {
+      event = JSON.parse(rawBody.toString("utf8"));
+    }
+
+    if (!event || !event.event) {
+      return reply.status(400).send({ error: "Invalid webhook payload structure" });
+    }
 
     if (event.event === "payment.captured" || event.event === "order.paid") {
       const payment = event.payload?.payment?.entity;

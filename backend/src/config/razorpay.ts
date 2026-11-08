@@ -61,26 +61,36 @@ export function verifyRazorpaySignature(params: {
 }
 
 /**
- * Verifies Razorpay Webhook HMAC SHA256 signature against the raw body.
+ * Verifies Razorpay Webhook HMAC SHA256 signature against the raw body using dedicated RAZORPAY_WEBHOOK_SECRET.
+ * Fails closed if RAZORPAY_WEBHOOK_SECRET is not configured or empty.
+ * Never falls back to RAZORPAY_KEY_SECRET or unauthenticated verification.
  */
 export function verifyRazorpayWebhookSignature(
   rawBody: string | Buffer,
   signature: string
 ): boolean {
   const secret = process.env.RAZORPAY_WEBHOOK_SECRET || env.RAZORPAY_WEBHOOK_SECRET;
-  if (!secret) {
-    console.warn("[RAZORPAY] RAZORPAY_WEBHOOK_SECRET not set in environment.");
+  if (!secret || !secret.trim()) {
+    console.warn("[RAZORPAY WEBHOOK] RAZORPAY_WEBHOOK_SECRET not configured in environment. Failing closed.");
+    return false;
+  }
+
+  if (!signature || typeof signature !== "string" || !signature.trim()) {
+    return false;
+  }
+
+  if (!rawBody || (typeof rawBody !== "string" && !Buffer.isBuffer(rawBody))) {
     return false;
   }
 
   try {
     const expectedSignature = crypto
-      .createHmac("sha256", secret)
+      .createHmac("sha256", secret.trim())
       .update(rawBody)
       .digest("hex");
 
     const expectedBuf = Buffer.from(expectedSignature, "utf-8");
-    const actualBuf = Buffer.from(signature, "utf-8");
+    const actualBuf = Buffer.from(signature.trim(), "utf-8");
 
     if (expectedBuf.length !== actualBuf.length) {
       return false;

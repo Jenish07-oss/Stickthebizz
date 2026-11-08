@@ -45,7 +45,16 @@ export class EmailService {
 
     // Non-production recipient authorization gate
     if (!isProduction) {
-      // 1. Simulation mode (no Resend API key configured or client null)
+      // In staging, silent simulation is strictly forbidden. Real delivery configuration is required.
+      if (env.APP_ENV === "staging" && (!resend || !env.RESEND_API_KEY)) {
+        console.error("❌ [SECURITY] Email delivery misconfigured: RESEND_API_KEY is required in staging.");
+        return {
+          success: false,
+          message: "Email delivery service is unavailable in staging.",
+        };
+      }
+
+      // 1. Simulation mode (only allowed in development or test without a configured Resend API key)
       if (!resend || !env.RESEND_API_KEY) {
         console.log(`\n======================================================`);
         console.log(`📩 [DEV EMAIL SIMULATION] Simulated OTP dispatch to: ${redactEmail(cleanEmail)}`);
@@ -161,7 +170,7 @@ export class EmailService {
       return { success: true, id: response.data?.id };
     } catch (err: any) {
       console.error("Failed to send OTP email:", err?.message || "Delivery exception");
-      return { success: false, message: "Unexpected delivery exception" };
+      return { success: false, message: "Delivery request could not be completed. Please try again." };
     }
   }
 }

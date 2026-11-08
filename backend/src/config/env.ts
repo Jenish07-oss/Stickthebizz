@@ -4,6 +4,19 @@ import { z } from "zod";
 // Load environment variables from .env file
 dotenv.config();
 
+const KNOWN_PREDICTABLE_SECRETS = new Set([
+  "stb-access-secret-fallback-key-32chars",
+  "stb-refresh-secret-fallback-key-32chars",
+  "stb-otp-hmac-secret-fallback-key-32chars",
+  "stb-cron-secret-key",
+  "stb-jwt-access-secret-minimum-32-characters-long",
+  "stb-jwt-refresh-secret-minimum-32-characters-long",
+  "stb-hmac-sha256-otp-hash-secret-minimum-32-characters-long",
+  "stb-internal-cron-trigger-secret-key",
+  "your_razorpay_webhook_secret",
+  "your_razorpay_key_secret",
+]);
+
 export const envSchema = z
   .object({
     PORT: z.string().default("8000").transform((val) => parseInt(val, 10)),
@@ -19,10 +32,16 @@ export const envSchema = z
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     DIRECT_URL: z.string().optional(),
 
-    // JWT & Crypto Secrets
-    JWT_ACCESS_SECRET: z.string().min(16, "JWT_ACCESS_SECRET must be at least 16 chars").default("stb-access-secret-fallback-key-32chars"),
-    JWT_REFRESH_SECRET: z.string().min(16, "JWT_REFRESH_SECRET must be at least 16 chars").default("stb-refresh-secret-fallback-key-32chars"),
-    OTP_SECRET: z.string().min(16, "OTP_SECRET must be at least 16 chars").default("stb-otp-hmac-secret-fallback-key-32chars"),
+    // JWT & Crypto Secrets (No predictable defaults - mandatory strong secrets)
+    JWT_ACCESS_SECRET: z
+      .string({ required_error: "JWT_ACCESS_SECRET is required" })
+      .min(16, "JWT_ACCESS_SECRET must be at least 16 chars"),
+    JWT_REFRESH_SECRET: z
+      .string({ required_error: "JWT_REFRESH_SECRET is required" })
+      .min(16, "JWT_REFRESH_SECRET must be at least 16 chars"),
+    OTP_SECRET: z
+      .string({ required_error: "OTP_SECRET is required" })
+      .min(16, "OTP_SECRET must be at least 16 chars"),
 
     // Resend Email Delivery
     RESEND_API_KEY: z.string().default(""),
@@ -39,8 +58,10 @@ export const envSchema = z
     RAZORPAY_KEY_SECRET: z.string().default(""),
     RAZORPAY_WEBHOOK_SECRET: z.string().default(""),
 
-    // Cron Secret
-    CRON_SECRET: z.string().default("stb-cron-secret-key"),
+    // Cron Secret (No predictable defaults)
+    CRON_SECRET: z
+      .string({ required_error: "CRON_SECRET is required" })
+      .min(16, "CRON_SECRET must be at least 16 chars"),
   })
   .superRefine((data, ctx) => {
     // 1. Razorpay Key Environment Separation
@@ -128,6 +149,135 @@ export const envSchema = z
             break;
           }
         }
+      }
+    }
+
+    // 3. Staging and Production Secret Hardening & Fallback Rejection
+    const isProdOrStaging = data.APP_ENV === "production" || data.APP_ENV === "staging";
+
+    if (isProdOrStaging) {
+      // Minimum 32 characters required in staging and production
+      if (data.JWT_ACCESS_SECRET.length < 32) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["JWT_ACCESS_SECRET"],
+          message: `In ${data.APP_ENV} environment, JWT_ACCESS_SECRET must be at least 32 characters.`,
+        });
+      }
+      if (data.JWT_REFRESH_SECRET.length < 32) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["JWT_REFRESH_SECRET"],
+          message: `In ${data.APP_ENV} environment, JWT_REFRESH_SECRET must be at least 32 characters.`,
+        });
+      }
+      if (data.OTP_SECRET.length < 32) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["OTP_SECRET"],
+          message: `In ${data.APP_ENV} environment, OTP_SECRET must be at least 32 characters.`,
+        });
+      }
+      if (data.CRON_SECRET.length < 32) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["CRON_SECRET"],
+          message: `In ${data.APP_ENV} environment, CRON_SECRET must be at least 32 characters.`,
+        });
+      }
+
+      // Rejection of known repository / predictable fallback strings
+      if (KNOWN_PREDICTABLE_SECRETS.has(data.JWT_ACCESS_SECRET)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["JWT_ACCESS_SECRET"],
+          message: `Known repository placeholder or fallback secret is strictly prohibited in ${data.APP_ENV}.`,
+        });
+      }
+      if (KNOWN_PREDICTABLE_SECRETS.has(data.JWT_REFRESH_SECRET)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["JWT_REFRESH_SECRET"],
+          message: `Known repository placeholder or fallback secret is strictly prohibited in ${data.APP_ENV}.`,
+        });
+      }
+      if (KNOWN_PREDICTABLE_SECRETS.has(data.OTP_SECRET)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["OTP_SECRET"],
+          message: `Known repository placeholder or fallback secret is strictly prohibited in ${data.APP_ENV}.`,
+        });
+      }
+      if (KNOWN_PREDICTABLE_SECRETS.has(data.CRON_SECRET)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["CRON_SECRET"],
+          message: `Known repository placeholder or fallback secret is strictly prohibited in ${data.APP_ENV}.`,
+        });
+      }
+
+      // Independence: Secrets must be distinct from each other
+      if (data.JWT_ACCESS_SECRET === data.JWT_REFRESH_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["JWT_REFRESH_SECRET"],
+          message: "JWT_REFRESH_SECRET must be distinct and independent from JWT_ACCESS_SECRET.",
+        });
+      }
+      if (data.JWT_ACCESS_SECRET === data.OTP_SECRET || data.JWT_REFRESH_SECRET === data.OTP_SECRET) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["OTP_SECRET"],
+          message: "OTP_SECRET must be distinct and independent from JWT secrets.",
+        });
+      }
+      if (
+        data.CRON_SECRET === data.JWT_ACCESS_SECRET ||
+        data.CRON_SECRET === data.JWT_REFRESH_SECRET ||
+        data.CRON_SECRET === data.OTP_SECRET
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["CRON_SECRET"],
+          message: "CRON_SECRET must be distinct and independent from authentication secrets.",
+        });
+      }
+    }
+
+    // 4. Razorpay Webhook Secret Validation
+    const webhookSecret = data.RAZORPAY_WEBHOOK_SECRET ? data.RAZORPAY_WEBHOOK_SECRET.trim() : "";
+    if (webhookSecret) {
+      if (KNOWN_PREDICTABLE_SECRETS.has(webhookSecret)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["RAZORPAY_WEBHOOK_SECRET"],
+          message: "Known repository placeholder for RAZORPAY_WEBHOOK_SECRET is strictly prohibited.",
+        });
+      }
+
+      if (data.RAZORPAY_KEY_SECRET && webhookSecret === data.RAZORPAY_KEY_SECRET.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["RAZORPAY_WEBHOOK_SECRET"],
+          message:
+            "RAZORPAY_WEBHOOK_SECRET must not match RAZORPAY_KEY_SECRET. A dedicated webhook secret is required.",
+        });
+      }
+
+      if (webhookSecret === data.RAZORPAY_KEY_ID.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["RAZORPAY_WEBHOOK_SECRET"],
+          message: "RAZORPAY_WEBHOOK_SECRET cannot match RAZORPAY_KEY_ID.",
+        });
+      }
+
+      if (isProdOrStaging && webhookSecret.length < 16) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["RAZORPAY_WEBHOOK_SECRET"],
+          message: `In ${data.APP_ENV} environment, RAZORPAY_WEBHOOK_SECRET must be at least 16 characters long.`,
+        });
       }
     }
   });
