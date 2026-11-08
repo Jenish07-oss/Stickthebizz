@@ -8,6 +8,10 @@ process.env.NODE_ENV = "test";
 process.env.DATABASE_URL = "postgres://offline-mock-db:5432/mock_db";
 process.env.RAZORPAY_KEY_ID = "rzp_test_mockKeyForTestHarnessBaseline";
 process.env.NON_PRODUCTION_EMAIL_ALLOWLIST = "test@stickthebizz.in";
+process.env.JWT_ACCESS_SECRET = "mock-access-secret-32-chars-minimum-safe";
+process.env.JWT_REFRESH_SECRET = "mock-refresh-secret-32-chars-minimum-safe";
+process.env.OTP_SECRET = "mock-otp-hmac-secret-32-chars-minimum-safe";
+process.env.CRON_SECRET = "mock-cron-secret-32-chars-minimum-safe";
 
 async function runEnvValidationTests() {
   console.log("==================================================");
@@ -54,6 +58,7 @@ async function runEnvValidationTests() {
     JWT_ACCESS_SECRET: "mock-access-secret-32-chars-minimum-safe",
     JWT_REFRESH_SECRET: "mock-refresh-secret-32-chars-minimum-safe",
     OTP_SECRET: "mock-otp-hmac-secret-32-chars-minimum-safe",
+    CRON_SECRET: "mock-cron-secret-32-chars-minimum-safe",
     RAZORPAY_KEY_ID: "rzp_test_mockKey12345",
     RESEND_API_KEY: "re_mock_test_key_for_baseline",
     NON_PRODUCTION_EMAIL_ALLOWLIST: "dev@stickthebizz.in",
@@ -325,8 +330,10 @@ async function runEnvValidationTests() {
           ? ["/c", "npx", "tsx", ...extraArgs, "-e", `import('${envFileUrl}')`]
           : ["tsx", ...extraArgs, "-e", `import('${envFileUrl}')`];
 
+        const targetCwd = process.cwd().endsWith("backend") ? process.cwd() : path.resolve("backend");
+
         return spawnSync(cmd, args, {
-          cwd: path.resolve("backend"),
+          cwd: targetCwd,
           env: {
             ...process.env,
             ...customEnv,
@@ -389,7 +396,7 @@ async function runEnvValidationTests() {
         { status: childArgBypassAttempt.status }
       );
 
-      // Case E: Valid staging setup -> MUST EXIT 0
+      // Case E: Valid staging setup with independent strong secrets -> MUST EXIT 0
       const childStagingValid = runChildProcess({
         APP_ENV: "staging",
         NODE_ENV: "production",
@@ -397,6 +404,11 @@ async function runEnvValidationTests() {
         DATABASE_URL: "postgres://mock:5432/db",
         RESEND_API_KEY: "re_mock_valid_staging_key",
         NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "staging-access-secret-unique-random-64-bytes-val-1111",
+        JWT_REFRESH_SECRET: "staging-refresh-secret-unique-random-64-bytes-val-2222",
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+        RAZORPAY_WEBHOOK_SECRET: "staging-webhook-secret-min-16-chars-safe",
       });
       testAssert(
         "Child process with valid staging configuration and NODE_ENV=production exits 0",
@@ -404,17 +416,119 @@ async function runEnvValidationTests() {
         { status: childStagingValid.status }
       );
 
-      // Case F: Valid production setup -> MUST EXIT 0
+      // Case F: Valid production setup with independent strong secrets -> MUST EXIT 0
       const childProdValid = runChildProcess({
         APP_ENV: "production",
         NODE_ENV: "production",
         RAZORPAY_KEY_ID: "rzp_live_validProductionKey123",
         DATABASE_URL: "postgres://mock:5432/db",
+        JWT_ACCESS_SECRET: "prod-access-secret-unique-random-64-bytes-value-1111",
+        JWT_REFRESH_SECRET: "prod-refresh-secret-unique-random-64-bytes-value-2222",
+        OTP_SECRET: "prod-otp-secret-unique-random-64-bytes-value-33333333333",
+        CRON_SECRET: "prod-cron-secret-unique-random-64-bytes-value-444444444",
       });
       testAssert(
         "Child process with valid production configuration and live key exits 0",
         childProdValid.status === 0,
         { status: childProdValid.status }
+      );
+
+      // Case G (Phase 3G.10.2): Staging with missing JWT_ACCESS_SECRET -> MUST EXIT 1
+      const childStagingMissingSecret = runChildProcess({
+        APP_ENV: "staging",
+        NODE_ENV: "production",
+        RAZORPAY_KEY_ID: "rzp_test_validStagingKey123",
+        DATABASE_URL: "postgres://mock:5432/db",
+        RESEND_API_KEY: "re_mock_valid_staging_key",
+        NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "", // Missing/empty
+        JWT_REFRESH_SECRET: "staging-refresh-secret-unique-random-64-bytes-val-2222",
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+      });
+      testAssert(
+        "Child process with staging + missing JWT_ACCESS_SECRET exits nonzero (exit code 1)",
+        childStagingMissingSecret.status === 1,
+        { status: childStagingMissingSecret.status }
+      );
+
+      // Case H (Phase 3G.10.2): Staging with predictable fallback secret -> MUST EXIT 1
+      const childStagingPredictableSecret = runChildProcess({
+        APP_ENV: "staging",
+        NODE_ENV: "production",
+        RAZORPAY_KEY_ID: "rzp_test_validStagingKey123",
+        DATABASE_URL: "postgres://mock:5432/db",
+        RESEND_API_KEY: "re_mock_valid_staging_key",
+        NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "stb-access-secret-fallback-key-32chars", // Known repository fallback
+        JWT_REFRESH_SECRET: "staging-refresh-secret-unique-random-64-bytes-val-2222",
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+      });
+      testAssert(
+        "Child process with staging + predictable repository fallback secret exits nonzero (exit code 1)",
+        childStagingPredictableSecret.status === 1,
+        { status: childStagingPredictableSecret.status }
+      );
+
+      // Case I (Phase 3G.10.2): Staging with identical secrets -> MUST EXIT 1
+      const childStagingIdenticalSecrets = runChildProcess({
+        APP_ENV: "staging",
+        NODE_ENV: "production",
+        RAZORPAY_KEY_ID: "rzp_test_validStagingKey123",
+        DATABASE_URL: "postgres://mock:5432/db",
+        RESEND_API_KEY: "re_mock_valid_staging_key",
+        NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "identical-secret-shared-between-access-and-refresh",
+        JWT_REFRESH_SECRET: "identical-secret-shared-between-access-and-refresh", // Not independent
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+      });
+      testAssert(
+        "Child process with staging + non-independent secrets exits nonzero (exit code 1)",
+        childStagingIdenticalSecrets.status === 1,
+        { status: childStagingIdenticalSecrets.status }
+      );
+
+      // Case J (Phase 3G.10.2): Webhook secret matching API key secret -> MUST EXIT 1
+      const childWebhookMatchesKeySecret = runChildProcess({
+        APP_ENV: "staging",
+        NODE_ENV: "production",
+        RAZORPAY_KEY_ID: "rzp_test_validStagingKey123",
+        RAZORPAY_KEY_SECRET: "shared_secret_between_key_and_webhook",
+        RAZORPAY_WEBHOOK_SECRET: "shared_secret_between_key_and_webhook", // Matches key secret
+        DATABASE_URL: "postgres://mock:5432/db",
+        RESEND_API_KEY: "re_mock_valid_staging_key",
+        NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "staging-access-secret-unique-random-64-bytes-val-1111",
+        JWT_REFRESH_SECRET: "staging-refresh-secret-unique-random-64-bytes-val-2222",
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+      });
+      testAssert(
+        "Child process with RAZORPAY_WEBHOOK_SECRET matching RAZORPAY_KEY_SECRET exits nonzero (exit code 1)",
+        childWebhookMatchesKeySecret.status === 1,
+        { status: childWebhookMatchesKeySecret.status }
+      );
+
+      // Case K (Phase 3G.10.2): Webhook secret placeholder rejected -> MUST EXIT 1
+      const childWebhookPlaceholder = runChildProcess({
+        APP_ENV: "staging",
+        NODE_ENV: "production",
+        RAZORPAY_KEY_ID: "rzp_test_validStagingKey123",
+        RAZORPAY_WEBHOOK_SECRET: "your_razorpay_webhook_secret", // Known placeholder
+        DATABASE_URL: "postgres://mock:5432/db",
+        RESEND_API_KEY: "re_mock_valid_staging_key",
+        NON_PRODUCTION_EMAIL_ALLOWLIST: "staging-tester@stickthebizz.in",
+        JWT_ACCESS_SECRET: "staging-access-secret-unique-random-64-bytes-val-1111",
+        JWT_REFRESH_SECRET: "staging-refresh-secret-unique-random-64-bytes-val-2222",
+        OTP_SECRET: "staging-otp-secret-unique-random-64-bytes-val-3333333333",
+        CRON_SECRET: "staging-cron-secret-unique-random-64-bytes-val-444444444",
+      });
+      testAssert(
+        "Child process with placeholder RAZORPAY_WEBHOOK_SECRET exits nonzero (exit code 1)",
+        childWebhookPlaceholder.status === 1,
+        { status: childWebhookPlaceholder.status }
       );
     }
   } finally {

@@ -5,6 +5,10 @@ process.env.DATABASE_URL = "postgres://offline-mock-db:5432/mock_db";
 process.env.RAZORPAY_KEY_ID = "rzp_test_mockKeyForTestHarnessBaseline";
 process.env.NON_PRODUCTION_EMAIL_ALLOWLIST = "test@stickthebizz.in";
 process.env.RESEND_API_KEY = "re_mock_test_key_for_offline_tests";
+process.env.JWT_ACCESS_SECRET = "mock-access-secret-32-chars-minimum-safe";
+process.env.JWT_REFRESH_SECRET = "mock-refresh-secret-32-chars-minimum-safe";
+process.env.OTP_SECRET = "mock-otp-hmac-secret-32-chars-minimum-safe";
+process.env.CRON_SECRET = "mock-cron-secret-32-chars-minimum-safe";
 
 async function runEmailAllowlistTests() {
   console.log("==================================================");
@@ -42,6 +46,7 @@ async function runEmailAllowlistTests() {
     JWT_ACCESS_SECRET: "mock-access-secret-32-chars-minimum-safe",
     JWT_REFRESH_SECRET: "mock-refresh-secret-32-chars-minimum-safe",
     OTP_SECRET: "mock-otp-hmac-secret-32-chars-minimum-safe",
+    CRON_SECRET: "mock-cron-secret-32-chars-minimum-safe",
     RAZORPAY_KEY_ID: "rzp_test_mockKey12345",
     RESEND_API_KEY: "re_mock_test_key_for_offline_tests",
     NON_PRODUCTION_EMAIL_ALLOWLIST: "authorized@stickthebizz.in, dev-lead@stickthebizz.in",
@@ -236,6 +241,21 @@ async function runEmailAllowlistTests() {
         "Test 2: Staging + unauthorized recipient → blocked; zero Resend calls",
         result.success === false && result.blockedByAllowlist === true && resendSendCalls.length === 0
       );
+    }
+
+    // Test 2b (Phase 3G.10.2): Staging without Resend key -> strictly forbidden from simulating delivery
+    {
+      const { env } = await import("../src/config/env");
+      const savedKey = (env as any).RESEND_API_KEY;
+      (env as any).APP_ENV = "staging";
+      (env as any).RESEND_API_KEY = ""; // Missing key in staging
+
+      const result = await EmailService.sendOtpEmail("authorized@stickthebizz.in", "112233");
+      testAssert(
+        "Test 2b (Phase 3G.10.2): Staging without Resend key → fails closed, does NOT simulate delivery",
+        result.success === false && result.simulated !== true && result.message?.includes("unavailable in staging")
+      );
+      (env as any).RESEND_API_KEY = savedKey; // Restore
     }
 
     // Test 3: Development + unauthorized recipient -> blocked when Resend is configured
