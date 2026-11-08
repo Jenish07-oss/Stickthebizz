@@ -111,6 +111,37 @@ function validateBuildEnvironment() {
       );
     }
   }
+
+  // 4. Validate Razorpay Public Key ID if provided at build time
+  const rawRazorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim();
+  if (rawRazorpayKey && rawRazorpayKey !== "") {
+    if (/\s/.test(rawRazorpayKey)) {
+      throw new Error("❌ [BUILD SAFETY ERROR] NEXT_PUBLIC_RAZORPAY_KEY_ID must not contain whitespace.");
+    }
+    if (appEnv === "staging" || appEnv === "preview" || appEnv === "development") {
+      if (rawRazorpayKey.startsWith("rzp_live_")) {
+        throw new Error(
+          `❌ [BUILD SAFETY ERROR] Security Violation: '${appEnv}' build cannot use live Razorpay key ('rzp_live_...'). Live credentials in non-production builds are strictly prohibited.`
+        );
+      }
+      if (!rawRazorpayKey.startsWith("rzp_test_")) {
+        throw new Error(
+          `❌ [BUILD SAFETY ERROR] In '${appEnv}' build, NEXT_PUBLIC_RAZORPAY_KEY_ID must begin with 'rzp_test_'. Received: '${rawRazorpayKey}'`
+        );
+      }
+    } else if (appEnv === "production") {
+      if (rawRazorpayKey.startsWith("rzp_test_")) {
+        throw new Error(
+          `❌ [BUILD SAFETY ERROR] Security Violation: Production build cannot use test Razorpay key ('rzp_test_...').`
+        );
+      }
+      if (!rawRazorpayKey.startsWith("rzp_live_")) {
+        throw new Error(
+          `❌ [BUILD SAFETY ERROR] In production build, NEXT_PUBLIC_RAZORPAY_KEY_ID must begin with 'rzp_live_'. Received: '${rawRazorpayKey}'`
+        );
+      }
+    }
+  }
 }
 
 // Execute validation before Next.js compiles any routes or bundles

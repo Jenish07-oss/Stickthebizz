@@ -19,6 +19,7 @@ const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { frontendEnv } from "@/lib/config/env";
 import { useTerminalSocket } from "@/lib/ws/useTerminalSocket";
 import { playApprovalBell, playScanChime } from "@/lib/audio";
 import { decodeHtml } from "@/lib/utils/sanitize";
@@ -434,7 +435,7 @@ export default function OwnerDashboardPage() {
       }
 
       const options = {
-        key: orderRes.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderRes.keyId || frontendEnv.RAZORPAY_KEY_ID,
         amount: orderRes.amountPaise,
         currency: "INR",
         name: "StickTheBizz",

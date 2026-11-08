@@ -6,6 +6,7 @@ export interface FrontendEnv {
   APP_ENV: AppEnvironment;
   API_BASE_URL: string;
   WS_BASE_URL: string;
+  RAZORPAY_KEY_ID?: string;
 }
 
 export const PRODUCTION_BACKEND_HOSTNAME = "stickthebizz.onrender.com";
@@ -24,7 +25,14 @@ const appEnvSchema = z.enum(["development", "staging", "preview", "production"],
 export function validateFrontendEnv(
   envInput?: Record<string, string | undefined>
 ): FrontendEnv {
-  const envSource = envInput ?? (typeof process !== "undefined" ? process.env : {});
+  const envSource = envInput ?? {
+    NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+    NEXT_PUBLIC_WS_URL: process.env.NEXT_PUBLIC_WS_URL,
+    NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+    VERCEL_ENV: process.env.VERCEL_ENV,
+    NODE_ENV: process.env.NODE_ENV,
+  };
 
   // 1. Resolve Deployment Environment Identity
   let resolvedEnv: string | undefined = envSource.NEXT_PUBLIC_APP_ENV;
@@ -196,10 +204,48 @@ export function validateFrontendEnv(
     finalWsUrl = `${derivedProtocol}//${parsedApiUrl.host}/ws`;
   }
 
+  // 5. Razorpay Key Isolation Enforcement
+  const rawRazorpayKey = envSource.NEXT_PUBLIC_RAZORPAY_KEY_ID?.trim();
+  let finalRazorpayKey: string | undefined = undefined;
+
+  if (rawRazorpayKey && rawRazorpayKey !== "") {
+    if (/\s/.test(rawRazorpayKey)) {
+      throw new Error(
+        `❌ [FRONTEND ENV CONFIG ERROR] NEXT_PUBLIC_RAZORPAY_KEY_ID must not contain whitespace.`
+      );
+    }
+
+    if (appEnv === "staging" || appEnv === "preview" || appEnv === "development") {
+      if (rawRazorpayKey.startsWith("rzp_live_")) {
+        throw new Error(
+          `❌ [SECURITY VIOLATION] '${appEnv}' environment cannot use live Razorpay credentials ('rzp_live_...'). Live keys in non-production builds are strictly prohibited.`
+        );
+      }
+      if (!rawRazorpayKey.startsWith("rzp_test_")) {
+        throw new Error(
+          `❌ [FRONTEND ENV CONFIG ERROR] In '${appEnv}' environment, NEXT_PUBLIC_RAZORPAY_KEY_ID must begin with 'rzp_test_'. Received: '${rawRazorpayKey}'`
+        );
+      }
+    } else if (appEnv === "production") {
+      if (rawRazorpayKey.startsWith("rzp_test_")) {
+        throw new Error(
+          `❌ [SECURITY VIOLATION] Production frontend cannot use test Razorpay credentials ('rzp_test_...'). Production must use live credentials ('rzp_live_...').`
+        );
+      }
+      if (!rawRazorpayKey.startsWith("rzp_live_")) {
+        throw new Error(
+          `❌ [FRONTEND ENV CONFIG ERROR] In production environment, NEXT_PUBLIC_RAZORPAY_KEY_ID must begin with 'rzp_live_'. Received: '${rawRazorpayKey}'`
+        );
+      }
+    }
+    finalRazorpayKey = rawRazorpayKey;
+  }
+
   return {
     APP_ENV: appEnv,
     API_BASE_URL: normalizedApiBaseUrl,
     WS_BASE_URL: finalWsUrl,
+    RAZORPAY_KEY_ID: finalRazorpayKey,
   };
 }
 

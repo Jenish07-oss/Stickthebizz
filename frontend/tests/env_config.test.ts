@@ -536,6 +536,260 @@ async function runFrontendEnvConfigTests() {
       );
     }
 
+    // -------------------------------------------------------------------------
+    // TEST 22: Direct process.env inlining regression test for Staging
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 22] Direct process.env inlining regression test for Staging:");
+    {
+      const prevAppEnv = process.env.NEXT_PUBLIC_APP_ENV;
+      const prevApiUrl = process.env.NEXT_PUBLIC_API_URL;
+      const prevWsUrl = process.env.NEXT_PUBLIC_WS_URL;
+
+      try {
+        process.env.NEXT_PUBLIC_APP_ENV = "staging";
+        process.env.NEXT_PUBLIC_API_URL = "https://stickthebizz-api-staging.onrender.com";
+        delete process.env.NEXT_PUBLIC_WS_URL;
+
+        // Call validateFrontendEnv() without arguments (the exact path executed by client bundle in browser)
+        const res = validateFrontendEnv();
+
+        testAssert(
+          "Direct process.env reads staging APP_ENV correctly",
+          res.APP_ENV === "staging",
+          res.APP_ENV
+        );
+        testAssert(
+          "Direct process.env resolves staging API_BASE_URL to https://stickthebizz-api-staging.onrender.com",
+          res.API_BASE_URL === "https://stickthebizz-api-staging.onrender.com",
+          res.API_BASE_URL
+        );
+        testAssert(
+          "Direct process.env resolves staging WS_BASE_URL to wss://stickthebizz-api-staging.onrender.com/ws",
+          res.WS_BASE_URL === "wss://stickthebizz-api-staging.onrender.com/ws",
+          res.WS_BASE_URL
+        );
+        testAssert(
+          "Direct process.env strictly NEVER resolves to http://localhost:8000 in staging",
+          res.API_BASE_URL !== "http://localhost:8000" && !res.API_BASE_URL.includes("localhost"),
+          res.API_BASE_URL
+        );
+      } finally {
+        process.env.NEXT_PUBLIC_APP_ENV = prevAppEnv;
+        process.env.NEXT_PUBLIC_API_URL = prevApiUrl;
+        if (prevWsUrl !== undefined) {
+          process.env.NEXT_PUBLIC_WS_URL = prevWsUrl;
+        } else {
+          delete process.env.NEXT_PUBLIC_WS_URL;
+        }
+      }
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 23: Localhost fallback strictly prohibited in Staging
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 23] Localhost fallback strictly prohibited in Staging:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "staging",
+          NEXT_PUBLIC_API_URL: "http://localhost:8000",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Staging with http://localhost:8000 is rejected (requires HTTPS)",
+        caught && errorMsg.includes("must use HTTPS protocol in 'staging' environment"),
+        errorMsg
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 24: Staging with live Razorpay key (rzp_live_...) is strictly rejected
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 24] Staging with live Razorpay key is strictly rejected:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "staging",
+          NEXT_PUBLIC_API_URL: "https://stickthebizz-api-staging.onrender.com",
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_live_TwB6i8HNWltApy",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Staging with rzp_live_ key throws security violation",
+        caught && errorMsg.includes("cannot use live Razorpay credentials ('rzp_live_...')"),
+        errorMsg
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 25: Staging with test Razorpay key (rzp_test_...) succeeds
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 25] Staging with test Razorpay key succeeds:");
+    {
+      const res = validateFrontendEnv({
+        NEXT_PUBLIC_APP_ENV: "staging",
+        NEXT_PUBLIC_API_URL: "https://stickthebizz-api-staging.onrender.com",
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_demoKey12345",
+      });
+      testAssert(
+        "Staging with rzp_test_ key resolves correctly",
+        res.APP_ENV === "staging" && res.RAZORPAY_KEY_ID === "rzp_test_demoKey12345"
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 26: Staging with omitted/empty Razorpay key succeeds (dynamic backend resolution)
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 26] Staging with omitted Razorpay key succeeds:");
+    {
+      const res = validateFrontendEnv({
+        NEXT_PUBLIC_APP_ENV: "staging",
+        NEXT_PUBLIC_API_URL: "https://stickthebizz-api-staging.onrender.com",
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: "",
+      });
+      testAssert(
+        "Staging with empty Razorpay key sets RAZORPAY_KEY_ID to undefined",
+        res.APP_ENV === "staging" && res.RAZORPAY_KEY_ID === undefined
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 27: Preview with live Razorpay key is strictly rejected
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 27] Preview with live Razorpay key is strictly rejected:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "preview",
+          NEXT_PUBLIC_API_URL: "https://stickthebizz-api-staging.onrender.com",
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_live_SomeLiveKey123",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Preview with rzp_live_ key throws security violation",
+        caught && errorMsg.includes("cannot use live Razorpay credentials ('rzp_live_...')"),
+        errorMsg
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 28: Development with live Razorpay key is strictly rejected
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 28] Development with live Razorpay key is strictly rejected:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "development",
+          NEXT_PUBLIC_API_URL: "http://localhost:8000",
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_live_SomeLiveKey123",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Development with rzp_live_ key throws security violation",
+        caught && errorMsg.includes("cannot use live Razorpay credentials ('rzp_live_...')"),
+        errorMsg
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 29: Production with test Razorpay key is strictly rejected
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 29] Production with test Razorpay key is strictly rejected:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "production",
+          NEXT_PUBLIC_API_URL: "https://stickthebizz.onrender.com",
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_SomeTestKey123",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Production with rzp_test_ key throws security violation",
+        caught && errorMsg.includes("cannot use test Razorpay credentials ('rzp_test_...')"),
+        errorMsg
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 30: Production with valid live Razorpay key succeeds
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 30] Production with valid live Razorpay key succeeds:");
+    {
+      const res = validateFrontendEnv({
+        NEXT_PUBLIC_APP_ENV: "production",
+        NEXT_PUBLIC_API_URL: "https://stickthebizz.onrender.com",
+        NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_live_ValidProductionKey123",
+      });
+      testAssert(
+        "Production with rzp_live_ key resolves correctly",
+        res.APP_ENV === "production" && res.RAZORPAY_KEY_ID === "rzp_live_ValidProductionKey123"
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 31: Production with omitted/empty Razorpay key succeeds (dynamic backend resolution)
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 31] Production with omitted Razorpay key succeeds:");
+    {
+      const res = validateFrontendEnv({
+        NEXT_PUBLIC_APP_ENV: "production",
+        NEXT_PUBLIC_API_URL: "https://stickthebizz.onrender.com",
+      });
+      testAssert(
+        "Production with omitted key sets RAZORPAY_KEY_ID to undefined",
+        res.APP_ENV === "production" && res.RAZORPAY_KEY_ID === undefined
+      );
+    }
+
+    // -------------------------------------------------------------------------
+    // TEST 32: Whitespace in NEXT_PUBLIC_RAZORPAY_KEY_ID is rejected
+    // -------------------------------------------------------------------------
+    console.log("\n[TEST 32] Whitespace in NEXT_PUBLIC_RAZORPAY_KEY_ID is rejected:");
+    {
+      let caught = false;
+      let errorMsg = "";
+      try {
+        validateFrontendEnv({
+          NEXT_PUBLIC_APP_ENV: "staging",
+          NEXT_PUBLIC_API_URL: "https://stickthebizz-api-staging.onrender.com",
+          NEXT_PUBLIC_RAZORPAY_KEY_ID: "rzp_test_ key_with_space",
+        });
+      } catch (e: any) {
+        caught = true;
+        errorMsg = e.message;
+      }
+      testAssert(
+        "Whitespace in NEXT_PUBLIC_RAZORPAY_KEY_ID throws validation error",
+        caught && errorMsg.includes("must not contain whitespace"),
+        errorMsg
+      );
+    }
+
   } catch (err) {
     console.error("Test execution exception:", err);
     failed++;
