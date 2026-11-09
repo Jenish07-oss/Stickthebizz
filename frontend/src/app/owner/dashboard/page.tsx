@@ -328,16 +328,23 @@ export default function OwnerDashboardPage() {
         validityDays: Number(validityInput),
       });
 
-      if (res.success) {
-        setMerchant(res.merchant);
+      if (res?.success && res?.merchant) {
+        const m = res.merchant;
+        setMerchant(m);
+        if (m.name !== undefined) setShopNameInput(m.name);
+        if (m.minSpend !== undefined) setMinSpendInput(Number(m.minSpend) || 100);
+        if (m.visitsRequired !== undefined) setVisitsInput(Number(m.visitsRequired) || 10);
+        if (m.rewardName !== undefined) setRewardInput(m.rewardName);
+        if (m.validityDays !== undefined) setValidityInput(Number(m.validityDays) || 45);
+
         setRuleSaveMessage("✓ Streak rules updated instantly across all customer passes!");
         toast.success("Rules saved successfully!");
         setTimeout(() => setRuleSaveMessage(null), 3500);
       } else {
-        toast.error(res.message || "Failed to update rules.");
+        toast.error(res?.error || res?.message || "Failed to update rules.");
       }
-    } catch {
-      toast.error("Error saving rules.");
+    } catch (err: any) {
+      toast.error(err?.message || "Error saving rules.");
     }
   };
 

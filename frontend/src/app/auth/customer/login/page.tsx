@@ -431,6 +431,7 @@ export default function CustomerAuthPage() {
                 {otp.map((digit, idx) => (
                   <input
                     key={idx}
+                    data-testid={`otp-input-${idx}`}
                     ref={(el) => {
                       otpInputs.current[idx] = el;
                     }}
@@ -448,6 +449,7 @@ export default function CustomerAuthPage() {
 
               <button
                 type="submit"
+                data-testid="otp-verify-button"
                 disabled={isSubmitting || otp.join("").length < 6}
                 className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-card transition-all hover:bg-primary/90 disabled:opacity-50"
               >
