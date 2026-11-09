@@ -1,6 +1,7 @@
 import type { WebSocket } from "ws";
 import type { FastifyRequest } from "fastify";
 import { verifyAccessToken } from "../utils/jwt.js";
+import { authorizeMerchantAccess } from "../utils/authorization.js";
 
 interface ConnectedClient {
   socket: WebSocket;
@@ -101,89 +102,179 @@ export function broadcastToCustomer(customerId: string, event: string, payload: 
 }
 
 /**
+ * Returns active room sizes for testing and observability.
+ */
+export function getMerchantRoomSize(merchantId: string): number {
+  return merchantRooms.get(merchantId)?.size || 0;
+}
+
+export function getCustomerRoomSize(customerId: string): number {
+  return customerRooms.get(customerId)?.size || 0;
+}
+
+/**
  * Handle new WebSocket connection from `@fastify/websocket`.
  */
-export function handleTerminalSocketConnection(socket: WebSocket, req: FastifyRequest) {
-  const query = (req.query as Record<string, string>) || {};
-  const token = query.token || (req.cookies as Record<string, string>)?.["stb_access_token"];
-  const merchantId = query.merchantId || query.shopId;
-  const customerId = query.customerId;
+export async function handleTerminalSocketConnection(socket: WebSocket, req: FastifyRequest) {
+  try {
+    const query = (req.query as Record<string, string>) || {};
+    const authHeader = req.headers?.authorization;
+    const bearerToken = authHeader && authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : undefined;
+    const token =
+      query.token ||
+      (req.cookies as Record<string, string>)?.["stb_access_token"] ||
+      (req.cookies as Record<string, string>)?.["access_token"] ||
+      (req.cookies as Record<string, string>)?.["token"] ||
+      bearerToken;
+    const merchantId = query.merchantId || query.shopId;
+    const customerId = query.customerId;
 
-  let userId: string | undefined;
-  let role: string | undefined;
+    let userId: string | undefined;
+    let role: string | undefined;
 
-  if (token) {
-    const decoded = verifyAccessToken(token);
-    if (decoded) {
-      userId = decoded.userId;
-      role = decoded.role;
+    if (token) {
+      const decoded = verifyAccessToken(token);
+      if (decoded) {
+        userId = decoded.userId;
+        role = decoded.role;
+      }
     }
-  }
 
-  const client: ConnectedClient = {
-    socket,
-    userId,
-    role,
-    merchantId,
-    customerId,
-    isAlive: true,
-  };
-
-  if (merchantId) {
-    joinMerchantRoom(merchantId, client);
-  }
-  if (customerId) {
-    joinCustomerRoom(customerId, client);
-  }
-
-  // Welcome handshake
-  socket.send(
-    JSON.stringify({
-      type: "connected",
-      message: "StickTheBizz Counter Terminal WebSocket connected.",
-      merchantId,
+    const client: ConnectedClient = {
+      socket,
+      userId,
+      role,
+      merchantId: undefined, // Only set upon verified authorization
       customerId,
-      timestamp: new Date().toISOString(),
-    })
-  );
+      isAlive: true,
+    };
 
-  // Ping-pong heartbeat
-  socket.on("pong", () => {
-    client.isAlive = true;
-  });
+    // Strict Multi-Tenant Authorization for Merchant Room Subscription
+    if (merchantId) {
+      const auth = await authorizeMerchantAccess(merchantId, userId ? { userId, role } : undefined);
+      if (!auth.authorized) {
+        if (socket.readyState === 1) { // 1 = OPEN
+          socket.send(
+            JSON.stringify({
+              type: "error",
+              error: auth.error,
+              message: auth.message,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          socket.close(auth.statusCode === 401 ? 4401 : 4403, auth.message);
+        }
+        return;
+      }
 
-  socket.on("message", (raw: any) => {
+      client.merchantId = auth.merchant!.id;
+      joinMerchantRoom(client.merchantId, client);
+    }
+
+    if (customerId) {
+      joinCustomerRoom(customerId, client);
+    }
+
+    // Welcome handshake
+    if (socket.readyState === 1) {
+      socket.send(
+        JSON.stringify({
+          type: "connected",
+          message: "StickTheBizz Counter Terminal WebSocket connected.",
+          merchantId: client.merchantId,
+          customerId: client.customerId,
+          timestamp: new Date().toISOString(),
+        })
+      );
+    }
+
+    // Ping-pong heartbeat
+    socket.on("pong", () => {
+      client.isAlive = true;
+    });
+
+    socket.on("message", async (raw: any) => {
+      try {
+        const data = JSON.parse(raw.toString());
+        if (data.type === "ping") {
+          if (socket.readyState === 1) {
+            socket.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
+          }
+        } else if (data.type === "subscribe_merchant" && data.merchantId) {
+          // Authorize dynamic subscription attempt
+          const auth = await authorizeMerchantAccess(
+            data.merchantId,
+            client.userId ? { userId: client.userId, role: client.role } : undefined
+          );
+
+          if (!auth.authorized) {
+            if (socket.readyState === 1) {
+              socket.send(
+                JSON.stringify({
+                  type: "error",
+                  error: auth.error,
+                  message: auth.message,
+                  room: `merchant:${data.merchantId}`,
+                  timestamp: new Date().toISOString(),
+                })
+              );
+            }
+            return;
+          }
+
+          if (client.merchantId && merchantRooms.has(client.merchantId)) {
+            merchantRooms.get(client.merchantId)?.delete(client);
+          }
+          client.merchantId = auth.merchant!.id;
+          joinMerchantRoom(client.merchantId, client);
+
+          if (socket.readyState === 1) {
+            socket.send(
+              JSON.stringify({
+                type: "subscribed",
+                room: `merchant:${client.merchantId}`,
+                timestamp: new Date().toISOString(),
+              })
+            );
+          }
+        } else if (data.type === "subscribe_customer" && data.customerId) {
+          if (client.customerId && customerRooms.has(client.customerId)) {
+            customerRooms.get(client.customerId)?.delete(client);
+          }
+          client.customerId = data.customerId;
+          joinCustomerRoom(data.customerId, client);
+
+          if (socket.readyState === 1) {
+            socket.send(
+              JSON.stringify({
+                type: "subscribed",
+                room: `customer:${data.customerId}`,
+                timestamp: new Date().toISOString(),
+              })
+            );
+          }
+        }
+      } catch {
+        // Ignore unparseable frames
+      }
+    });
+
+    socket.on("close", () => {
+      removeClient(client);
+    });
+
+    socket.on("error", () => {
+      removeClient(client);
+    });
+  } catch (err: any) {
     try {
-      const data = JSON.parse(raw.toString());
-      if (data.type === "ping") {
-        socket.send(JSON.stringify({ type: "pong", timestamp: Date.now() }));
-      } else if (data.type === "subscribe_merchant" && data.merchantId) {
-        if (client.merchantId) {
-          merchantRooms.get(client.merchantId)?.delete(client);
-        }
-        client.merchantId = data.merchantId;
-        joinMerchantRoom(data.merchantId, client);
-        socket.send(JSON.stringify({ type: "subscribed", room: `merchant:${data.merchantId}` }));
-      } else if (data.type === "subscribe_customer" && data.customerId) {
-        if (client.customerId) {
-          customerRooms.get(client.customerId)?.delete(client);
-        }
-        client.customerId = data.customerId;
-        joinCustomerRoom(data.customerId, client);
-        socket.send(JSON.stringify({ type: "subscribed", room: `customer:${data.customerId}` }));
+      if (socket.readyState === 1) {
+        socket.close(1011, "Internal server error");
       }
     } catch {
-      // Ignore unparseable frames
+      // Ignore cleanup error
     }
-  });
-
-  socket.on("close", () => {
-    removeClient(client);
-  });
-
-  socket.on("error", () => {
-    removeClient(client);
-  });
+  }
 }
 
 // 30s Heartbeat sweep
