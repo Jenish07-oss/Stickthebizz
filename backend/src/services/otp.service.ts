@@ -80,7 +80,7 @@ export class OtpService {
 
       // Execute concurrency-safe cooldown check and persistence inside a single transaction
       const txResult = await prisma.$transaction(async (tx) => {
-        const isProduction = process.env.NODE_ENV === "production" || env.NODE_ENV === "production";
+        const isProduction = env.APP_ENV === "production";
 
         // Inter-process PostgreSQL transaction advisory lock enforcement
         if (typeof (tx as any).$queryRaw !== "function") {
@@ -276,7 +276,7 @@ export class OtpService {
       };
     }
 
-    const isProduction = process.env.NODE_ENV === "production" || env.NODE_ENV === "production";
+    const isProduction = env.APP_ENV === "production";
     const isTestEmail = cleanEmail === "test.customer@stickthebizz.in" || cleanEmail === "demo.customer@stickthebizz.in";
 
     // In production, reject static test code shortcut even if an old non-prod hash exists
