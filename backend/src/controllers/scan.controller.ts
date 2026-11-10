@@ -8,6 +8,7 @@ import {
   getMerchantLedger,
   getCustomerMerchantStatus,
 } from "../services/scan.service.js";
+import { authorizeMerchantAccess } from "../utils/authorization.js";
 
 export async function submitScanHandler(req: FastifyRequest, reply: FastifyReply) {
   const body = (req.body as any) || {};
@@ -104,11 +105,16 @@ export async function getPendingVisitsHandler(req: FastifyRequest, reply: Fastif
   const query = (req.query as any) || {};
   const merchantId = query.merchantId;
 
-  if (!merchantId) {
-    return reply.status(400).send({ success: false, error: "merchantId is required" });
+  const auth = await authorizeMerchantAccess(merchantId, req.user);
+  if (!auth.authorized) {
+    return reply.status(auth.statusCode).send({
+      success: false,
+      error: auth.error,
+      message: auth.message,
+    });
   }
 
-  const result = await getPendingVisits(merchantId);
+  const result = await getPendingVisits(auth.merchant!.id);
   return reply.status(200).send(result);
 }
 
@@ -116,12 +122,17 @@ export async function getLedgerHandler(req: FastifyRequest, reply: FastifyReply)
   const query = (req.query as any) || {};
   const merchantId = query.merchantId;
 
-  if (!merchantId) {
-    return reply.status(400).send({ success: false, error: "merchantId is required" });
+  const auth = await authorizeMerchantAccess(merchantId, req.user);
+  if (!auth.authorized) {
+    return reply.status(auth.statusCode).send({
+      success: false,
+      error: auth.error,
+      message: auth.message,
+    });
   }
 
   const limit = query.limit ? parseInt(query.limit, 10) : 50;
-  const result = await getMerchantLedger(merchantId, limit);
+  const result = await getMerchantLedger(auth.merchant!.id, limit);
   return reply.status(200).send(result);
 }
 

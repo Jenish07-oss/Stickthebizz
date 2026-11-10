@@ -85,18 +85,10 @@ export default function CustomerAuthPage() {
 
     setIsSubmitting(true);
     try {
-      if (cleanEmail === "demo.customer@stickthebizz.in") {
-        setOtpSuccessMessage("✓ Test account recognized! Use code: 123456");
-        toast.success("Test Code: 123456");
-        setStep("otp");
-        setIsSubmitting(false);
-        return;
-      }
-
       const res = await api.auth.requestCustomerOtp(cleanEmail);
       if (res && res.success) {
-        setOtpSuccessMessage(`Verification code sent to ${cleanEmail}! Check your inbox and Spam folder.`);
-        toast.success("Verification code sent! Check your inbox.");
+        setOtpSuccessMessage(res.message || `Verification code sent to ${cleanEmail}! Check your inbox and Spam folder.`);
+        toast.success(res.message || "Verification code sent! Check your inbox.");
         setStep("otp");
       } else {
         setErrorMessage(res?.message || "Failed to dispatch verification email. Please try again.");
@@ -117,18 +109,14 @@ export default function CustomerAuthPage() {
     try {
       const cleanEmail = email.trim().toLowerCase();
 
-      if (cleanEmail === "demo.customer@stickthebizz.in") {
-        setOtpSuccessMessage("✓ Test code: 123456");
-        toast.success("Test Code: 123456");
-      } else {
-        const res = await api.auth.requestCustomerOtp(cleanEmail);
-        if (!res?.success) {
-          setErrorMessage(res?.message || "Failed to resend code. Please try again.");
-          setIsResending(false);
-          return;
-        }
-        setOtpSuccessMessage(`✓ New verification code sent to ${cleanEmail}! Check inbox & Spam.`);
+      const res = await api.auth.requestCustomerOtp(cleanEmail);
+      if (!res?.success) {
+        setErrorMessage(res?.message || "Failed to resend code. Please try again.");
+        setIsResending(false);
+        return;
       }
+      setOtpSuccessMessage(res.message || `✓ New verification code sent to ${cleanEmail}! Check inbox & Spam.`);
+      toast.success(res.message || "New verification code sent! Check inbox & Spam.");
 
       setOtp(["", "", "", "", "", ""]);
       otpInputs.current[0]?.focus();
@@ -431,6 +419,7 @@ export default function CustomerAuthPage() {
                 {otp.map((digit, idx) => (
                   <input
                     key={idx}
+                    data-testid={`otp-input-${idx}`}
                     ref={(el) => {
                       otpInputs.current[idx] = el;
                     }}
@@ -448,6 +437,7 @@ export default function CustomerAuthPage() {
 
               <button
                 type="submit"
+                data-testid="otp-verify-button"
                 disabled={isSubmitting || otp.join("").length < 6}
                 className="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-primary px-6 text-sm font-bold text-white shadow-card transition-all hover:bg-primary/90 disabled:opacity-50"
               >

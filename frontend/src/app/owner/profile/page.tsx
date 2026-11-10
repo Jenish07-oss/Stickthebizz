@@ -8,6 +8,7 @@ import Footer from "@/components/Footer";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { frontendEnv } from "@/lib/config/env";
 import { SUBSCRIPTION_PLANS, calculatePlanPricing, SubscriptionPlanId } from "@/lib/pricing";
 import { decodeHtml } from "@/lib/utils/sanitize";
 import {
@@ -201,7 +202,7 @@ export default function OwnerProfilePage() {
       }
 
       const options = {
-        key: orderRes.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderRes.keyId || frontendEnv.RAZORPAY_KEY_ID,
         amount: orderRes.amountPaise,
         currency: orderRes.currency || "INR",
         name: "StickTheBizz",

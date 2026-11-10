@@ -75,14 +75,28 @@ export default function CounterQR({
     iframe.style.border = "0";
     document.body.appendChild(iframe);
 
-    const doc = iframe.contentWindow?.document;
+    let doc: Document | null | undefined = null;
+    try {
+      doc = iframe.contentWindow?.document || iframe.contentDocument;
+    } catch (err) {
+      console.error("[CounterQR] Standee print failed: iframe document access threw an exception.", err);
+      iframe.remove();
+      return;
+    }
+
     if (!doc) {
-      window.print();
+      console.error("[CounterQR] Standee print failed: iframe document context is inaccessible.");
+      iframe.remove();
       return;
     }
 
     const svgEl = document.getElementById("clean-standee-qr");
-    const svgHtml = svgEl ? svgEl.outerHTML : "";
+    if (!svgEl) {
+      console.error("[CounterQR] Standee print failed: clean-standee-qr SVG element not found in DOM.");
+      iframe.remove();
+      return;
+    }
+    const svgHtml = svgEl.outerHTML;
 
     doc.open();
     doc.write(`<!DOCTYPE html>
@@ -335,14 +349,7 @@ export default function CounterQR({
         <div className="flex flex-wrap items-center justify-center gap-3">
           <button
             type="button"
-            onClick={() => {
-              const printTarget = document.getElementById("standee-print-target");
-              if (printTarget) printTarget.style.display = "flex";
-              window.print();
-              window.onafterprint = () => {
-                if (printTarget) printTarget.style.display = "none";
-              };
-            }}
+            onClick={handlePrint}
             className="inline-flex min-h-[48px] items-center gap-2 rounded-full bg-secondary px-6 text-sm font-bold text-white shadow-sm transition hover:bg-primary"
           >
             <Printer className="h-4 w-4" />

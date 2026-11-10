@@ -24,6 +24,7 @@ import Logo from "@/components/Logo";
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { frontendEnv } from "@/lib/config/env";
 import {
   SubscriptionPlanId,
   SUBSCRIPTION_PLANS,
@@ -263,7 +264,7 @@ function OwnerRegisterForm() {
       }
 
       const options = {
-        key: orderRes.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderRes.keyId || frontendEnv.RAZORPAY_KEY_ID,
         amount: orderRes.amountPaise,
         currency: orderRes.currency || "INR",
         name: "StickTheBizz",

@@ -15,7 +15,8 @@ export class AuthController {
     }
 
     const result = await OtpService.requestOtp(email);
-    return reply.status(result.success ? 200 : 400).send(result);
+    const statusCode = result.statusCode || (result.success ? 200 : 400);
+    return reply.status(statusCode).send(result);
   }
 
   /**

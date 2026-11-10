@@ -9,7 +9,9 @@ import {
   playMilestoneFanfare,
 } from "../audio";
 
-const WS_BASE_URL = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:8000/ws";
+import { frontendEnv } from "../config/env";
+
+const WS_BASE_URL = frontendEnv.WS_BASE_URL;
 
 export interface UseTerminalSocketOptions {
   merchantId?: string;

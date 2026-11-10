@@ -19,6 +19,7 @@ const ConfettiEffect = dynamic(() => import("@/components/ConfettiEffect"), {
 import { useToast } from "@/components/ui/Toast";
 import { api } from "@/lib/api/client";
 import { useAuth } from "@/context/AuthContext";
+import { frontendEnv } from "@/lib/config/env";
 import { useTerminalSocket } from "@/lib/ws/useTerminalSocket";
 import { playApprovalBell, playScanChime } from "@/lib/audio";
 import { decodeHtml } from "@/lib/utils/sanitize";
@@ -327,16 +328,23 @@ export default function OwnerDashboardPage() {
         validityDays: Number(validityInput),
       });
 
-      if (res.success) {
-        setMerchant(res.merchant);
+      if (res?.success && res?.merchant) {
+        const m = res.merchant;
+        setMerchant(m);
+        if (m.name !== undefined) setShopNameInput(m.name);
+        if (m.minSpend !== undefined) setMinSpendInput(Number(m.minSpend) || 100);
+        if (m.visitsRequired !== undefined) setVisitsInput(Number(m.visitsRequired) || 10);
+        if (m.rewardName !== undefined) setRewardInput(m.rewardName);
+        if (m.validityDays !== undefined) setValidityInput(Number(m.validityDays) || 45);
+
         setRuleSaveMessage("✓ Streak rules updated instantly across all customer passes!");
         toast.success("Rules saved successfully!");
         setTimeout(() => setRuleSaveMessage(null), 3500);
       } else {
-        toast.error(res.message || "Failed to update rules.");
+        toast.error(res?.error || res?.message || "Failed to update rules.");
       }
-    } catch {
-      toast.error("Error saving rules.");
+    } catch (err: any) {
+      toast.error(err?.message || "Error saving rules.");
     }
   };
 
@@ -434,7 +442,7 @@ export default function OwnerDashboardPage() {
       }
 
       const options = {
-        key: orderRes.keyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        key: orderRes.keyId || frontendEnv.RAZORPAY_KEY_ID,
         amount: orderRes.amountPaise,
         currency: "INR",
         name: "StickTheBizz",

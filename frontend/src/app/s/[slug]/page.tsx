@@ -2,6 +2,7 @@ import React from "react";
 import CustomerView from "@/components/CustomerView";
 import Link from "next/link";
 import { Store, ArrowLeft, Clock } from "lucide-react";
+import { frontendEnv } from "@/lib/config/env";
 
 export const dynamic = "force-dynamic";
 
@@ -13,8 +14,7 @@ interface Props {
 
 async function getMerchant(slug: string) {
   try {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
-    const res = await fetch(`${apiUrl}/api/v1/merchant/slug/${encodeURIComponent(slug)}`, {
+    const res = await fetch(`${frontendEnv.API_BASE_URL}/api/v1/merchant/slug/${encodeURIComponent(slug)}`, {
       cache: "no-store",
     });
     if (!res.ok) return null;
