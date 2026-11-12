@@ -39,6 +39,8 @@ export function validateFrontendEnv(
 
   if (!resolvedEnv || resolvedEnv.trim() === "") {
     // Vercel deployment environment fallback (VERCEL_ENV: "production" | "preview" | "development")
+    // Note: VERCEL_ENV is a server-side variable and is NOT available in the browser bundle.
+    // In the browser, NODE_ENV is set to "production" for all Vercel production/preview builds.
     if (envSource.VERCEL_ENV === "preview") {
       resolvedEnv = "preview";
     } else if (envSource.VERCEL_ENV === "production") {
@@ -50,6 +52,11 @@ export function validateFrontendEnv(
       !envSource.NODE_ENV
     ) {
       resolvedEnv = "development";
+    } else if (envSource.NODE_ENV === "production") {
+      // Fallback: browser bundle with NODE_ENV=production but no VERCEL_ENV or NEXT_PUBLIC_APP_ENV.
+      // This happens when NEXT_PUBLIC_APP_ENV is not set in Vercel env vars.
+      // Treat as production so the app does not crash silently with a blank page.
+      resolvedEnv = "production";
     }
   }
 
